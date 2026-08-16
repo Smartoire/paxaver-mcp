@@ -1,0 +1,166 @@
+/**
+ * OAuth access-token validation for incoming MCP requests.
+ *
+ * Validates RS256 JWTs from the centralized auth worker via JWKS.
+ * Also supports legacy static MCP client tokens via the backend /whoami.
+ *
+ * User context (permissions, schoolSlug, studentIds) is loaded from the
+ * backend via the service-binding API client.
+ */
+
+import { jwtVerify, createRemoteJWKSet } from "jose";
+import type { Env, AuthContext } from "../env.js";
+import { callPaxaverApi } from "../api/client.js";
+
+export interface AuthResult {
+  ok: boolean;
+  status: number;
+  context?: AuthContext;
+  error?: { code: string; message: string };
+  wwwAuthenticate?: string;
+}
+
+/**
+ * Determine the auth worker issuer URL for the current environment.
+ */
+function authIssuer(env: Env): string {
+  if (env.ENVIRONMENT === 'development') return 'http://localhost:8788';
+  if (env.ENVIRONMENT === 'staging') return 'https://auth.paxaver.dev';
+  return 'https://auth.paxaver.com';
+}
+
+// ponytail: JWKS cache is per-isolate. Workers isolates are short-lived,
+// so this cache is effectively per-request. No TTL needed.
+// Upgrade path: use a KV-backed JWKS cache for long-lived isolates.
+const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+
+function getJwks(issuer: string): ReturnType<typeof createRemoteJWKSet> {
+  let jwks = jwksCache.get(issuer);
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+    jwksCache.set(issuer, jwks);
+  }
+  return jwks;
+}
+
+/**
+ * Validate the Bearer token on an incoming MCP request and resolve the
+ * authenticated user context.
+ *
+ * Tries RS256 (auth worker) first, then falls back to legacy static tokens.
+ */
+export async function authenticateRequest(
+  env: Env,
+  authHeader: string | undefined,
+  origin: string,
+): Promise<AuthResult> {
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : undefined;
+
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      error: { code: "UNAUTHORIZED", message: "Authorization required" },
+      wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource", scope="tools"`,
+    };
+  }
+
+  // --- RS256 path (auth worker JWT via JWKS) ---
+  const issuer = authIssuer(env);
+  const jwks = getJwks(issuer);
+
+  try {
+    const { payload } = await jwtVerify(token, jwks, {
+      algorithms: ['RS256'],
+      issuer,
+      audience: ['paxaver-api', 'mcp', origin],
+    });
+
+    if (payload.sub) {
+      // Load user context from backend
+      const result = await callPaxaverApi(
+        env,
+        {
+          userId: payload.sub,
+          email: '',
+          schoolSlug: '',
+          permissions: [],
+          isPlatformAdmin: false,
+          studentIds: [],
+        },
+        origin,
+        { method: 'GET', path: '/api/users/me/context' },
+      );
+
+      if (!result.ok || !result.data) {
+        return {
+          ok: false,
+          status: 401,
+          error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+        };
+      }
+
+      const ctx =
+        (result.data as { data?: AuthContext })?.data ??
+        (result.data as AuthContext);
+      if (!ctx.userId) {
+        return {
+          ok: false,
+          status: 401,
+          error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+        };
+      }
+      return { ok: true, status: 200, context: ctx };
+    }
+  } catch {
+    // Fall through to legacy static token check
+  }
+
+  // --- Legacy static MCP client token ---
+  // Forward the original Bearer token to the backend's /api/mcp/whoami.
+  // callPaxaverApi signs a service JWT, so we fetch directly to preserve
+  // the original token in the Authorization header.
+  const whoamiUrl = new URL('/api/mcp/whoami', env.API_BASE_URL);
+  let whoamiResp: Response;
+  if (env.PAXAVER_API) {
+    whoamiResp = await env.PAXAVER_API.fetch(whoamiUrl.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-MCP-Region': env.REGION,
+      },
+    });
+  } else {
+    whoamiResp = await fetch(whoamiUrl.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-MCP-Region': env.REGION,
+      },
+    });
+  }
+
+  if (whoamiResp.ok) {
+    const data = await whoamiResp.json().catch(() => null);
+    const ctx =
+      (data as { data?: AuthContext })?.data ??
+      (data as AuthContext);
+    if (!ctx.userId) {
+      return {
+        ok: false,
+        status: 401,
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' },
+      };
+    }
+    return { ok: true, status: 200, context: ctx };
+  }
+
+  return {
+    ok: false,
+    status: 401,
+    error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' },
+    wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource", scope="tools"`,
+  };
+}

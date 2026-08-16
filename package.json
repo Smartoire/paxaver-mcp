@@ -1,0 +1,45 @@
+{
+  "name": "@paxaver/mcp",
+  "version": "2.0.0",
+  "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school lunch platform. Streamable HTTP, OAuth 2.1, capability-first authorization.",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:staging": "wrangler dev --env staging",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run && vitest run --config vitest.node.config.ts",
+    "test:watch": "vitest",
+    "test:node": "vitest run --config vitest.node.config.ts",
+    "build": "wrangler deploy --dry-run",
+    "build:staging": "wrangler deploy --dry-run --env staging",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:ca": "wrangler deploy --env production-ca",
+    "deploy:us": "wrangler deploy --env production-us",
+    "deploy:prod": "npm run deploy:ca && npm run deploy:us",
+    "smoke:staging": "vitest run tests/smoke/staging.smoke.ts",
+    "smoke:ca": "vitest run tests/smoke/ca.smoke.ts",
+    "smoke:us": "vitest run tests/smoke/us.smoke.ts",
+    "wrangler:check": "wrangler deploy --dry-run --env staging && wrangler deploy --dry-run --env production-ca && wrangler deploy --dry-run --env production-us"
+  },
+  "dependencies": {
+    "hono": "^4.4.0",
+    "jose": "^5.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.0",
+    "@cloudflare/workers-types": "^5.20260710.1",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.0.0",
+    "wrangler": "^4.120.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
