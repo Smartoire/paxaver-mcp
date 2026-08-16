@@ -1,7 +1,7 @@
 {
   "name": "@paxaver/mcp",
   "version": "2.0.0",
-  "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school lunch platform. Streamable HTTP, OAuth 2.1, capability-first authorization.",
+  "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school community operating system. Streamable HTTP, OAuth 2.1, capability-first authorization.",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",

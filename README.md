@@ -1,6 +1,6 @@
 # Paxaver MCP Server
 
-> AI-facing adapter over the [Paxaver](https://paxaver.com) school lunch platform.
+> AI-facing adapter over the [Paxaver](https://paxaver.com) school community operating system.
 > Implements the Model Context Protocol (MCP) on Cloudflare Workers with OAuth 2.1,
 > capability-first authorization, and Streamable HTTP transport.
 

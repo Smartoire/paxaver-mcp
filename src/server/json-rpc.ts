@@ -58,11 +58,11 @@ export async function handleJsonRpc(
           version: "2.0.0",
           title: "Paxaver MCP",
           description:
-            "School lunch ordering, wallet, menus, and school management.",
+            "School community operations: ordering, wallet, menus, events, fundraising, and school management.",
         },
         instructions: admin
-          ? "Paxaver connects school lunch accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Admin tools: list_school_restaurants, create_restaurant, list_menu_items, create_menu_item, update_menu_item, delete_menu_item, set_daily_menu, get_daily_orders. Do not invent tool names - use only the tools returned by tools/list."
-          : "Paxaver connects school lunch accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.",
+          ? "Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Admin tools: list_school_restaurants, create_restaurant, list_menu_items, create_menu_item, update_menu_item, delete_menu_item, set_daily_menu, get_daily_orders. Do not invent tool names - use only the tools returned by tools/list."
+          : "Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.",
       },
     });
   }
