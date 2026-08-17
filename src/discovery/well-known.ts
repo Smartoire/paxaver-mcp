@@ -47,7 +47,6 @@ wellKnownApp.get('/.well-known/oauth-authorization-server', (c) => {
     issuer: authServer,
     authorization_endpoint: `${authServer}/authorize`,
     token_endpoint: `${authServer}/token`,
-    registration_endpoint: `${authServer}/register`,
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported: ['S256'],
