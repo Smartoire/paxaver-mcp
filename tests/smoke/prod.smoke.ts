@@ -1,6 +1,7 @@
 /**
- * Read-only smoke test for production (mcp.paxaver.com).
+ * Read-only smoke test for production (mcp.paxaver.com or mcp.paxaver.ca).
  * Run with: npm run smoke:prod
+ * Override endpoint with: SMOKE_URL=https://mcp.paxaver.ca npm run smoke:prod
  */
 
 import { describe, it, expect } from 'vitest';
@@ -20,7 +21,7 @@ describe('Production smoke (read-only)', () => {
     const res = await fetch(`${BASE}/.well-known/oauth-protected-resource`);
     expect(res.status).toBe(200);
     const json = await res.json() as { resource: string; authorization_servers: string[] };
-    expect(json.resource).toContain('paxaver.com');
+    expect(json.resource).toMatch(/^https:\/\/mcp\.paxaver\.(com|ca)$/);
     expect(json.authorization_servers).toContain('https://auth.paxaver.com');
   });
 
