@@ -60,7 +60,3 @@ export type SchoolPermission =
   | 'treasurer'
   | 'liaison'
   | 'restaurant_manager';
-
-export function hasPermission(permissions: string[], perm: SchoolPermission): boolean {
-  return permissions.includes(perm);
-}

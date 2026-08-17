@@ -72,20 +72,10 @@ app.use("*", async (c, next) => {
 });
 
 // --- Auth middleware for MCP endpoints ---
-// Applied only to /mcp and /messages (transport). OAuth discovery and
+// Applied only to /mcp (transport). OAuth discovery and
 // well-known endpoints are public.
-app.use("/mcp", async (c, next) => {
-  return mcpAuthMiddleware(c, next);
-});
-app.use("/mcp/*", async (c, next) => {
-  return mcpAuthMiddleware(c, next);
-});
-app.use("/messages", async (c, next) => {
-  return mcpAuthMiddleware(c, next);
-});
-app.use("/messages/*", async (c, next) => {
-  return mcpAuthMiddleware(c, next);
-});
+app.use("/mcp", mcpAuthMiddleware);
+app.use("/mcp/*", mcpAuthMiddleware);
 
 async function mcpAuthMiddleware(c: any, next: any): Promise<Response | void> {
   const origin = originFrom(c.req.url);

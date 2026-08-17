@@ -2,12 +2,12 @@
 
 ## Overview
 
-The Paxaver MCP server is a Cloudflare Worker that exposes the Paxaver school
-lunch platform to AI assistants via the Model Context Protocol. It is
+The Paxaver MCP server is a Cloudflare Worker that exposes the Paxaver
+school community operating system to AI assistants via the Model Context Protocol. It is
 deliberately a **thin adapter**: it owns protocol handling, authentication, and
 authorization policy, but contains no business logic and no direct data access.
 
-```
+```text
 ┌───────────────────┐                                ┌──────────────────────┐
 │   AI Client       │   MCP / Streamable HTTP        │   Paxaver MCP Worker │
 │  (ChatGPT,        │ ─────────────────────────────▶ │  (this repo)         │
@@ -65,7 +65,7 @@ Reasons:
 When the MCP server calls the backend, it does not forward the user's OAuth
 access token. Instead it mints a **short-lived service JWT** (`src/api/client.ts`):
 
-```
+```text
 signServiceToken(env, ctx, origin)
   → JWT, HS256, signed with JWT_SECRET (shared with backend)
     claims: { sub: <userId>, type: "mcp_service", schoolSlug: <slug> }
@@ -145,7 +145,7 @@ hasn't confirmed.
 
 ## Module map
 
-```
+```text
 src/
 ├── index.ts                     Hono app: CORS, security headers, auth middleware, route mounts
 ├── env.ts                       Env bindings (no D1), AuthContext, AppVariables

@@ -112,13 +112,6 @@ export async function dispatchTool(
         });
         break;
       case "add_funds":
-        result = await callPaxaverApi(env, ctx, origin, {
-          method: "POST",
-          path: "/api/wallet/deposit",
-          body: args,
-          idempotencyKey,
-        });
-        break;
       case "top-up-balance":
         result = await callPaxaverApi(env, ctx, origin, {
           method: "POST",

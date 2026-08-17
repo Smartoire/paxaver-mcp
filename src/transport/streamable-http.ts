@@ -7,9 +7,6 @@
  *   - Accept: application/json, text/event-stream
  *   - GET /mcp opens an SSE stream for server-to-client notifications
  *   - DELETE /mcp terminates a session
- *
- * Legacy SSE transport (GET /sse + POST /messages) is supported as a
- * deliberate compatibility shim for older clients and is clearly labeled.
  */
 
 import { Hono } from "hono";
@@ -146,63 +143,6 @@ transportApp.delete("/mcp", async (c) => {
   const sessionId = c.req.header("Mcp-Session-Id");
   if (sessionId) sessions.delete(sessionId);
   return c.json({}, 200);
-});
-
-// --- Legacy SSE compatibility (GET /sse + POST /messages) ---
-// Deliberately retained for older MCP clients that predate Streamable HTTP.
-// Clearly labeled; new clients should use POST /mcp.
-transportApp.get("/sse", async (c) => {
-  const sessionId = generateSessionId();
-  const stream = new ReadableStream({
-    start(controller) {
-      const origin = originFrom(c.req.url);
-      controller.enqueue(
-        `event: endpoint\ndata: ${origin}/messages?session_id=${sessionId}\n\n`,
-      );
-      const heartbeat = setInterval(() => {
-        try {
-          controller.enqueue(`: heartbeat\n\n`);
-        } catch {
-          clearInterval(heartbeat);
-        }
-      }, 30000);
-      c.req.raw.signal?.addEventListener("abort", () => {
-        clearInterval(heartbeat);
-        try {
-          controller.close();
-        } catch {
-          /* ignore */
-        }
-      });
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
-});
-
-transportApp.post("/messages", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body) {
-    return c.json(
-      {
-        jsonrpc: "2.0",
-        error: { code: -32700, message: "Parse error" },
-        id: null,
-      },
-      400,
-    );
-  }
-  if (Array.isArray(body)) {
-    const results = await Promise.all(body.map((r) => handleJsonRpc(c, r)));
-    return c.json(results);
-  }
-  return handleJsonRpc(c, body);
 });
 
 export { PROTOCOL_VERSION };
