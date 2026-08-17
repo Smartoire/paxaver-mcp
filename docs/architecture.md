@@ -16,8 +16,8 @@ authorization policy, but contains no business logic and no direct data access.
 │   any MCP client) │                                │  ├─ well-known/      │
 └───────────────────┘                                │  ├─ oauth/           │
        │                                             │  ├─ /mcp (transport) │
-       │ OAuth Authorization Code + PKCE             │  └─ /sse /messages   │
-       │ (user logs in to Paxaver via hosted page)   │      (legacy compat) │
+       │ OAuth Authorization Code + PKCE             │                      │
+       │ (user logs in to Paxaver via hosted page)   │                      │
                                                      └──────────┬───────────┘
                                                                 │
                                        Cloudflare service binding
@@ -174,5 +174,5 @@ src/
 ├── tools/
 │   └── dispatch.ts              Tool → backend API path mapping + idempotency keys
 └── transport/
-    └── streamable-http.ts       POST /mcp, GET /mcp (SSE), DELETE /mcp, legacy /sse + /messages
+    └── streamable-http.ts       POST /mcp, GET /mcp (SSE), DELETE /mcp
 ```

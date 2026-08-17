@@ -109,16 +109,16 @@ Secrets must be set per environment with `wrangler secret put --env <env>`:
 
 ## Tools
 
-The server exposes 20 tools grouped into five categories. Visibility in
+The server exposes 31 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
 | Category              | Tools |
 | --------------------- | ----- |
 | User / account        | `get_user_info`, `update_student` |
-| Wallet                | `get_wallet_balance`, `get_wallet_status`, `add_funds` |
-| Orders & menu         | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders` |
-| Events                | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event` |
+| Wallet                | `get_wallet_balance`, `get_wallet_status`, `add_funds`, `top-up-balance`, `donate-to-school` |
+| Orders & menu         | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `get-published-menu`, `create-draft-order`, `finalize-order`, `cancel-order` |
+| Events                | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register-event`, `request-volunteer` |
 | Admin / restaurant    | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `set_menu_item_price`, `delete_menu_item`, `set_daily_menu` |
 
 Financial and destructive tools are labeled and require user confirmation. Full
@@ -150,7 +150,7 @@ reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 - **Runtime:** Cloudflare Workers (`compatibility_date: 2026-08-01`, `nodejs_compat`)
 - **Framework:** [Hono](https://hono.dev) v4
 - **JWT:** [jose](https://github.com/panva/jose) v5 (HS256)
-- **Protocol:** MCP `2025-06-18`, Streamable HTTP (+ legacy SSE compat)
+- **Protocol:** MCP `2025-06-18`, Streamable HTTP
 - **Auth:** OAuth 2.1, Authorization Code + PKCE (S256 only)
 - **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
 - **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)

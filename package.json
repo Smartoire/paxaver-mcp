@@ -20,9 +20,9 @@
     "deploy:ca": "wrangler deploy --env production-ca",
     "deploy:us": "wrangler deploy --env production-us",
     "deploy:prod": "npm run deploy:ca && npm run deploy:us",
-    "smoke:staging": "vitest run tests/smoke/staging.smoke.ts",
-    "smoke:ca": "vitest run tests/smoke/ca.smoke.ts",
-    "smoke:us": "vitest run tests/smoke/us.smoke.ts",
+    "smoke:staging": "vitest run --config vitest.smoke.config.ts tests/smoke/staging.smoke.ts",
+    "smoke:ca": "vitest run --config vitest.smoke.config.ts tests/smoke/ca.smoke.ts",
+    "smoke:us": "vitest run --config vitest.smoke.config.ts tests/smoke/us.smoke.ts",
     "wrangler:check": "wrangler deploy --dry-run --env staging && wrangler deploy --dry-run --env production-ca && wrangler deploy --dry-run --env production-us"
   },
   "dependencies": {

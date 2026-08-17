@@ -35,9 +35,9 @@ This is the most significant change. It means:
 
 ### Transport: Streamable HTTP
 
-**v1** used SSE-only transport (`GET /sse` + `POST /messages`). **v2** adopts
-Streamable HTTP (`POST /mcp`) as the primary transport, per MCP `2025-06-18`.
-The legacy SSE endpoints are retained as a compatibility shim for older clients.
+**v1** used SSE-only transport (`GET /sse` + `POST /messages`). **v2** uses
+Streamable HTTP (`POST /mcp`) only, per MCP `2025-06-18`. The legacy SSE
+endpoints have been removed.
 
 ### Auth: OAuth 2.1
 
@@ -92,8 +92,8 @@ explicitly revoked, but no new static tokens should be issued.
 
 ### SSE-only transport
 
-**Superseded.** `GET /sse` + `POST /messages` still work but are a compatibility
-shim. New clients should use `POST /mcp` (Streamable HTTP).
+**Removed.** `GET /sse` + `POST /messages` are no longer available. Clients
+must use `POST /mcp` (Streamable HTTP).
 
 ## Migration checklist for operators
 
@@ -111,5 +111,4 @@ shim. New clients should use `POST /mcp` (Streamable HTTP).
 ## Compatibility
 
 v2 is **not** wire-compatible with v1 clients that hardcode the SSE transport
-and lack PKCE. Such clients should be upgraded. The legacy SSE endpoints ease
-the transition but OAuth is required for new sessions.
+and lack PKCE. Such clients must be upgraded to Streamable HTTP and OAuth 2.1.

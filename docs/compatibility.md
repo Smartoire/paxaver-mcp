@@ -8,9 +8,9 @@ The server implements MCP protocol version **`2025-06-18`**, returned in the
 
 ## Transports
 
-### Streamable HTTP (primary)
+### Streamable HTTP
 
-The modern transport, per the `2025-06-18` spec:
+The only transport, per the `2025-06-18` spec:
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
@@ -24,19 +24,6 @@ The modern transport, per the `2025-06-18` spec:
   auth is re-validated on every request via the Bearer token, so a missing or
   unknown session ID is tolerated (logged, not errored).
 - Heartbeat interval: 15 seconds.
-
-### Legacy SSE (compatibility shim)
-
-For older MCP clients that predate Streamable HTTP:
-
-| Method | Path | Purpose |
-| ------ | ---- | ------- |
-| `GET` | `/sse` | Opens an SSE stream; emits an `endpoint` event pointing to `/messages?session_id=...`. |
-| `POST` | `/messages` | JSON-RPC requests. |
-
-This is deliberately retained and clearly labeled in the source
-(`src/transport/streamable-http.ts`). New clients should use `POST /mcp`.
-Heartbeat interval: 30 seconds.
 
 ## OAuth client types
 
@@ -56,7 +43,7 @@ Tested against:
 | ------ | --------- | ---- | ----- |
 | **ChatGPT** (OpenAI) | Streamable HTTP | CIMD + PKCE | Marketplace connector; requires `CHATGPT_VERIFY_TOKEN` for domain verification. |
 | **Claude** (Anthropic) | Streamable HTTP | CIMD + PKCE | |
-| **Perplexity** | Streamable HTTP / legacy SSE | CIMD + PKCE | |
+| **Perplexity** | Streamable HTTP | CIMD + PKCE | |
 
 Any MCP-compatible client that implements OAuth 2.1 Authorization Code + PKCE
 S256 and follows RFC 9728 / RFC 8414 discovery should work.
@@ -77,7 +64,7 @@ legacy `mcp-server/` that lived in the private monorepo:
 
 | Area | v1 (legacy) | v2 (this repo) |
 | ---- | ----------- | -------------- |
-| Transport | SSE only (`/sse` + `/messages`) | Streamable HTTP (`POST /mcp`) primary; SSE retained as compat shim. |
+| Transport | SSE only (`/sse` + `/messages`) | Streamable HTTP (`POST /mcp`) only; legacy SSE removed. |
 | Protocol version | `2024-11-05` | `2025-06-18` |
 | Auth | Static bearer tokens (D1-backed) | OAuth 2.1 Authorization Code + PKCE S256; static tokens retained as legacy fallback via `/api/mcp/whoami`. |
 | Data access | Direct D1 binding | Service binding to backend only; no D1. |
