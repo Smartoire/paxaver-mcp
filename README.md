@@ -96,12 +96,10 @@ Three environments, each a separate Worker with its own custom domain and region
 
 ```bash
 npm run deploy:staging   # wrangler deploy --env staging
-npm run deploy:ca        # wrangler deploy --env production-ca
-npm run deploy:us        # wrangler deploy --env production-us
-npm run deploy:prod      # both production regions
+npm run deploy:prod      # wrangler deploy --env production
 ```
 
-Secrets must be set per environment with `wrangler secret put --env <env>`:
+Secrets must be set with `wrangler secret put --env production`:
 `JWT_SECRET`, `OAUTH_STATE_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `CHATGPT_VERIFY_TOKEN`. See [`docs/deployment.md`](./docs/deployment.md).
 

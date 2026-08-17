@@ -70,10 +70,10 @@ If the private model changes, update the names in `contracts.ts` to match.
 
 ### Deployment: three environments
 
-**v1** deployed a single Worker. **v2** deploys three: `staging`
-(`mcp.paxaver.dev`), `production-ca` (`mcp.paxaver.ca`), and `production-us`
-(`mcp.paxaver.com`), each with regional isolation and a same-region service
-binding.
+**v1** deployed a single Worker. **v2** deploys two environments: `staging`
+(`mcp.paxaver.dev`) and `production` (`mcp.paxaver.com`). The production worker
+routes to both CA and US backends via service bindings, selecting the correct
+region per request based on the authenticated user's tenant country.
 
 ## What was deprecated
 
@@ -100,9 +100,9 @@ must use `POST /mcp` (Streamable HTTP).
 - [ ] Deploy the backend with the new `/api/*` endpoints listed above.
 - [ ] Set `JWT_SECRET` on the MCP Worker **identical** to the backend's.
 - [ ] Set `OAUTH_STATE_SECRET` on the MCP Worker.
-- [ ] Configure the `PAXAVER_API` service binding (same region) in the
-      Cloudflare dashboard.
-- [ ] Configure custom domains (`mcp.paxaver.dev`, `.ca`, `.com`) in Cloudflare.
+- [ ] Configure `PAXAVER_API_CA` and `PAXAVER_API_US` service bindings in
+      `wrangler.jsonc` (production environment).
+- [ ] Configure custom domains (`mcp.paxaver.dev`, `.com`) in Cloudflare.
 - [ ] Set `CHATGPT_VERIFY_TOKEN` if listing on the ChatGPT marketplace.
 - [ ] Deploy staging first and run `npm run smoke:staging`.
 - [ ] Notify existing static-token users to migrate to OAuth; revoke old tokens

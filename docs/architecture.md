@@ -20,10 +20,11 @@ authorization policy, but contains no business logic and no direct data access.
        │ (user logs in to Paxaver via hosted page)   │                      │
                                                      └──────────┬───────────┘
                                                                 │
-                                       Cloudflare service binding
-                                       binding name: PAXAVER_API
-                                       same region, no public hop
-                                       carries short-lived JWT
+                              Cloudflare service bindings (regional routing)
+                              PAXAVER_API_CA → paxaver-api-ca (CA users)
+                              PAXAVER_API_US → paxaver-api-us (US users)
+                              selected per-request from JWT tenant_id
+                              carries short-lived JWT
                                                                 │
                                                                 ▼
                                                      ┌──────────────────────┐

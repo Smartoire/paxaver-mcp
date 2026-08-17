@@ -31,7 +31,7 @@ wellKnownApp.get('/.well-known/oauth-protected-resource', (c) => {
     authorization_servers: [authServer],
     scopes_supported: ['tools'],
     bearer_methods_supported: ['header'],
-    resource_documentation: `${origin}/docs/security`,
+    resource_documentation: 'https://github.com/Smartoire/paxaver-mcp/blob/main/docs/security.md',
   });
 });
 

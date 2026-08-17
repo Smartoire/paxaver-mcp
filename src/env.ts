@@ -1,29 +1,33 @@
 /**
  * Paxaver MCP server environment bindings.
  *
- * Secrets (set via `wrangler secret put` per environment):
+ * Secrets (set via `wrangler secret put`):
  *   - JWT_SECRET            — used only for service-binding JWTs to call the
  *                             Paxaver API. OAuth tokens are RS256 JWTs from
  *                             the auth worker, validated via JWKS.
  *   - CHATGPT_VERIFY_TOKEN  — ChatGPT marketplace domain verification (optional)
  *
- * Service bindings (configured in wrangler.jsonc per env, not here):
- *   - PAXAVER_API           — Fetch interface to the same-region Paxaver
- *                             backend worker.
+ * Service bindings (configured in wrangler.jsonc):
+ *   - PAXAVER_API_CA        — Fetch interface to the CA Paxaver backend worker.
+ *   - PAXAVER_API_US        — Fetch interface to the US Paxaver backend worker.
+ *
+ * The MCP server routes to the correct regional backend based on the
+ * authenticated user's tenant country (extracted from the JWT tenant_id claim
+ * and confirmed via /api/users/me/context).
  *
  * No D1 binding. The MCP server never touches the database directly.
  */
 
 export interface Env {
-  // --- Cloudflare service binding to the Paxaver backend (same region) ---
-  PAXAVER_API?: Fetcher;
+  // --- Cloudflare service bindings to both regional backends ---
+  PAXAVER_API_CA?: Fetcher;
+  PAXAVER_API_US?: Fetcher;
 
   // --- Public vars (wrangler.jsonc) ---
   ENVIRONMENT: 'development' | 'staging' | 'production';
-  REGION: 'ca' | 'us';
-  DEFAULT_CURRENCY: string;
   ALLOWED_ORIGINS: string;
-  API_BASE_URL: string;
+  API_BASE_URL_CA: string;
+  API_BASE_URL_US: string;
 
   // --- Secrets (wrangler secret) ---
   JWT_SECRET: string;
@@ -37,6 +41,7 @@ export interface AuthContext {
   permissions: string[];
   isPlatformAdmin: boolean;
   studentIds: string[];
+  country: 'ca' | 'us';
 }
 
 export type AppBindings = Env;

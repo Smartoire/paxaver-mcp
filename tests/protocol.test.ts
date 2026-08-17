@@ -18,16 +18,48 @@ const USER_CONTEXT = {
   permissions: ["school_master"],
   isPlatformAdmin: false,
   studentIds: ["student-1"],
+  country: "ca" as const,
 };
 
 const TEST_ENV = {
   JWT_SECRET: "test-jwt-secret-for-vitest-only",
   ENVIRONMENT: "test" as const,
-  REGION: "ca" as const,
-  DEFAULT_CURRENCY: "CAD",
+  
+  
   ALLOWED_ORIGINS: "http://localhost:5173",
-  API_BASE_URL: "http://localhost:8787",
-  PAXAVER_API: {
+  API_BASE_URL_CA: "http://localhost:8787",
+  API_BASE_URL_US: "http://localhost:8787",
+  PAXAVER_API_CA: {
+    async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+      const req = typeof request === "string" ? new Request(request, init) : request;
+      const url = new URL(req.url);
+      if (url.pathname === "/api/mcp/whoami") {
+        const authHeader = req.headers.get("Authorization") || "";
+        const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+        if (token !== TEST_TOKEN) {
+          return new Response(JSON.stringify({ error: "Invalid token" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(
+          JSON.stringify({ data: USER_CONTEXT }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.pathname === "/api/users/me/context") {
+        return new Response(
+          JSON.stringify({ data: USER_CONTEXT }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ data: { ok: true } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+  },
+  PAXAVER_API_US: {
     async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
       const req = typeof request === "string" ? new Request(request, init) : request;
       const url = new URL(req.url);

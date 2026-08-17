@@ -4,8 +4,10 @@
  * Validates RS256 JWTs from the centralized auth worker via JWKS.
  * Also supports legacy static MCP client tokens via the backend /whoami.
  *
- * User context (permissions, schoolSlug, studentIds) is loaded from the
- * backend via the service-binding API client.
+ * User context (permissions, schoolSlug, studentIds, country) is loaded
+ * from the backend via the service-binding API client. The user's region
+ * is determined from the JWT tenant_id claim and used to route to the
+ * correct regional backend.
  */
 
 import { jwtVerify, createRemoteJWKSet } from "jose";
@@ -20,9 +22,6 @@ export interface AuthResult {
   wwwAuthenticate?: string;
 }
 
-/**
- * Determine the auth worker issuer URL for the current environment.
- */
 function authIssuer(env: Env): string {
   if (env.ENVIRONMENT === 'development') return 'http://localhost:8788';
   if (env.ENVIRONMENT === 'staging') return 'https://auth.paxaver.dev';
@@ -43,12 +42,10 @@ function getJwks(issuer: string): ReturnType<typeof createRemoteJWKSet> {
   return jwks;
 }
 
-/**
- * Validate the Bearer token on an incoming MCP request and resolve the
- * authenticated user context.
- *
- * Tries RS256 (auth worker) first, then falls back to legacy static tokens.
- */
+function countryFromTenantId(tenantId: string | undefined | null): 'ca' | 'us' {
+  return tenantId && tenantId.endsWith('-us') ? 'us' : 'ca';
+}
+
 export async function authenticateRequest(
   env: Env,
   authHeader: string | undefined,
@@ -79,7 +76,8 @@ export async function authenticateRequest(
     });
 
     if (payload.sub) {
-      // Load user context from backend
+      const country = countryFromTenantId(payload.tenant_id as string | undefined);
+
       const result = await callPaxaverApi(
         env,
         {
@@ -89,6 +87,7 @@ export async function authenticateRequest(
           permissions: [],
           isPlatformAdmin: false,
           studentIds: [],
+          country,
         },
         origin,
         { method: 'GET', path: '/api/users/me/context' },
@@ -112,6 +111,7 @@ export async function authenticateRequest(
           error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
         };
       }
+      if (!ctx.country) ctx.country = country;
       return { ok: true, status: 200, context: ctx };
     }
   } catch {
@@ -119,42 +119,39 @@ export async function authenticateRequest(
   }
 
   // --- Legacy static MCP client token ---
-  // Forward the original Bearer token to the backend's /api/mcp/whoami.
-  // callPaxaverApi signs a service JWT, so we fetch directly to preserve
-  // the original token in the Authorization header.
-  const whoamiUrl = new URL('/api/mcp/whoami', env.API_BASE_URL);
-  let whoamiResp: Response;
-  if (env.PAXAVER_API) {
-    whoamiResp = await env.PAXAVER_API.fetch(whoamiUrl.toString(), {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-MCP-Region': env.REGION,
-      },
-    });
-  } else {
-    whoamiResp = await fetch(whoamiUrl.toString(), {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-MCP-Region': env.REGION,
-      },
-    });
-  }
-
-  if (whoamiResp.ok) {
-    const data = await whoamiResp.json().catch(() => null);
-    const ctx =
-      (data as { data?: AuthContext })?.data ??
-      (data as AuthContext);
-    if (!ctx.userId) {
-      return {
-        ok: false,
-        status: 401,
-        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' },
-      };
+  // Without a JWT we do not know the user's region, so try CA first, then US.
+  for (const country of ['ca', 'us'] as const) {
+    const baseUrl = country === 'us' ? env.API_BASE_URL_US : env.API_BASE_URL_CA;
+    const fetcher = country === 'us' ? env.PAXAVER_API_US : env.PAXAVER_API_CA;
+    const whoamiUrl = new URL('/api/mcp/whoami', baseUrl);
+    let whoamiResp: Response;
+    if (fetcher) {
+      whoamiResp = await fetcher.fetch(whoamiUrl.toString(), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-MCP-Region': country,
+        },
+      });
+    } else {
+      whoamiResp = await fetch(whoamiUrl.toString(), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-MCP-Region': country,
+        },
+      });
     }
-    return { ok: true, status: 200, context: ctx };
+
+    if (whoamiResp.ok) {
+      const data = await whoamiResp.json().catch(() => null);
+      const ctx =
+        (data as { data?: AuthContext })?.data ??
+        (data as AuthContext);
+      if (!ctx.userId) continue;
+      if (!ctx.country) ctx.country = country;
+      return { ok: true, status: 200, context: ctx };
+    }
   }
 
   return {

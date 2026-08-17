@@ -69,7 +69,7 @@ legacy `mcp-server/` that lived in the private monorepo:
 | Auth | Static bearer tokens (D1-backed) | OAuth 2.1 Authorization Code + PKCE S256; static tokens retained as legacy fallback via `/api/mcp/whoami`. |
 | Data access | Direct D1 binding | Service binding to backend only; no D1. |
 | Repo | Embedded in private monorepo | Standalone repo, vendored contracts, zero private-code dependency. |
-| Deployment | Single Worker | Three environments (staging, production-ca, production-us) with regional isolation. |
+| Deployment | Single Worker | Two environments (staging, production). Production routes to both CA and US backends. |
 | Discovery | None | RFC 9728 + RFC 8414 + ChatGPT domain verification. |
 | CORS | Reflect origin | Allowlist with wildcard subdomain support. |
 

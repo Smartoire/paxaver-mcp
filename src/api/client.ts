@@ -1,6 +1,9 @@
 /**
- * Paxaver API client. Calls the same-region backend via Cloudflare
- * service binding when available, otherwise authenticated HTTPS.
+ * Paxaver API client. Routes to the correct regional backend based on the
+ * authenticated user's tenant country.
+ *
+ * Uses Cloudflare service bindings when available (PAXAVER_API_CA /
+ * PAXAVER_API_US), otherwise falls back to authenticated HTTPS.
  *
  * The MCP server NEVER touches D1, Stripe, or SES directly. All business
  * logic lives in the backend. This client is the only data path.
@@ -48,7 +51,18 @@ export interface ApiCallResult {
 }
 
 /**
+ * Resolve the service binding and API base URL for the user's region.
+ */
+function resolveBackend(env: Env, country: 'ca' | 'us'): { fetcher: Fetcher | undefined; baseUrl: string } {
+  if (country === 'us') {
+    return { fetcher: env.PAXAVER_API_US, baseUrl: env.API_BASE_URL_US };
+  }
+  return { fetcher: env.PAXAVER_API_CA, baseUrl: env.API_BASE_URL_CA };
+}
+
+/**
  * Call the Paxaver backend API on behalf of the authenticated user.
+ * Routes to the correct regional backend based on ctx.country.
  * Uses the service binding when configured; falls back to HTTPS.
  */
 export async function callPaxaverApi(
@@ -58,8 +72,9 @@ export async function callPaxaverApi(
   opts: ApiCallOptions,
 ): Promise<ApiCallResult> {
   const token = await signServiceToken(env, ctx, origin);
+  const { fetcher, baseUrl } = resolveBackend(env, ctx.country);
 
-  const url = new URL(opts.path, env.API_BASE_URL);
+  const url = new URL(opts.path, baseUrl);
   if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
       if (v !== undefined) url.searchParams.set(k, v);
@@ -69,16 +84,15 @@ export async function callPaxaverApi(
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
-    'X-MCP-Region': env.REGION,
+    'X-MCP-Region': ctx.country,
   };
   if (opts.idempotencyKey) {
     headers['Idempotency-Key'] = opts.idempotencyKey;
   }
 
   let response: Response;
-  if (env.PAXAVER_API) {
-    // Service binding: same-region, no public-network hop.
-    response = await env.PAXAVER_API.fetch(url.toString(), {
+  if (fetcher) {
+    response = await fetcher.fetch(url.toString(), {
       method: opts.method,
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,

@@ -26,11 +26,10 @@ Config lives in [`wrangler.jsonc`](../wrangler.jsonc). Key fields:
 
 ## Environments
 
-| `--env` | Worker name | Domain | Region | Currency | API backend |
-| ------- | ----------- | ------ | ------ | -------- | ----------- |
-| `staging` | `paxaver-mcp-staging` | `mcp.paxaver.dev` | ca | CAD | `api.paxaver.dev` |
-| `production-ca` | `paxaver-mcp-ca` | `mcp.paxaver.ca` | ca | CAD | `api.paxaver.ca` |
-| `production-us` | `paxaver-mcp-us` | `mcp.paxaver.com` | us | USD | `api.paxaver.com` |
+| `--env` | Worker name | Domain | API backends |
+| ------- | ----------- | ------ | ------------ |
+| `staging` | `paxaver-mcp-staging` | `mcp.paxaver.dev` | `api.paxaver.dev` |
+| `production` | `paxaver-mcp` | `mcp.paxaver.com` | `api.paxaver.ca` + `api.paxaver.com` |
 
 Each environment declares its own `vars` (region, currency, allowed origins,
 API base URL) and `routes` (custom domain). The top-level config is used for
@@ -59,18 +58,17 @@ Paxaver app origins. See [security.md](./security.md) for the CORS policy.
 
 ## Service binding: `PAXAVER_API`
 
-The MCP worker calls the Paxaver backend via a Cloudflare **service binding**
-named `PAXAVER_API`. Service bindings are configured in the Cloudflare dashboard
-(or via `wrangler` service-binding config), not in `wrangler.jsonc` vars, because
-they reference another Worker by name.
+The MCP worker calls the Paxaver backend via Cloudflare **service bindings**.
+The production worker has two bindings:
 
-Setup per environment:
+- `PAXAVER_API_CA` → `paxaver-api-ca` (Canadian users)
+- `PAXAVER_API_US` → `paxaver-api-us` (US users)
 
-1. In the Cloudflare dashboard, open the MCP Worker (e.g. `paxaver-mcp-ca`).
-2. Go to **Settings → Bindings → Add binding → Service**.
-3. Variable name: `PAXAVER_API`. Service: the same-region Paxaver API Worker
-   (e.g. `paxaver-api-ca`). Environment: match (production → production).
-4. Repeat for each environment. **Never** cross-bind regions (CA MCP → US API).
+The correct backend is selected per request based on the authenticated user's
+tenant country (derived from the JWT `tenant_id` claim).
+
+Service bindings are configured in `wrangler.jsonc` under each environment's
+`services` array.
 
 When `PAXAVER_API` is absent (local dev), the client falls back to authenticated
 HTTPS against `API_BASE_URL`. This is fine for development but the service
@@ -83,7 +81,6 @@ Set per environment with `wrangler secret put --env <env> <NAME>`:
 | Secret | Required | Purpose |
 | ------ | -------- | ------- |
 | `JWT_SECRET` | **yes** | Signs OAuth access tokens **and** short-lived service-binding JWTs. Shared with the backend Worker. |
-| `OAUTH_STATE_SECRET` | **yes** | HMAC key for OAuth `state` CSRF tokens. |
 | `GOOGLE_CLIENT_ID` | no | Google sign-in. |
 | `GOOGLE_CLIENT_SECRET` | no | Google sign-in. |
 | `CHATGPT_VERIFY_TOKEN` | no | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`). |
@@ -94,9 +91,8 @@ Set per environment with `wrangler secret put --env <env> <NAME>`:
 Example:
 
 ```bash
-wrangler secret put JWT_SECRET --env production-ca
-wrangler secret put OAUTH_STATE_SECRET --env production-ca
-wrangler secret put CHATGPT_VERIFY_TOKEN --env production-ca
+wrangler secret put JWT_SECRET --env production
+wrangler secret put CHATGPT_VERIFY_TOKEN --env production
 ```
 
 For local development, use a `.dev.vars` file (gitignored):
@@ -112,11 +108,7 @@ OAUTH_STATE_SECRET=local-dev-state-secret
 # Staging
 npm run deploy:staging        # wrangler deploy --env staging
 
-# Production (each region independently)
-npm run deploy:ca             # wrangler deploy --env production-ca
-npm run deploy:us             # wrangler deploy --env production-us
-
-# Both production regions
+# Production (single endpoint, routes to both regions)
 npm run deploy:prod
 
 # Dry-run build for all environments (CI uses this)
@@ -129,8 +121,7 @@ Post-deploy smoke tests hit the live endpoint:
 
 ```bash
 npm run smoke:staging         # tests/smoke/staging.smoke.ts
-npm run smoke:ca              # tests/smoke/ca.smoke.ts
-npm run smoke:us              # tests/smoke/us.smoke.ts
+npm run smoke:prod            # tests/smoke/prod.smoke.ts
 ```
 
 These verify the health endpoint, discovery endpoints, and a basic
@@ -142,8 +133,8 @@ authenticated tool calls.
 Cloudflare Workers supports instant rollback via the dashboard or:
 
 ```bash
-wrangler deployments list --env production-ca
-wrangler rollback --env production-ca
+wrangler deployments list --env production
+wrangler rollback --env production
 ```
 
 Because the MCP server is stateless (no D1, sessions are per-isolate

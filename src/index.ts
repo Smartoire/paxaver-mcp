@@ -113,7 +113,6 @@ app.get("/health", (c) =>
   c.json({
     status: "ok",
     version: "2.0.0",
-    region: c.env.REGION,
   }),
 );
 
