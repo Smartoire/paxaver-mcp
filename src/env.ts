@@ -44,10 +44,17 @@ export interface AuthContext {
   country: 'ca' | 'us';
   /** Original OAuth access token, used to call the Paxaver backend. */
   userToken?: string;
+  /** Subscription status from the backend. */
+  subscription?: {
+    status: 'active' | 'expired' | 'none';
+    toolLevel: string | null;
+    expiry: string | null;
+  };
 }
 
 export type AppBindings = Env;
 export type AppVariables = AuthContext & {
   sessionId?: string;
   correlationId: string;
+  subscription?: AuthContext['subscription'] | null;
 };

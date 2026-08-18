@@ -88,6 +88,7 @@ export async function authenticateRequest(
           isPlatformAdmin: false,
           studentIds: [],
           country,
+          userToken: token,
         },
         origin,
         { method: 'GET', path: '/api/users/me/context' },
@@ -115,7 +116,7 @@ export async function authenticateRequest(
       ctx.userToken = token;
       return { ok: true, status: 200, context: ctx };
     }
-  } catch {
+  } catch (err) {
     // Fall through to legacy static token check
   }
 

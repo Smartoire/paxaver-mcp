@@ -84,12 +84,21 @@ export async function dispatchTool(
 
     switch (name) {
       // --- User ---
-      case "get_user_info":
+      case "get_user_info": {
         result = await callPaxaverApi(env, ctx, origin, {
           method: "GET",
           path: "/api/users/me",
         });
+        if (result.ok) {
+          const userData = (result.data as { data?: Record<string, unknown> })?.data ?? result.data;
+          if (ctx.subscription) {
+            if (userData && typeof userData === "object") {
+              (userData as Record<string, unknown>).subscription = ctx.subscription;
+            }
+          }
+        }
         break;
+      }
       case "update_student":
         result = await callPaxaverApi(env, ctx, origin, {
           method: "PATCH",

@@ -7,39 +7,14 @@
  *
  * The MCP server NEVER touches D1, Stripe, or SES directly. All business
  * logic lives in the backend. This client is the only data path.
+ *
+ * The backend's `authenticate` middleware only accepts RS256 JWTs issued by
+ * the auth worker (audience `paxaver-api`). The MCP server forwards the
+ * user's OAuth access token directly — it does not mint its own service
+ * token.
  */
 
-import { SignJWT } from 'jose';
 import type { Env, AuthContext } from '../env.js';
-
-const SERVICE_AUDIENCE = 'paxaver-internal';
-const SERVICE_TTL_SECONDS = 120;
-const JWT_ALG = 'HS256';
-
-/**
- * Sign a short-lived service-binding JWT that the backend's
- * `authenticate` middleware accepts as a trusted internal call.
- * The token carries the authenticated Paxaver user id in `sub`
- * and the resolved school slug in `schoolSlug`.
- */
-export async function signServiceToken(env: Env, ctx: AuthContext, origin: string): Promise<string> {
-  const secret = new TextEncoder().encode(env.JWT_SECRET);
-  const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ sub: ctx.userId, type: 'mcp_service', schoolSlug: ctx.schoolSlug })
-    .setProtectedHeader({ alg: JWT_ALG })
-    .setIssuer(origin)
-    .setAudience(SERVICE_AUDIENCE)
-    .setIssuedAt(now)
-    .setExpirationTime(now + SERVICE_TTL_SECONDS)
-    .setJti(crypto.randomUUID())
-    .sign(secret);
-}
-
-/** Resolve the backend authorization token. Prefer the user's OAuth token. */
-async function resolveBackendToken(env: Env, ctx: AuthContext, origin: string): Promise<string> {
-  if (ctx.userToken) return ctx.userToken;
-  return signServiceToken(env, ctx, origin);
-}
 
 export interface ApiCallOptions {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -70,14 +45,17 @@ function resolveBackend(env: Env, country: 'ca' | 'us'): { fetcher: Fetcher | un
  * Call the Paxaver backend API on behalf of the authenticated user.
  * Routes to the correct regional backend based on ctx.country.
  * Uses the service binding when configured; falls back to HTTPS.
+ * Forwards the user's OAuth access token to the backend.
  */
 export async function callPaxaverApi(
   env: Env,
   ctx: AuthContext,
-  origin: string,
+  _origin: string,
   opts: ApiCallOptions,
 ): Promise<ApiCallResult> {
-  const token = await resolveBackendToken(env, ctx, origin);
+  if (!ctx.userToken) {
+    return { ok: false, status: 401, data: { error: 'No user token available' } };
+  }
   const { fetcher, baseUrl } = resolveBackend(env, ctx.country);
 
   const url = new URL(opts.path, baseUrl);
@@ -88,7 +66,7 @@ export async function callPaxaverApi(
   }
 
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${ctx.userToken}`,
     'Content-Type': 'application/json',
     'X-MCP-Region': ctx.country,
   };

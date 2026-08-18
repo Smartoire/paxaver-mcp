@@ -107,6 +107,31 @@ async function mcpAuthMiddleware(c: any, next: any): Promise<Response | void> {
     c.set("isPlatformAdmin", result.context.isPlatformAdmin);
     c.set("studentIds", result.context.studentIds);
     c.set("userToken", result.context.userToken ?? "");
+    c.set("subscription", result.context.subscription ?? null);
+  }
+
+  // Block tool calls for users without an active subscription.
+  // tools/list is allowed so the user can see what is available.
+  const mcpMethod = c.req.header("Mcp-Method")?.toLowerCase();
+  const isPlatformAdmin = result.context?.isPlatformAdmin ?? false;
+  const subStatus = result.context?.subscription?.status ?? "none";
+  if (
+    !isPlatformAdmin &&
+    subStatus !== "active" &&
+    mcpMethod === "tools/call"
+  ) {
+    return c.json(
+      {
+        jsonrpc: "2.0",
+        id: null,
+        error: {
+          code: -32603,
+          message:
+            "An active Paxaver AI subscription or trial is required to use Paxaver MCP tools. Please buy a subscription or activate a trial at https://paxaver.com/settings/mcp.",
+        },
+      },
+      200,
+    );
   }
 
   await next();
