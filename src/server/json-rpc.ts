@@ -6,7 +6,7 @@
  * business logic runs in the backend via the service-binding API client.
  */
 
-import { PROTOCOL_VERSION } from "../transport/streamable-http.js";
+import { PROTOCOL_VERSION } from "../lib/protocol-version.js";
 import {
   canSeeTool,
   checkToolAuthorization,
@@ -16,6 +16,8 @@ import {
 import { ALL_TOOLS } from "../schemas/index.js";
 import { dispatchTool } from "../tools/dispatch.js";
 import { mcpError, type RpcRequest } from "../lib/errors.js";
+
+const SUPPORTED_VERSIONS = [PROTOCOL_VERSION];
 
 // ponytail: Hono's Context generic is complex and varies by route path.
 // The fields we use (env, var, req.header, url) are stable across all
@@ -27,6 +29,33 @@ export async function handleJsonRpc(
   req: RpcRequest,
 ): Promise<Response> {
   const { method, params, id } = req;
+
+  // server/discover is the 2026-07-28 protocol discovery probe.
+  // It is public and must not depend on authentication.
+  if (method === "server/discover") {
+    return Response.json({
+      jsonrpc: "2.0",
+      id,
+      result: {
+        resultType: "complete",
+        supportedVersions: SUPPORTED_VERSIONS,
+        capabilities: {
+          tools: {},
+          resources: {},
+        },
+        _meta: {
+          "io.modelcontextprotocol/serverInfo": {
+            name: "paxaver-mcp",
+            version: "2.1.1",
+          },
+        },
+        instructions:
+          "Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.",
+        ttlMs: 3600000,
+        cacheScope: "public",
+      },
+    });
+  }
 
   // notifications/initialized is the only unauthenticated notification
   if (method === "notifications/initialized") {

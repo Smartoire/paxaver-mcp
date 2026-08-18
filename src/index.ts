@@ -44,7 +44,7 @@ app.use("*", async (c, next) => {
     c.header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
     c.header(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id",
+      "Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name",
     );
     c.header("Access-Control-Expose-Headers", "MCP-Session-Id");
     c.header("Access-Control-Max-Age", "86400");
@@ -78,6 +78,13 @@ app.use("/mcp", mcpAuthMiddleware);
 app.use("/mcp/*", mcpAuthMiddleware);
 
 async function mcpAuthMiddleware(c: any, next: any): Promise<Response | void> {
+  // The 2026-07-28 `server/discover` RPC is a public capability probe.
+  // It carries no user data and must answer before authentication.
+  if (c.req.header("Mcp-Method")?.toLowerCase() === "server/discover") {
+    await next();
+    return;
+  }
+
   const origin = originFrom(c.req.url);
   const result = await authenticateRequest(
     c.env,
@@ -99,6 +106,7 @@ async function mcpAuthMiddleware(c: any, next: any): Promise<Response | void> {
     c.set("permissions", result.context.permissions);
     c.set("isPlatformAdmin", result.context.isPlatformAdmin);
     c.set("studentIds", result.context.studentIds);
+    c.set("userToken", result.context.userToken ?? "");
   }
 
   await next();

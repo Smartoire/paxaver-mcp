@@ -42,6 +42,8 @@ export interface AuthContext {
   isPlatformAdmin: boolean;
   studentIds: string[];
   country: 'ca' | 'us';
+  /** Original OAuth access token, used to call the Paxaver backend. */
+  userToken?: string;
 }
 
 export type AppBindings = Env;

@@ -38,8 +38,6 @@ function cleanupSessions(): void {
   }
 }
 
-const PROTOCOL_VERSION = "2025-06-18";
-
 export function originFrom(url: string): string {
   return new URL(url).origin.replace(/^http:/, "https:");
 }
@@ -145,4 +143,4 @@ transportApp.delete("/mcp", async (c) => {
   return c.json({}, 200);
 });
 
-export { PROTOCOL_VERSION };
+

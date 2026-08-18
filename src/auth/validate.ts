@@ -112,6 +112,7 @@ export async function authenticateRequest(
         };
       }
       if (!ctx.country) ctx.country = country;
+      ctx.userToken = token;
       return { ok: true, status: 200, context: ctx };
     }
   } catch {

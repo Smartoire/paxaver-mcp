@@ -35,6 +35,12 @@ export async function signServiceToken(env: Env, ctx: AuthContext, origin: strin
     .sign(secret);
 }
 
+/** Resolve the backend authorization token. Prefer the user's OAuth token. */
+async function resolveBackendToken(env: Env, ctx: AuthContext, origin: string): Promise<string> {
+  if (ctx.userToken) return ctx.userToken;
+  return signServiceToken(env, ctx, origin);
+}
+
 export interface ApiCallOptions {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   path: string;
@@ -71,7 +77,7 @@ export async function callPaxaverApi(
   origin: string,
   opts: ApiCallOptions,
 ): Promise<ApiCallResult> {
-  const token = await signServiceToken(env, ctx, origin);
+  const token = await resolveBackendToken(env, ctx, origin);
   const { fetcher, baseUrl } = resolveBackend(env, ctx.country);
 
   const url = new URL(opts.path, baseUrl);
