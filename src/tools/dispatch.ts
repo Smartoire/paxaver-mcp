@@ -28,6 +28,7 @@ function toolResult(data: unknown): Response {
     jsonrpc: "2.0",
     id: null,
     result: {
+      resultType: "complete",
       content: [{ type: "text", text: JSON.stringify(data) }],
       structuredContent: data as Record<string, unknown>,
     },

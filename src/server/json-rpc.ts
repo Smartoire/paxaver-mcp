@@ -17,7 +17,7 @@ import { ALL_TOOLS } from "../schemas/index.js";
 import { dispatchTool } from "../tools/dispatch.js";
 import { mcpError, type RpcRequest } from "../lib/errors.js";
 
-const SUPPORTED_VERSIONS = [PROTOCOL_VERSION];
+const SUPPORTED_VERSIONS = ["2026-07-28", PROTOCOL_VERSION];
 
 // ponytail: Hono's Context generic is complex and varies by route path.
 // The fields we use (env, var, req.header, url) are stable across all
