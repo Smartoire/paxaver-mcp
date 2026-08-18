@@ -55,7 +55,7 @@ export async function handleJsonRpc(
         },
         serverInfo: {
           name: "paxaver-mcp",
-          version: "2.0.0",
+          version: "2.1.1",
           title: "Paxaver MCP",
           description:
             "School community operations: ordering, wallet, menus, events, fundraising, and school management.",
