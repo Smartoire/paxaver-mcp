@@ -120,14 +120,17 @@ async function mcpAuthMiddleware(c: any, next: any): Promise<Response | void> {
     subStatus !== "active" &&
     mcpMethod === "tools/call"
   ) {
+    const message =
+      subStatus === "expired"
+        ? "Your Paxaver AI subscription has expired. Please renew your subscription at https://paxaver.com/settings/mcp to continue using Paxaver MCP tools."
+        : "An active Paxaver AI subscription is required to use Paxaver MCP tools. Please buy a subscription or activate a trial at https://paxaver.com/settings/mcp.";
     return c.json(
       {
         jsonrpc: "2.0",
         id: null,
         error: {
           code: -32603,
-          message:
-            "An active Paxaver AI subscription or trial is required to use Paxaver MCP tools. Please buy a subscription or activate a trial at https://paxaver.com/settings/mcp.",
+          message,
         },
       },
       200,
