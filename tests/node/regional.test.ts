@@ -35,6 +35,7 @@ describe("Regional routing", () => {
 
   it("production routes to mcp.paxaver.com only", () => {
     const routes = envs["production"]!.routes as Array<{ pattern: string }>;
+    expect(routes).toHaveLength(1);
     expect(routes[0]!.pattern).toBe("mcp.paxaver.com");
   });
 

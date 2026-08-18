@@ -86,13 +86,18 @@ under `/.well-known/`; the MCP endpoint is `POST /mcp`.
 
 ## Deployment
 
-Three environments, each a separate Worker with its own custom domain and region:
+Two environments, each a separate Worker with its own custom domain:
 
-| Environment     | Worker name           | Domain                | Region | Currency |
-| --------------- | --------------------- | --------------------- | ------ | -------- |
-| `staging`       | `paxaver-mcp-staging` | `mcp.paxaver.dev`     | ca     | CAD      |
-| `production-ca` | `paxaver-mcp-ca`      | `mcp.paxaver.ca`      | ca     | CAD      |
-| `production-us` | `paxaver-mcp-us`      | `mcp.paxaver.com`     | us     | USD      |
+| Environment  | Worker name           | Domain             |
+| ------------ | --------------------- | ------------------ |
+| `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev`  |
+| `production` | `paxaver-mcp`         | `mcp.paxaver.com`  |
+
+The production worker serves both CA and US users through a single endpoint
+(`mcp.paxaver.com`). User region is resolved from the JWT `tenant_id` claim,
+and the worker routes to the correct regional backend via service bindings
+(`PAXAVER_API_CA`, `PAXAVER_API_US`). Currency is determined by the user's
+school, not by the MCP endpoint.
 
 ```bash
 npm run deploy:staging   # wrangler deploy --env staging

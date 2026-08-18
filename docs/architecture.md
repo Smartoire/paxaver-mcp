@@ -88,17 +88,19 @@ OAuth access tokens.
 
 ## Regional isolation
 
-Paxaver operates two production regions, each with its own stack:
+Paxaver operates two production regions, each with its own API backend. The
+MCP worker is a single deployment at `mcp.paxaver.com` that serves both regions:
 
-| Region | API backend              | MCP worker             | Currency |
-| ------ | ------------------------ | ---------------------- | -------- |
-| `ca`   | `api.paxaver.ca`         | `mcp.paxaver.ca`       | CAD      |
-| `us`   | `api.paxaver.com`        | `mcp.paxaver.com`      | USD      |
+| Region | API backend              | MCP endpoint         |
+| ------ | ------------------------ | -------------------- |
+| `ca`   | `api.paxaver.ca`         | `mcp.paxaver.com`    |
+| `us`   | `api.paxaver.com`        | `mcp.paxaver.com`    |
 
-The service binding is **same-region only**: `paxaver-mcp-ca` binds to the
-Canadian backend, `paxaver-mcp-us` binds to the US backend. There is no
-cross-region service binding. This keeps user data within its region and avoids
-a public-network hop between the MCP and API workers.
+The MCP worker binds to both regional backends (`PAXAVER_API_CA`,
+`PAXAVER_API_US`) and routes each request to the correct region based on the
+JWT `tenant_id` claim. This keeps user data within its region while exposing
+a single public MCP endpoint. Currency is determined by the user's school,
+not by the MCP endpoint.
 
 Staging (`mcp.paxaver.dev`) is a single Canadian deployment used for integration
 testing against `api.paxaver.dev`.

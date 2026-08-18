@@ -17,7 +17,7 @@ Please include:
 
 - A description of the issue and its impact.
 - Steps to reproduce (proof of concept, if possible).
-- The affected environment (staging / production-ca / production-us) if known.
+- The affected environment (staging / production) if known.
 - Your contact information for follow-up.
 
 We will acknowledge receipt within **2 business days** and aim to send an initial

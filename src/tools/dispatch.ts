@@ -53,6 +53,33 @@ function makeIdempotencyKey(
 }
 
 /**
+ * Validate that user-supplied student_id and school_slug arguments are
+ * owned by the authenticated user. Prevents cross-tenant access when the
+ * MCP client sends an ID that does not belong to the user context.
+ */
+function validateOwnership(
+  args: Record<string, unknown>,
+  ctx: AppVariables,
+): void {
+  // If the context has a non-empty studentIds list, the supplied
+  // student_id must be in that list.
+  if (args.student_id !== undefined && ctx.studentIds?.length) {
+    const sid = String(args.student_id);
+    if (!ctx.studentIds.includes(sid)) {
+      throw new Error("student_id is not permitted for this user");
+    }
+  }
+  // If the context has a schoolSlug and the caller supplies a school_slug
+  // that differs from it, reject the request.
+  if (args.school_slug !== undefined && ctx.schoolSlug) {
+    const slug = String(args.school_slug);
+    if (slug !== ctx.schoolSlug) {
+      throw new Error("school_slug does not match the user school");
+    }
+  }
+}
+
+/**
  * Validate that a path-parameter ID contains only safe characters.
  * Prevents path traversal (../) and URL injection when interpolating IDs
  * into API paths.
@@ -81,6 +108,10 @@ export async function dispatchTool(
     const idempotencyKey = policy?.mutates
       ? makeIdempotencyKey(name, args, ctx.correlationId)
       : undefined;
+
+    // Verify that user-supplied student_id and school_slug arguments are
+    // owned by the authenticated user before dispatching to the backend.
+    validateOwnership(args, ctx);
 
     switch (name) {
       // --- User ---

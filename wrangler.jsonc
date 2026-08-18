@@ -57,8 +57,7 @@
         }
       ],
       "routes": [
-        { "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true },
-        { "pattern": "mcp.paxaver.ca", "zone_name": "paxaver.ca", "custom_domain": true }
+        { "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true }
       ]
     }
   }

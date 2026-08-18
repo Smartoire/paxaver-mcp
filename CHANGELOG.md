@@ -30,9 +30,9 @@ repository. This is a major release with breaking changes.
 - **Service binding architecture.** The MCP worker calls the Paxaver backend
   via a same-region Cloudflare service binding (`PAXAVER_API`) carrying a
   short-lived (120s) HS256 service JWT. No D1 binding.
-- **Three deployment environments.** `staging` (`mcp.paxaver.dev`),
-  `production-ca` (`mcp.paxaver.ca`), `production-us` (`mcp.paxaver.com`) with
-  regional isolation and per-region service bindings.
+- **Two deployment environments.** `staging` (`mcp.paxaver.dev`) and
+  `production` (`mcp.paxaver.com`) with dual-region service bindings
+  (`PAXAVER_API_CA`, `PAXAVER_API_US`) routed by JWT `tenant_id`.
 - **Per-tool capability policy table.** Every tool has an explicit
   `TOOL_POLICIES` entry with capability, entitlement requirement,
   classifications, required roles, mutation/financial/destructive flags, and
