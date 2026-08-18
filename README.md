@@ -1,8 +1,8 @@
 # Paxaver MCP Server
 
-> AI-facing adapter over the [Paxaver](https://paxaver.com) school community operating system.
-> Implements the Model Context Protocol (MCP) on Cloudflare Workers with OAuth 2.1,
-> capability-first authorization, and Streamable HTTP transport.
+> AI-facing adapter over the [Paxaver](https://paxaver.com) school community platform.
+> Implements the Model Context Protocol (MCP) on Cloudflare Workers with RS256 JWT
+> validation, capability-first authorization, and Streamable HTTP transport.
 
 **Proprietary / Source-Available — UNLICENSED.** See [`LICENSE`](./LICENSE).
 This source code is made available for review and educational purposes.
@@ -14,8 +14,9 @@ Unauthorized use, reproduction, or distribution is prohibited.
 
 The Paxaver MCP server lets AI assistants (ChatGPT, Claude, Perplexity, and any
 MCP-compatible client) act on behalf of a Paxaver user: check a lunch menu, order
-lunch, top up a wallet, view orders, and — for school administrators — manage
-restaurants, menu items, events, and daily orders.
+lunch, top up a wallet, register for fundraising events, donate to a school,
+volunteer, and — for school administrators — manage restaurants, menu items,
+events, and daily orders.
 
 It is a **thin adapter**. It contains no business logic and never touches the
 database, Stripe, or email directly. Every action is delegated to the private
@@ -23,9 +24,14 @@ Paxaver backend API over a Cloudflare **service binding** (same region, no publi
 network hop). The MCP server's only responsibilities are:
 
 - MCP protocol handling (JSON-RPC 2.0, Streamable HTTP)
-- OAuth 2.1 authorization server (Authorization Code + PKCE S256)
+- RS256 JWT validation via JWKS from the centralized Paxaver auth worker
 - Per-tool capability policy and role gating
 - Sanitized, user-safe error mapping
+
+Authentication is handled by the Paxaver auth worker (`auth.paxaver.com`), which
+serves as the OAuth 2.0 / OIDC authorization server. The MCP server validates
+the resulting RS256 JWTs and forwards them to the backend. The MCP server itself
+is not an authorization server.
 
 ---
 
@@ -35,7 +41,7 @@ network hop). The MCP server's only responsibilities are:
 ┌───────────────┐     MCP (Streamable HTTP)      ┌──────────────────────┐
 │   AI Client   │ ─────────────────────────────▶ │   Paxaver MCP Worker │
 │ ChatGPT/Claude│ ◀───────────────────────────── │  (this repo)         │
-│  /Perplexity  │     OAuth 2.1 + JSON-RPC 2.0   │  Hono + jose         │
+│  /Perplexity  │     RS256 JWT + JSON-RPC 2.0   │  Hono + jose         │
 └───────────────┘                                └──────────┬───────────┘
                                                             │
                                           Cloudflare service binding
@@ -135,7 +141,7 @@ reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 | Document | Topic |
 | -------- | ----- |
 | [docs/architecture.md](./docs/architecture.md) | System architecture, service binding boundary, regional isolation |
-| [docs/authentication.md](./docs/authentication.md) | OAuth 2.1 flow, PKCE, discovery, CIMD, token format |
+| [docs/authentication.md](./docs/authentication.md) | JWT validation, JWKS, auth worker delegation, token format |
 | [docs/authorization.md](./docs/authorization.md) | Capability policy table, role gating, defense-in-depth |
 | [docs/tools.md](./docs/tools.md) | Full tool reference with input schemas and classifications |
 | [docs/deployment.md](./docs/deployment.md) | Wrangler config, environments, secrets, custom domains |
@@ -152,9 +158,9 @@ reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 
 - **Runtime:** Cloudflare Workers (`compatibility_date: 2026-08-01`, `nodejs_compat`)
 - **Framework:** [Hono](https://hono.dev) v4
-- **JWT:** [jose](https://github.com/panva/jose) v5 (HS256)
+- **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
 - **Protocol:** MCP `2025-06-18`, Streamable HTTP
-- **Auth:** OAuth 2.1, Authorization Code + PKCE (S256 only)
+- **Auth:** RS256 JWT validation via centralized auth worker (`auth.paxaver.com`)
 - **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
 - **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)
 

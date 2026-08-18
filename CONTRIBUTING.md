@@ -50,8 +50,8 @@ Test files live in `tests/`:
 | File | Coverage |
 | ---- | -------- |
 | `tests/authz.test.ts` | `canSeeTool`, `checkToolAuthorization`, policy table |
-| `tests/crypto.test.ts` | PKCE S256, state HMAC, timing-safe compare, JWT signing |
-| `tests/oauth.test.ts` | OAuth authorize/token flow, CIMD, redirect-URI matching |
+| `tests/crypto.test.ts` | Session ID generation |
+| `tests/node/regional.test.ts` | Wrangler config validation, regional routing |
 | `tests/protocol.test.ts` | JSON-RPC initialize, tools/list, tools/call, error codes |
 | `tests/safety.test.ts` | Error sanitization, financial/destructive labeling |
 | `tests/node/*.test.ts` | Node-pool tests (crypto, pure functions) |

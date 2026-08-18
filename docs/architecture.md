@@ -3,7 +3,7 @@
 ## Overview
 
 The Paxaver MCP server is a Cloudflare Worker that exposes the Paxaver
-school community operating system to AI assistants via the Model Context Protocol. It is
+school community platform to AI assistants via the Model Context Protocol. It is
 deliberately a **thin adapter**: it owns protocol handling, authentication, and
 authorization policy, but contains no business logic and no direct data access.
 
@@ -12,19 +12,19 @@ authorization policy, but contains no business logic and no direct data access.
 │   AI Client       │   MCP / Streamable HTTP        │   Paxaver MCP Worker │
 │  (ChatGPT,        │ ─────────────────────────────▶ │  (this repo)         │
 │   Claude,         │ ◀───────────────────────────── │                      │
-│   Perplexity,     │   OAuth 2.1 Bearer + JSON-RPC  │  Hono app            │
+│   Perplexity,     │   RS256 JWT Bearer + JSON-RPC  │  Hono app            │
 │   any MCP client) │                                │  ├─ well-known/      │
-└───────────────────┘                                │  ├─ oauth/           │
-       │                                             │  ├─ /mcp (transport) │
-       │ OAuth Authorization Code + PKCE             │                      │
-       │ (user logs in to Paxaver via hosted page)   │                      │
+└───────────────────┘                                │  ├─ /mcp (transport) │
+       │                                             │                      │
+       │ OAuth 2.0 Authorization Code + PKCE         │                      │
+       │ (user logs in to Paxaver auth worker)       │                      │
                                                      └──────────┬───────────┘
                                                                 │
                               Cloudflare service bindings (regional routing)
                               PAXAVER_API_CA → paxaver-api-ca (CA users)
                               PAXAVER_API_US → paxaver-api-us (US users)
                               selected per-request from JWT tenant_id
-                              carries short-lived JWT
+                              forwards user's RS256 JWT
                                                                 │
                                                                 ▼
                                                      ┌──────────────────────┐
@@ -63,28 +63,17 @@ Reasons:
 
 ## Service binding authentication
 
-When the MCP server calls the backend, it does not forward the user's OAuth
-access token. Instead it mints a **short-lived service JWT** (`src/api/client.ts`):
+When the MCP server calls the backend, it forwards the user's RS256 JWT directly
+as `Authorization: Bearer <token>` (`src/api/client.ts`). The backend validates
+the JWT via its own JWKS check and performs authorization as if the user called
+the API directly. This means:
 
-```text
-signServiceToken(env, ctx, origin)
-  → JWT, HS256, signed with JWT_SECRET (shared with backend)
-    claims: { sub: <userId>, type: "mcp_service", schoolSlug: <slug> }
-    iss:    <origin of the MCP worker>
-    aud:    "paxaver-internal"
-    exp:    now + 120s
-    jti:    random UUID
-```
-
-The backend's `authenticate` middleware recognizes `type: "mcp_service"` with
-audience `paxaver-internal` as a trusted internal call and attributes the action
-to `sub` (the real Paxaver user). Because the TTL is 120 seconds and the token is
-single-use in practice (one API call), a leaked service token is useless within
-two minutes.
-
-`JWT_SECRET` is shared between the MCP worker and the backend worker and is set
-per environment via `wrangler secret put`. It is the same secret used to sign
-OAuth access tokens.
+- The backend's existing authz pipeline (school membership, student ownership,
+  role checks, entitlement) applies to every MCP-initiated request.
+- There is no separate service token or shared secret between the MCP worker and
+  the backend for user-attributed calls.
+- The MCP worker's `JWT_SECRET` binding is reserved for future internal use and
+  is not currently used for service-to-service authentication.
 
 ## Regional isolation
 
@@ -107,19 +96,20 @@ testing against `api.paxaver.dev`.
 
 ## Request lifecycle
 
-1. **AI client** sends `POST /mcp` with `Authorization: Bearer <oauth-jwt>`.
-2. **Auth middleware** (`src/auth/validate.ts`) verifies the JWT (HS256, audience
-   `mcp` or the request origin), then calls the backend's
-   `GET /api/users/me/context` over the service binding to load the live user
-   context (permissions, schoolSlug, studentIds, isPlatformAdmin). Context is
-   reloaded on **every** request — there is no cached session trust.
+1. **AI client** sends `POST /mcp` with `Authorization: Bearer <rs256-jwt>`.
+2. **Auth middleware** (`src/auth/validate.ts`) verifies the JWT (RS256, via JWKS
+   from the auth worker, audience `paxaver-api` / `mcp` / request origin), then
+   calls the backend's `GET /api/users/me/context` over the service binding to
+   load the live user context (permissions, schoolSlug, studentIds,
+   isPlatformAdmin). Context is reloaded on **every** request — there is no
+   cached session trust.
 3. **JSON-RPC handler** (`src/server/json-rpc.ts`) dispatches `tools/list` or
    `tools/call`.
 4. For `tools/call`, **`checkToolAuthorization`** enforces the interface-level
    role policy. If denied, returns `-32603` without calling the backend.
 5. **`dispatchTool`** (`src/tools/dispatch.ts`) maps the tool to a backend API
-   path, mints a service JWT, and calls `PAXAVER_API.fetch(...)`. Mutating calls
-   include an `Idempotency-Key` header.
+   path and calls `PAXAVER_API.fetch(...)` with the user's JWT forwarded.
+   Mutating calls include an `Idempotency-Key` header.
 6. The **backend** re-checks data-level authorization (school membership, student
    ownership, entitlement) and performs the action against D1/Stripe/SES.
 7. The result is unwrapped from the backend's `{ data: ... }` envelope and
@@ -153,18 +143,17 @@ src/
 ├── index.ts                     Hono app: CORS, security headers, auth middleware, route mounts
 ├── env.ts                       Env bindings (no D1), AuthContext, AppVariables
 ├── api/
-│   └── client.ts                Service-binding client + service JWT signing
+│   └── client.ts                Service-binding client + regional routing + user JWT forwarding
 ├── auth/
-│   ├── oauth.ts                 Authorization server: /oauth/authorize, /oauth/token, /oauth/register
-│   ├── oauth-ui.ts              Inline HTML login/error pages
-│   └── validate.ts              Bearer token validation + context loading
+│   └── validate.ts              RS256 JWT validation via JWKS + context loading
 ├── discovery/
-│   └── well-known.ts            RFC 9728 + RFC 8414 + ChatGPT domain verification
+│   └── well-known.ts            RFC 9728 + RFC 8414 (delegates to auth worker) + ChatGPT verification
 ├── lib/
 │   ├── contracts.ts             Vendored capability/role/classification names
 │   ├── policy.ts                Per-tool policy table, canSeeTool, checkToolAuthorization
-│   ├── crypto.ts                PKCE S256, state HMAC, JWT signing, timing-safe compare
-│   └── errors.ts                MCP error codes + backend→MCP error sanitization
+│   ├── crypto.ts                Session ID generation
+│   ├── errors.ts                MCP error codes + backend→MCP error sanitization
+│   └── protocol-version.ts      MCP protocol version negotiation
 ├── schemas/
 │   ├── index.ts                 ToolDefinition type + ALL_TOOLS registry
 │   ├── user-tools.ts
@@ -175,7 +164,7 @@ src/
 ├── server/
 │   └── json-rpc.ts              JSON-RPC 2.0 handler: initialize, tools/list, tools/call
 ├── tools/
-│   └── dispatch.ts              Tool → backend API path mapping + idempotency keys
+│   └── dispatch.ts              Tool → backend API path mapping + ownership validation
 └── transport/
     └── streamable-http.ts       POST /mcp, GET /mcp (SSE), DELETE /mcp
 ```
