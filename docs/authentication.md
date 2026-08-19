@@ -45,7 +45,7 @@ The MCP server validates RS256 JWTs using the auth worker's JWKS endpoint
 ```ts
 const { payload } = await jwtVerify(token, jwks, {
   algorithms: ['RS256'],
-  issuer,        // auth.paxaver.com (or auth.paxaver.dev / localhost)
+  issuer, // auth.paxaver.com (or auth.paxaver.dev / localhost)
   audience: ['paxaver-api', 'mcp', origin],
 });
 ```
@@ -56,17 +56,18 @@ effectively per-request.
 
 ### Token claims
 
-| Claim | Value |
-| ----- | ----- |
-| `sub` | Paxaver user ID |
-| `iss` | Auth worker origin (`https://auth.paxaver.com`) |
-| `aud` | `paxaver-api`, `mcp`, or the request origin |
-| `tenant_id` | User tenant ID (used for regional routing) |
-| `exp` | Token expiration |
+| Claim       | Value                                           |
+| ----------- | ----------------------------------------------- |
+| `sub`       | Paxaver user ID                                 |
+| `iss`       | Auth worker origin (`https://auth.paxaver.com`) |
+| `aud`       | `paxaver-api`, `mcp`, or the request origin     |
+| `tenant_id` | User tenant ID (used for regional routing)      |
+| `exp`       | Token expiration                                |
 
 ### Regional routing
 
 The user's region is determined from the JWT `tenant_id` claim:
+
 - `tenant_id` ending in `-us` → routes to `PAXAVER_API_US` (US backend)
 - All others → routes to `PAXAVER_API_CA` (CA backend)
 

@@ -80,10 +80,10 @@ the API directly. This means:
 Paxaver operates two production regions, each with its own API backend. The
 MCP worker is a single deployment at `mcp.paxaver.com` that serves both regions:
 
-| Region | API backend              | MCP endpoint         |
-| ------ | ------------------------ | -------------------- |
-| `ca`   | `api.paxaver.ca`         | `mcp.paxaver.com`    |
-| `us`   | `api.paxaver.com`        | `mcp.paxaver.com`    |
+| Region | API backend       | MCP endpoint      |
+| ------ | ----------------- | ----------------- |
+| `ca`   | `api.paxaver.ca`  | `mcp.paxaver.com` |
+| `us`   | `api.paxaver.com` | `mcp.paxaver.com` |
 
 The MCP worker binds to both regional backends (`PAXAVER_API_CA`,
 `PAXAVER_API_US`) and routes each request to the correct region based on the

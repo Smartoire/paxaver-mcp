@@ -74,10 +74,10 @@ format is:
 
 ## Secrets
 
-| Secret | Purpose |
-| ------ | ------- |
-| `JWT_SECRET` | Signs service-binding JWTs (HS256). Shared with the backend. |
-| `CHATGPT_VERIFY_TOKEN` | ChatGPT marketplace domain verification. |
+| Secret                 | Purpose                                                      |
+| ---------------------- | ------------------------------------------------------------ |
+| `JWT_SECRET`           | Signs service-binding JWTs (HS256). Shared with the backend. |
+| `CHATGPT_VERIFY_TOKEN` | ChatGPT marketplace domain verification.                     |
 
 Secrets are set via `wrangler secret put` and never appear in source
 code or configuration files.

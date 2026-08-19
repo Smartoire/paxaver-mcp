@@ -94,10 +94,10 @@ under `/.well-known/`; the MCP endpoint is `POST /mcp`.
 
 Two environments, each a separate Worker with its own custom domain:
 
-| Environment  | Worker name           | Domain             |
-| ------------ | --------------------- | ------------------ |
-| `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev`  |
-| `production` | `paxaver-mcp`         | `mcp.paxaver.com`  |
+| Environment  | Worker name           | Domain            |
+| ------------ | --------------------- | ----------------- |
+| `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev` |
+| `production` | `paxaver-mcp`         | `mcp.paxaver.com` |
 
 The production worker serves both CA and US users through a single endpoint
 (`mcp.paxaver.com`). User region is resolved from the JWT `tenant_id` claim,
@@ -122,13 +122,13 @@ The server exposes 31 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
-| Category              | Tools |
-| --------------------- | ----- |
-| User / account        | `get_user_info`, `update_student` |
-| Wallet                | `get_wallet_balance`, `get_wallet_status`, `add_funds`, `top-up-balance`, `donate-to-school` |
-| Orders & menu         | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `get-published-menu`, `create-draft-order`, `finalize-order`, `cancel-order` |
-| Events                | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register-event`, `request-volunteer` |
-| Admin / restaurant    | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `set_menu_item_price`, `delete_menu_item`, `set_daily_menu` |
+| Category           | Tools                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| User / account     | `get_user_info`, `update_student`                                                                                                                                                    |
+| Wallet             | `get_wallet_balance`, `get_wallet_status`, `add_funds`, `top_up_balance`, `donate_to_school`                                                                                         |
+| Orders & menu      | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `get_published_menu`, `create_draft_order`, `finalize_order`, `cancel_order` |
+| Events             | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register_event`, `request_volunteer`                                                                         |
+| Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `set_menu_item_price`, `delete_menu_item`, `set_daily_menu`               |
 
 Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
@@ -138,19 +138,19 @@ reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 
 ## Documentation
 
-| Document | Topic |
-| -------- | ----- |
-| [docs/architecture.md](./docs/architecture.md) | System architecture, service binding boundary, regional isolation |
-| [docs/authentication.md](./docs/authentication.md) | JWT validation, JWKS, auth worker delegation, token format |
-| [docs/authorization.md](./docs/authorization.md) | Capability policy table, role gating, defense-in-depth |
-| [docs/tools.md](./docs/tools.md) | Full tool reference with input schemas and classifications |
-| [docs/deployment.md](./docs/deployment.md) | Wrangler config, environments, secrets, custom domains |
-| [docs/security.md](./docs/security.md) | Security model, CORS, CSRF, error sanitization, headers |
-| [docs/compatibility.md](./docs/compatibility.md) | MCP protocol version, transports, supported AI clients |
-| [docs/migration.md](./docs/migration.md) | Migration from the legacy `mcp-server/` in the private monorepo |
-| [CHANGELOG.md](./CHANGELOG.md) | Release history |
-| [SECURITY.md](./SECURITY.md) | Vulnerability reporting policy |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Development setup and contribution process |
+| Document                                           | Topic                                                             |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| [docs/architecture.md](./docs/architecture.md)     | System architecture, service binding boundary, regional isolation |
+| [docs/authentication.md](./docs/authentication.md) | JWT validation, JWKS, auth worker delegation, token format        |
+| [docs/authorization.md](./docs/authorization.md)   | Capability policy table, role gating, defense-in-depth            |
+| [docs/tools.md](./docs/tools.md)                   | Full tool reference with input schemas and classifications        |
+| [docs/deployment.md](./docs/deployment.md)         | Wrangler config, environments, secrets, custom domains            |
+| [docs/security.md](./docs/security.md)             | Security model, CORS, CSRF, error sanitization, headers           |
+| [docs/compatibility.md](./docs/compatibility.md)   | MCP protocol version, transports, supported AI clients            |
+| [docs/migration.md](./docs/migration.md)           | Migration from the legacy `mcp-server/` in the private monorepo   |
+| [CHANGELOG.md](./CHANGELOG.md)                     | Release history                                                   |
+| [SECURITY.md](./SECURITY.md)                       | Vulnerability reporting policy                                    |
+| [CONTRIBUTING.md](./CONTRIBUTING.md)               | Development setup and contribution process                        |
 
 ---
 

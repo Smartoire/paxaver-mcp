@@ -1,0 +1,2828 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app": {
+    "name": "Paxaver",
+    "category": "Education / School Management",
+    "shortDescription": "Paxaver is the school community operating system that connects PACs, schools, and families. Use this app to check lunch menus, place lunch orders, view wallet balances, and manage school restaurant menus - all from ChatGPT.",
+    "fullDescription": "Paxaver is the operating system connecting Parent Advisory Committees (PACs), schools, and communities. This ChatGPT app lets parents, school staff, and PAC members interact with their Paxaver school account through natural conversation.\n\n**For parents & families:**\n- View the daily and monthly lunch menu for your child's school\n- Place lunch orders for your students\n- Check your wallet balance and recent transactions\n- Review your order history\n\n**For school masters, PAC members & program coordinators:**\n- View financial summaries (revenue, orders, gateway balances)\n- See school-level statistics (student counts, order volume)\n- Manage restaurants linked to your school\n- Create, update, and price menu items\n- Assign menu items to dates on the daily menu\n- View all orders placed for a given school day\n\n**How it works:**\nWhen you first connect, ChatGPT will ask you to sign in with your Paxaver account via secure OAuth. Once authorized, ChatGPT can call Paxaver tools on your behalf - it will always show you what it's doing and ask for confirmation before placing orders or making changes.",
+    "websiteUrl": "https://paxaver.com",
+    "supportUrl": "https://paxaver.com/support",
+    "supportEmail": "support@paxaver.com",
+    "privacyPolicyUrl": "https://paxaver.com/privacy",
+    "termsOfServiceUrl": "https://paxaver.com/privacy/terms",
+    "monetization": {
+      "pricingModel": "Free (requires existing Paxaver account)",
+      "inAppPurchases": false,
+      "transactionsThroughChatGPT": false,
+      "notes": "Paxaver is free for families. Schools pay a subscription for the platform. The ChatGPT app does not charge users; orders are placed against the user's existing wallet balance, which is topped up via the Paxaver website (Stripe/PayPal)."
+    }
+  },
+  "listings": [
+    {
+      "name": "Paxaver (Canada)",
+      "region": "Canada",
+      "countries": ["CA"],
+      "mcpServer": {
+        "url": "https://mcp-ca.paxaver.com",
+        "verificationTokenEnvVar": "CHATGPT_VERIFY_TOKEN",
+        "verificationEndpoint": "https://mcp-ca.paxaver.com/.well-known/chatgpt-verification/{token}",
+        "currency": "CAD",
+        "d1Database": "paxaver-db-ca"
+      }
+    },
+    {
+      "name": "Paxaver (US)",
+      "region": "United States",
+      "countries": ["US"],
+      "mcpServer": {
+        "url": "https://mcp-us.paxaver.com",
+        "verificationTokenEnvVar": "CHATGPT_VERIFY_TOKEN",
+        "verificationEndpoint": "https://mcp-us.paxaver.com/.well-known/chatgpt-verification/{token}",
+        "currency": "USD",
+        "d1Database": "paxaver-db-us"
+      }
+    }
+  ],
+  "mcpServer": {
+    "protocol": "MCP (Streamable HTTP)",
+    "transport": "https",
+    "authentication": {
+      "type": "OAuth 2.1 with PKCE (Authorization Code flow)",
+      "scopes": ["tools"],
+      "responseTypes": ["code"],
+      "grantTypes": ["authorization_code", "refresh_token"],
+      "codeChallengeMethods": ["S256", "plain"],
+      "tokenEndpointAuthMethods": ["none", "client_secret_post"],
+      "accessTokenExpirySeconds": 3600,
+      "discovery": {
+        "protectedResource": "/.well-known/oauth-protected-resource",
+        "authorizationServer": "/.well-known/oauth-authorization-server",
+        "dynamicClientRegistration": "/oauth/register",
+        "authorizationEndpoint": "/oauth/authorize",
+        "tokenEndpoint": "/oauth/token"
+      },
+      "cimdAllowedHosts": ["chatgpt.com", "chat.openai.com", "openai.com", "claude.ai", "anthropic.com"],
+      "fallbackRedirectUris": ["https://chatgpt.com/connector/oauth/*", "https://chat.openai.com/*"]
+    },
+    "tools": [
+      {
+        "name": "get_user_info",
+        "category": "User & Wallet",
+        "description": "Get the authenticated user's base information: id, role, province, city, school memberships (with school slugs and roles), and student list (with student ids). Use this to discover student ids and school slugs needed by other tools.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {},
+        "output": {
+          "user": {
+            "id": "string",
+            "email": "string",
+            "firstName": "string",
+            "lastName": "string",
+            "userType": "string",
+            "city": "string",
+            "province": "string"
+          },
+          "role": "string",
+          "activeSchoolSlug": "string",
+          "memberships": [
+            {
+              "id": "string",
+              "schoolSlug": "string",
+              "isSchoolMaster": "boolean",
+              "isPac": "boolean",
+              "status": "string",
+              "schoolName": "string"
+            }
+          ],
+          "students": [
+            {
+              "id": "string",
+              "firstName": "string",
+              "lastName": "string",
+              "grade": "string",
+              "className": "string",
+              "allergies": "string|null"
+            }
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads the authenticated user's profile, school memberships, and student list. This is the discovery endpoint - its output (school slugs, student IDs) is required as input parameters by nearly every other tool.",
+          "readOnlyJustification": "The tool only returns data about the currently authenticated user. It does not modify any records or expose data belonging to other users.",
+          "openWorldJustification": "All data is scoped to the authenticated user's own account and school memberships within the Paxaver platform. No external systems or third-party data are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "userType": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "province": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "email", "firstName", "lastName", "userType", "city", "province"]
+            },
+            "role": {
+              "type": "string"
+            },
+            "activeSchoolSlug": {
+              "type": "string"
+            },
+            "memberships": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "schoolSlug": {
+                    "type": "string"
+                  },
+                  "isSchoolMaster": {
+                    "type": "boolean"
+                  },
+                  "isPac": {
+                    "type": "boolean"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "schoolName": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "students": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "grade": {
+                    "type": "string"
+                  },
+                  "className": {
+                    "type": "string"
+                  },
+                  "allergies": {
+                    "type": "string|null"
+                  }
+                }
+              }
+            }
+          },
+          "required": ["user", "role", "activeSchoolSlug", "memberships", "students"]
+        }
+      },
+      {
+        "name": "get_wallet_balance",
+        "category": "User & Wallet",
+        "description": "Get the current wallet balance for the user at a specific school.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": false,
+            "description": "School slug (optional - defaults to the user's active school)"
+          }
+        },
+        "output": {
+          "balanceCents": "number",
+          "balanceFormatted": "string",
+          "currency": "string"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads the authenticated user's wallet balance for a specific school. The balance is needed so users can decide whether they have sufficient funds before placing a lunch order.",
+          "readOnlyJustification": "The tool only queries the current balance. It does not debit, credit, or modify the wallet in any way.",
+          "openWorldJustification": "Data is scoped to the authenticated user's own wallet account within Paxaver. No external financial systems are queried."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "balanceCents": {
+              "type": "number"
+            },
+            "balanceFormatted": {
+              "type": "string"
+            },
+            "currency": {
+              "type": "string"
+            }
+          },
+          "required": ["balanceCents", "balanceFormatted", "currency"]
+        }
+      },
+      {
+        "name": "order_lunch",
+        "category": "Lunch & Ordering",
+        "description": "Place a lunch order for a student at a specific school. If school_slug is omitted, the user's active school is used. If student_id is omitted and the user has exactly one student, that student is used automatically.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": false,
+            "description": "School slug (optional - defaults to the user's active school)"
+          },
+          "student_id": {
+            "type": "string",
+            "required": false,
+            "description": "Student ID (optional - auto-selected if the user has one student)"
+          },
+          "menu_item_id": {
+            "type": "string",
+            "required": true
+          },
+          "menu_date": {
+            "type": "string",
+            "required": true,
+            "format": "YYYY-MM-DD"
+          },
+          "quantity": {
+            "type": "number",
+            "required": false,
+            "default": 1
+          }
+        },
+        "output": {
+          "orderId": "string",
+          "item": "string",
+          "quantity": "number",
+          "unitPriceCents": "number",
+          "totalCents": "number",
+          "totalFormatted": "string",
+          "status": "string"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Creates a lunch order record that debits the user's wallet and reserves a menu item for a student. Reads the daily menu to verify availability and the wallet to verify sufficient funds.",
+          "mutationJustification": "Placing an order is the core user action - without write access, the app cannot fulfill its primary purpose of placing lunch orders. The mutation is limited to creating an order record and adjusting the wallet balance by the exact item price.",
+          "destructiveJustification": "Not applicable - the tool does not delete or destroy data. It creates a new order and decrements the wallet balance.",
+          "openWorldJustification": "All operations are within the Paxaver platform: the user's wallet, the school's daily menu, and the student's order history. No external systems are involved."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "orderId": {
+              "type": "string"
+            },
+            "item": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "unitPriceCents": {
+              "type": "number"
+            },
+            "totalCents": {
+              "type": "number"
+            },
+            "totalFormatted": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": ["orderId", "item", "quantity", "unitPriceCents", "totalCents", "totalFormatted", "status"]
+        }
+      },
+      {
+        "name": "get_orders",
+        "category": "Lunch & Ordering",
+        "description": "Get recent lunch orders at a specific school. Optionally filter to a single student by student_id; otherwise returns orders for all of the user's students.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": false,
+            "description": "School slug (optional - defaults to the user's active school)"
+          },
+          "student_id": {
+            "type": "string",
+            "required": false
+          }
+        },
+        "output": [
+          {
+            "id": "string",
+            "student": "string",
+            "item": "string",
+            "menu_date": "string",
+            "quantity": "number",
+            "unit_price_cents": "number",
+            "total_cents": "number",
+            "status": "string",
+            "created_at": "string"
+          }
+        ],
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads recent lunch orders for the authenticated user's students at a specific school. Optionally filtered to a single student. Used to review past orders and confirm successful placements.",
+          "readOnlyJustification": "The tool only queries order records. It does not create, modify, or cancel orders.",
+          "openWorldJustification": "Data is scoped to orders belonging to the authenticated user's students within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "student": {
+                "type": "string"
+              },
+              "item": {
+                "type": "string"
+              },
+              "menu_date": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "unit_price_cents": {
+                "type": "number"
+              },
+              "total_cents": {
+                "type": "number"
+              },
+              "status": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "get_daily_menu",
+        "category": "Lunch & Ordering",
+        "description": "List available food options for a specific school on a specific day or month. Provide \"date\" (YYYY-MM-DD) for a single day, or \"month\" (YYYY-MM) for a whole month. If neither is given, defaults to today. If school_slug is omitted, the user's active school is used.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": false,
+            "description": "School slug (optional - defaults to the user's active school)"
+          },
+          "date": {
+            "type": "string",
+            "required": false,
+            "format": "YYYY-MM-DD"
+          },
+          "month": {
+            "type": "string",
+            "required": false,
+            "format": "YYYY-MM"
+          }
+        },
+        "output": [
+          {
+            "menu_item_id": "string",
+            "name": "string",
+            "description": "string",
+            "price_cents": "number",
+            "restaurant_name": "string",
+            "available_qty": "number",
+            "calories": "number",
+            "ingredients": "string"
+          }
+        ],
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads the published daily or monthly lunch menu for a specific school, including item names, descriptions, prices, and availability. Used by parents to decide what to order.",
+          "readOnlyJustification": "The tool only queries published menu data. It does not modify menus or inventory.",
+          "openWorldJustification": "Data is scoped to the specified school's menu within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "menu_item_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "price_cents": {
+                "type": "number"
+              },
+              "restaurant_name": {
+                "type": "string"
+              },
+              "available_qty": {
+                "type": "number"
+              },
+              "calories": {
+                "type": "number"
+              },
+              "ingredients": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "get_daily_orders",
+        "category": "Lunch & Ordering",
+        "description": "List all lunch orders placed for a specific school day (school master/lunch coordinator).",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "menu_date": {
+            "type": "string",
+            "required": true,
+            "format": "YYYY-MM-DD"
+          }
+        },
+        "output": {
+          "menuDate": "string",
+          "count": "number",
+          "orders": [
+            {
+              "id": "string",
+              "student": "string",
+              "restaurant": "string",
+              "item": "string",
+              "quantity": "number",
+              "unit_price_cents": "number",
+              "total_cents": "number",
+              "status": "string",
+              "created_at": "string"
+            }
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads aggregated order data for a specific school on a specific date. Used by school masters and PAC members to see how many orders were placed and plan food preparation.",
+          "readOnlyJustification": "The tool only queries and aggregates order records. It does not modify orders.",
+          "openWorldJustification": "Data is scoped to orders at the specified school within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "menuDate": {
+              "type": "string"
+            },
+            "count": {
+              "type": "number"
+            },
+            "orders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "student": {
+                    "type": "string"
+                  },
+                  "restaurant": {
+                    "type": "string"
+                  },
+                  "item": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "number"
+                  },
+                  "unit_price_cents": {
+                    "type": "number"
+                  },
+                  "total_cents": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": ["menuDate", "count", "orders"]
+        }
+      },
+      {
+        "name": "get_upcoming_events",
+        "category": "School Management",
+        "description": "Get upcoming events for a specific school within a date window (default: today to +30 days).",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": false,
+            "description": "School slug (optional - defaults to the user's active school)"
+          },
+          "start_date": {
+            "type": "string",
+            "required": false,
+            "format": "YYYY-MM-DD",
+            "default": "today"
+          },
+          "end_date": {
+            "type": "string",
+            "required": false,
+            "format": "YYYY-MM-DD",
+            "default": "today+30days"
+          }
+        },
+        "output": [
+          {
+            "id": "string",
+            "title": "string",
+            "date": "string",
+            "description": "string"
+          }
+        ],
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads upcoming school events (fundraisers, volunteer opportunities, PAC meetings) for a specific school. Used by parents and PAC members to stay informed.",
+          "readOnlyJustification": "The tool only queries published event data. It does not create, modify, or cancel events.",
+          "openWorldJustification": "Data is scoped to the specified school's events within Paxaver. No external calendar systems are accessed."
+        },
+        "outputSchema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "list_school_restaurants",
+        "category": "School Management",
+        "description": "List restaurants linked to a specific school.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "output": [
+          {
+            "id": "string",
+            "name": "string",
+            "description": "string",
+            "contact_name": "string",
+            "contact_email": "string",
+            "contact_phone": "string",
+            "tax_percent": "number"
+          }
+        ],
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads the list of restaurants linked to a specific school, including contact details and status. Used by school masters to manage food vendors.",
+          "readOnlyJustification": "The tool only queries restaurant records. It does not create or modify restaurants.",
+          "openWorldJustification": "Data is scoped to the specified school's restaurant links within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "contact_name": {
+                "type": "string"
+              },
+              "contact_email": {
+                "type": "string"
+              },
+              "contact_phone": {
+                "type": "string"
+              },
+              "tax_percent": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "create_restaurant",
+        "category": "School Management",
+        "description": "Create a restaurant for a specific school (school master/lunch coordinator). Each restaurant belongs to exactly one school; if the same restaurant serves two schools, create two rows.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "name": {
+            "type": "string",
+            "required": true
+          },
+          "description": {
+            "type": "string",
+            "required": false
+          },
+          "contact_name": {
+            "type": "string",
+            "required": false
+          },
+          "contact_email": {
+            "type": "string",
+            "required": false
+          },
+          "contact_phone": {
+            "type": "string",
+            "required": false
+          },
+          "tax_percent": {
+            "type": "number",
+            "required": false
+          }
+        },
+        "output": {
+          "id": "string",
+          "name": "string",
+          "school_slug": "string"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Creates a new restaurant record linked to a specific school, including name, description, and contact information. Used by school masters to onboard new food vendors.",
+          "mutationJustification": "School masters need to add restaurants to the platform so that menus can be created and orders placed. Without write access, the app cannot fulfill its purpose of enabling lunch programs.",
+          "destructiveJustification": "Not applicable - the tool creates a new record. It does not delete or overwrite existing data.",
+          "openWorldJustification": "All operations are within the Paxaver platform. The new restaurant record is scoped to the specified school."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "school_slug": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name", "school_slug"]
+        }
+      },
+      {
+        "name": "list_menu_items",
+        "category": "School Management",
+        "description": "List menu items for a restaurant with school-specific prices.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "restaurant_id": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "output": [
+          {
+            "id": "string",
+            "name": "string",
+            "description": "string",
+            "cost_cents": "number",
+            "price_cents": "number|null",
+            "is_available": "boolean",
+            "ingredients": "string",
+            "calories": "number"
+          }
+        ],
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads menu items for a specific restaurant, including name, description, ingredients, calories, dietary tags, and pricing. Used by school masters to review and manage their menu catalog.",
+          "readOnlyJustification": "The tool only queries menu item records. It does not create or modify items.",
+          "openWorldJustification": "Data is scoped to the specified restaurant's menu items within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "cost_cents": {
+                "type": "number"
+              },
+              "price_cents": {
+                "type": "number|null"
+              },
+              "is_available": {
+                "type": "boolean"
+              },
+              "ingredients": {
+                "type": "string"
+              },
+              "calories": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "create_menu_item",
+        "category": "School Management",
+        "description": "Create a menu item for a restaurant at a specific school.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "restaurant_id": {
+            "type": "string",
+            "required": true
+          },
+          "name": {
+            "type": "string",
+            "required": true
+          },
+          "description": {
+            "type": "string",
+            "required": false
+          },
+          "cost_cents": {
+            "type": "number",
+            "required": false
+          },
+          "ingredients": {
+            "type": "string",
+            "required": false,
+            "notes": "Comma-separated list"
+          },
+          "calories": {
+            "type": "number",
+            "required": false
+          }
+        },
+        "output": {
+          "id": "string",
+          "name": "string",
+          "restaurant_id": "string"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Creates a new menu item for a specific restaurant, including name, description, ingredients, calories, dietary tags, and cost. Used by school masters to build their menu catalog.",
+          "mutationJustification": "School masters need to add menu items so they can be scheduled in daily menus and ordered by parents. Without write access, the lunch ordering workflow cannot function.",
+          "destructiveJustification": "Not applicable - the tool creates a new record. It does not delete or overwrite existing data.",
+          "openWorldJustification": "All operations are within the Paxaver platform. The new menu item is scoped to the specified restaurant."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "restaurant_id": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name", "restaurant_id"]
+        }
+      },
+      {
+        "name": "update_menu_item",
+        "category": "School Management",
+        "description": "Update a menu item for a restaurant, including its school-specific price and availability (price_cents / is_available). Setting price_cents upserts the school-specific price row.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "restaurant_id": {
+            "type": "string",
+            "required": true
+          },
+          "menu_item_id": {
+            "type": "string",
+            "required": true
+          },
+          "name": {
+            "type": "string",
+            "required": false
+          },
+          "description": {
+            "type": "string",
+            "required": false
+          },
+          "cost_cents": {
+            "type": "number",
+            "required": false
+          },
+          "ingredients": {
+            "type": "string",
+            "required": false
+          },
+          "calories": {
+            "type": "number",
+            "required": false
+          },
+          "is_active": {
+            "type": "boolean",
+            "required": false
+          },
+          "price_cents": {
+            "type": "number",
+            "required": false,
+            "notes": "School-specific price in cents (upserts restaurant_school_items)"
+          },
+          "is_available": {
+            "type": "boolean",
+            "required": false,
+            "notes": "Whether the item is available at this school (used with price_cents)"
+          }
+        },
+        "output": {
+          "id": "string",
+          "updated": "boolean"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Updates an existing menu item's name, description, ingredients, calories, dietary tags, cost, or active status. Used by school masters to keep menu information current.",
+          "mutationJustification": "Menu items change over time - prices are adjusted, ingredients are updated, items are deactivated. Without write access, school masters cannot maintain accurate menus.",
+          "destructiveJustification": "Not applicable - the tool modifies an existing record. It does not delete data. Deactivation is a soft state change (is_active = 0), not destruction.",
+          "openWorldJustification": "All operations are within the Paxaver platform. The update is scoped to the specified menu item."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "updated": {
+              "type": "boolean"
+            }
+          },
+          "required": ["id", "updated"]
+        }
+      },
+      {
+        "name": "delete_menu_item",
+        "category": "School Management",
+        "description": "Deactivate a menu item at a specific school (soft delete - sets is_active = false).",
+        "readOnly": false,
+        "destructive": true,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "restaurant_id": {
+            "type": "string",
+            "required": true
+          },
+          "menu_item_id": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "output": {
+          "id": "string",
+          "deactivated": "boolean"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Permanently deletes a menu item from a restaurant's catalog. Used by school masters to remove items that are no longer offered.",
+          "mutationJustification": "School masters need to remove obsolete menu items to keep their catalog clean and prevent parents from ordering unavailable items.",
+          "destructiveJustification": "Deletion is necessary because keeping inactive items indefinitely would clutter the menu and confuse users. The tool is restricted to school_master and platform_admin roles. Soft deletion (is_active = 0) is preferred for items that may return; hard deletion is for items that are permanently discontinued.",
+          "openWorldJustification": "All operations are within the Paxaver platform. The deletion is scoped to the specified menu item."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "deactivated": {
+              "type": "boolean"
+            }
+          },
+          "required": ["id", "deactivated"]
+        }
+      },
+      {
+        "name": "set_daily_menu",
+        "category": "School Management",
+        "description": "Assign a menu item to a date on the daily menu for a specific school.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true
+          },
+          "restaurant_id": {
+            "type": "string",
+            "required": true
+          },
+          "menu_item_id": {
+            "type": "string",
+            "required": true
+          },
+          "menu_date": {
+            "type": "string",
+            "required": true,
+            "format": "YYYY-MM-DD"
+          },
+          "available_qty": {
+            "type": "number",
+            "required": false,
+            "notes": "Max servings available"
+          }
+        },
+        "output": {
+          "id": "string",
+          "menu_date": "string",
+          "menu_item_id": "string",
+          "assigned": "boolean"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Sets the daily menu for a specific school by linking menu items to dates with availability quantities. Used by school masters to publish what will be served each day.",
+          "mutationJustification": "Daily menus must be set before parents can place orders. Without write access, the core ordering workflow cannot function - there would be nothing to order.",
+          "destructiveJustification": "Not applicable - the tool creates or updates daily menu entries. It does not delete data.",
+          "openWorldJustification": "All operations are within the Paxaver platform. The daily menu is scoped to the specified school and date."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "menu_date": {
+              "type": "string"
+            },
+            "menu_item_id": {
+              "type": "string"
+            },
+            "assigned": {
+              "type": "boolean"
+            }
+          },
+          "required": ["id", "menu_date", "menu_item_id", "assigned"]
+        }
+      },
+      {
+        "name": "create_event",
+        "category": "School Management",
+        "description": "Create a school event (fundraiser, meeting, PAC event, etc.). Admin only (school master / PAC). Returns the created event ID.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "school_slug": {
+            "type": "string",
+            "required": true,
+            "description": "School slug. Get from get_user_info."
+          },
+          "name": {
+            "type": "string",
+            "required": true,
+            "description": "Event name"
+          },
+          "event_date": {
+            "type": "string",
+            "required": true,
+            "description": "Event date YYYY-MM-DD"
+          },
+          "description": {
+            "type": "string",
+            "required": false,
+            "description": "Event description"
+          },
+          "starts_at": {
+            "type": "string",
+            "required": false,
+            "description": "Start time (e.g. 18:00)"
+          },
+          "ends_at": {
+            "type": "string",
+            "required": false,
+            "description": "End time (e.g. 20:00)"
+          },
+          "location": {
+            "type": "string",
+            "required": false,
+            "description": "Event location"
+          },
+          "max_capacity": {
+            "type": "number",
+            "required": false,
+            "description": "Max capacity. 0 = unlimited. Default: 0."
+          },
+          "ticket_price_cents": {
+            "type": "number",
+            "required": false,
+            "description": "Ticket price in cents. 0 = free. Default: 0."
+          }
+        },
+        "output": {
+          "id": "string",
+          "schoolSlug": "string",
+          "name": "string",
+          "eventDate": "string",
+          "status": "string"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Creates a new school event record (fundraiser, meeting, etc.) at the specified school. Used by school masters and PAC members to manage school events.",
+          "readOnlyJustification": "N/A - this tool creates a new event record.",
+          "openWorldJustification": "Data is scoped to the specified school within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Created event ID"
+            },
+            "schoolSlug": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "eventDate": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "description": "Always 'active' on creation"
+            }
+          },
+          "required": ["id", "schoolSlug", "name", "eventDate", "status"]
+        }
+      },
+      {
+        "name": "update_event",
+        "category": "School Management",
+        "description": "Update a school event's properties (name, description, date, times, location, capacity, ticket price, status). Pass only the fields to change. Admin only (school master / PAC).",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "event_id": {
+            "type": "string",
+            "required": true,
+            "description": "Event ID to update"
+          },
+          "name": {
+            "type": "string",
+            "required": false
+          },
+          "description": {
+            "type": "string",
+            "required": false
+          },
+          "event_date": {
+            "type": "string",
+            "required": false,
+            "description": "YYYY-MM-DD"
+          },
+          "starts_at": {
+            "type": "string",
+            "required": false
+          },
+          "ends_at": {
+            "type": "string",
+            "required": false
+          },
+          "location": {
+            "type": "string",
+            "required": false
+          },
+          "max_capacity": {
+            "type": "number",
+            "required": false
+          },
+          "ticket_price_cents": {
+            "type": "number",
+            "required": false
+          },
+          "status": {
+            "type": "string",
+            "required": false,
+            "description": "active, paused, or cancelled"
+          }
+        },
+        "output": {
+          "updated": "boolean",
+          "eventId": "string"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Updates an existing school event's properties. Only the fields passed are changed. Used by school masters and PAC members to manage event details.",
+          "readOnlyJustification": "N/A - this tool modifies an existing event record.",
+          "openWorldJustification": "Data is scoped to the event's school within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "updated": {
+              "type": "boolean"
+            },
+            "eventId": {
+              "type": "string"
+            }
+          },
+          "required": ["updated", "eventId"]
+        }
+      },
+      {
+        "name": "cancel_event",
+        "category": "School Management",
+        "description": "Cancel a school event (sets status to 'cancelled'). The event is not deleted - it remains in the database for record-keeping. Admin only (school master / PAC).",
+        "readOnly": false,
+        "destructive": true,
+        "roles": ["school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "event_id": {
+            "type": "string",
+            "required": true,
+            "description": "Event ID to cancel"
+          }
+        },
+        "output": {
+          "cancelled": "boolean",
+          "eventId": "string"
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Cancels a school event by setting its status to 'cancelled'. The event record is preserved for record-keeping. Used by school masters and PAC members.",
+          "readOnlyJustification": "N/A - this tool modifies an event's status.",
+          "openWorldJustification": "Data is scoped to the event's school within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "cancelled": {
+              "type": "boolean"
+            },
+            "eventId": {
+              "type": "string"
+            }
+          },
+          "required": ["cancelled", "eventId"]
+        }
+      },
+      {
+        "name": "get_monthly_orders",
+        "category": "Lunch & Ordering",
+        "description": "List all lunch orders for a specific month (YYYY-MM). Admin view (school master / lunch coordinator): all orders for the school. Parent view: only their students' orders. Respects the school ordering window.",
+        "readOnly": true,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "lunch_coordinator", "platform_admin"],
+        "inputs": {
+          "month": {
+            "type": "string",
+            "required": false,
+            "description": "Month YYYY-MM. Default: current month."
+          },
+          "student_id": {
+            "type": "string",
+            "required": false,
+            "description": "Filter to one student (parent view). Get from get_user_info."
+          }
+        },
+        "output": {
+          "month": "string",
+          "count": "number",
+          "orderingMaxDate": "string",
+          "orders": [
+            {
+              "id": "string",
+              "student": "string",
+              "restaurant": "string",
+              "item": "string",
+              "menu_date": "string",
+              "quantity": "number",
+              "total_cents": "number",
+              "status": "string"
+            }
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Reads lunch orders for a specific month at the user's active school. Admin roles see all orders; parents see only their own students' orders. Respects the school's ordering window.",
+          "readOnlyJustification": "The tool only queries order records. It does not create or modify orders.",
+          "openWorldJustification": "Data is scoped to the user's active school within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "month": {
+              "type": "string"
+            },
+            "count": {
+              "type": "number"
+            },
+            "orderingMaxDate": {
+              "type": "string"
+            },
+            "orders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "student": {
+                    "type": "string"
+                  },
+                  "restaurant": {
+                    "type": "string"
+                  },
+                  "item": {
+                    "type": "string"
+                  },
+                  "menu_date": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "number"
+                  },
+                  "total_cents": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": ["month", "count", "orders"]
+        }
+      },
+      {
+        "name": "update_student",
+        "category": "Student",
+        "description": "Update a student's profile fields (first_name, last_name, known_as, grade, division, allergies, notes, birthday). Only the authenticated user's own students can be updated. Pass only the fields to change.",
+        "readOnly": false,
+        "destructive": false,
+        "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+        "inputs": {
+          "student_id": {
+            "type": "string",
+            "required": true,
+            "description": "Student ID. Get from get_user_info."
+          },
+          "first_name": {
+            "type": "string",
+            "required": false
+          },
+          "last_name": {
+            "type": "string",
+            "required": false
+          },
+          "known_as": {
+            "type": "string",
+            "required": false,
+            "description": "Preferred name / nickname"
+          },
+          "grade": {
+            "type": "string",
+            "required": false
+          },
+          "division": {
+            "type": "string",
+            "required": false,
+            "description": "Class / division"
+          },
+          "allergies": {
+            "type": "string",
+            "required": false
+          },
+          "notes": {
+            "type": "string",
+            "required": false
+          },
+          "birthday": {
+            "type": "string",
+            "required": false,
+            "description": "YYYY-MM-DD"
+          }
+        },
+        "output": {
+          "updated": "boolean",
+          "studentId": "string",
+          "fields": ["string"]
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "justifications": {
+          "dataAccess": "Updates profile fields for a student linked to the authenticated user. Only the user's own students can be updated. Only the fields passed are changed.",
+          "readOnlyJustification": "N/A - this tool modifies a student's profile fields.",
+          "openWorldJustification": "Data is scoped to the authenticated user's own students within Paxaver. No external systems are accessed."
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "updated": {
+              "type": "boolean"
+            },
+            "studentId": {
+              "type": "string"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["updated", "studentId", "fields"]
+        }
+      }
+    ],
+    "toolUsageGuidance": "Always call get_user_info first to discover the user's school_slug and student_id values, since most other tools require these parameters. For lunch menu or schedule queries, use get_daily_menu (accepts 'date' YYYY-MM-DD for a single day or 'month' YYYY-MM for a whole month). Do not invent tool names - only use the 19 tools exposed by the server. For visual output, follow the two-step render pattern: fetch data with a data tool, then pass the data to the corresponding render tool to display a visual card."
+  },
+  "tools": {
+    "get_user_info": {
+      "description": "Get the authenticated user's base information: id, role, province, city, school memberships (with school slugs and roles), and student list (with student ids). Use this to discover student ids and school slugs needed by other tools.",
+      "category": "User & Wallet",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+      "inputs": {},
+      "output": {
+        "user": {
+          "id": "string",
+          "email": "string",
+          "firstName": "string",
+          "lastName": "string",
+          "userType": "string",
+          "city": "string",
+          "province": "string"
+        },
+        "role": "string",
+        "activeSchoolSlug": "string",
+        "memberships": [
+          {
+            "id": "string",
+            "schoolSlug": "string",
+            "isSchoolMaster": "boolean",
+            "isPac": "boolean",
+            "status": "string",
+            "schoolName": "string"
+          }
+        ],
+        "students": [
+          {
+            "id": "string",
+            "firstName": "string",
+            "lastName": "string",
+            "grade": "string",
+            "className": "string",
+            "allergies": "string|null"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads the authenticated user's profile, school memberships, and student list. This is the discovery endpoint - its output (school slugs, student IDs) is required as input parameters by nearly every other tool.",
+        "readOnlyJustification": "The tool only returns data about the currently authenticated user. It does not modify any records or expose data belonging to other users.",
+        "openWorldJustification": "All data is scoped to the authenticated user's own account and school memberships within the Paxaver platform. No external systems or third-party data are accessed."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "firstName": {
+                "type": "string"
+              },
+              "lastName": {
+                "type": "string"
+              },
+              "userType": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "province": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "email", "firstName", "lastName", "userType", "city", "province"]
+          },
+          "role": {
+            "type": "string"
+          },
+          "activeSchoolSlug": {
+            "type": "string"
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "schoolSlug": {
+                  "type": "string"
+                },
+                "isSchoolMaster": {
+                  "type": "boolean"
+                },
+                "isPac": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "schoolName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "grade": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                },
+                "allergies": {
+                  "type": "string|null"
+                }
+              }
+            }
+          }
+        },
+        "required": ["user", "role", "activeSchoolSlug", "memberships", "students"]
+      }
+    },
+    "get_wallet_balance": {
+      "description": "Get the current wallet balance for the user at a specific school.",
+      "category": "User & Wallet",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": false,
+          "description": "School slug (optional - defaults to the user's active school)"
+        }
+      },
+      "output": {
+        "balanceCents": "number",
+        "balanceFormatted": "string",
+        "currency": "string"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads the authenticated user's wallet balance for a specific school. The balance is needed so users can decide whether they have sufficient funds before placing a lunch order.",
+        "readOnlyJustification": "The tool only queries the current balance. It does not debit, credit, or modify the wallet in any way.",
+        "openWorldJustification": "Data is scoped to the authenticated user's own wallet account within Paxaver. No external financial systems are queried."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "balanceCents": {
+            "type": "number"
+          },
+          "balanceFormatted": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": ["balanceCents", "balanceFormatted", "currency"]
+      }
+    },
+    "order_lunch": {
+      "description": "Place a lunch order for a student at a specific school. If school_slug is omitted, the user's active school is used. If student_id is omitted and the user has exactly one student, that student is used automatically.",
+      "category": "Lunch & Ordering",
+      "readOnly": false,
+      "destructive": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": false,
+          "description": "School slug (optional - defaults to the user's active school)"
+        },
+        "student_id": {
+          "type": "string",
+          "required": false,
+          "description": "Student ID (optional - auto-selected if the user has one student)"
+        },
+        "menu_item_id": {
+          "type": "string",
+          "required": true
+        },
+        "menu_date": {
+          "type": "string",
+          "required": true,
+          "format": "YYYY-MM-DD"
+        },
+        "quantity": {
+          "type": "number",
+          "required": false,
+          "default": 1
+        }
+      },
+      "output": {
+        "orderId": "string",
+        "item": "string",
+        "quantity": "number",
+        "unitPriceCents": "number",
+        "totalCents": "number",
+        "totalFormatted": "string",
+        "status": "string"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Creates a lunch order record that debits the user's wallet and reserves a menu item for a student. Reads the daily menu to verify availability and the wallet to verify sufficient funds.",
+        "mutationJustification": "Placing an order is the core user action - without write access, the app cannot fulfill its primary purpose of placing lunch orders. The mutation is limited to creating an order record and adjusting the wallet balance by the exact item price.",
+        "destructiveJustification": "Not applicable - the tool does not delete or destroy data. It creates a new order and decrements the wallet balance.",
+        "openWorldJustification": "All operations are within the Paxaver platform: the user's wallet, the school's daily menu, and the student's order history. No external systems are involved."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "item": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitPriceCents": {
+            "type": "number"
+          },
+          "totalCents": {
+            "type": "number"
+          },
+          "totalFormatted": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": ["orderId", "item", "quantity", "unitPriceCents", "totalCents", "totalFormatted", "status"]
+      }
+    },
+    "get_orders": {
+      "description": "Get recent lunch orders at a specific school. Optionally filter to a single student by student_id; otherwise returns orders for all of the user's students.",
+      "category": "Lunch & Ordering",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": false,
+          "description": "School slug (optional - defaults to the user's active school)"
+        },
+        "student_id": {
+          "type": "string",
+          "required": false
+        }
+      },
+      "output": [
+        {
+          "id": "string",
+          "student": "string",
+          "item": "string",
+          "menu_date": "string",
+          "quantity": "number",
+          "unit_price_cents": "number",
+          "total_cents": "number",
+          "status": "string",
+          "created_at": "string"
+        }
+      ],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads recent lunch orders for the authenticated user's students at a specific school. Optionally filtered to a single student. Used to review past orders and confirm successful placements.",
+        "readOnlyJustification": "The tool only queries order records. It does not create, modify, or cancel orders.",
+        "openWorldJustification": "Data is scoped to orders belonging to the authenticated user's students within Paxaver. No external systems are accessed."
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "student": {
+              "type": "string"
+            },
+            "item": {
+              "type": "string"
+            },
+            "menu_date": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "unit_price_cents": {
+              "type": "number"
+            },
+            "total_cents": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "get_daily_menu": {
+      "description": "List available food options for a specific school on a specific day or month. Provide \"date\" (YYYY-MM-DD) for a single day, or \"month\" (YYYY-MM) for a whole month. If neither is given, defaults to today. If school_slug is omitted, the user's active school is used.",
+      "category": "Lunch & Ordering",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": false,
+          "description": "School slug (optional - defaults to the user's active school)"
+        },
+        "date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD"
+        },
+        "month": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM"
+        }
+      },
+      "output": [
+        {
+          "menu_item_id": "string",
+          "name": "string",
+          "description": "string",
+          "price_cents": "number",
+          "restaurant_name": "string",
+          "available_qty": "number",
+          "calories": "number",
+          "ingredients": "string"
+        }
+      ],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads the published daily or monthly lunch menu for a specific school, including item names, descriptions, prices, and availability. Used by parents to decide what to order.",
+        "readOnlyJustification": "The tool only queries published menu data. It does not modify menus or inventory.",
+        "openWorldJustification": "Data is scoped to the specified school's menu within Paxaver. No external systems are accessed."
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "menu_item_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "price_cents": {
+              "type": "number"
+            },
+            "restaurant_name": {
+              "type": "string"
+            },
+            "available_qty": {
+              "type": "number"
+            },
+            "calories": {
+              "type": "number"
+            },
+            "ingredients": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "get_daily_orders": {
+      "description": "List all lunch orders placed for a specific school day (school master/lunch coordinator).",
+      "category": "Lunch & Ordering",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "menu_date": {
+          "type": "string",
+          "required": true,
+          "format": "YYYY-MM-DD"
+        }
+      },
+      "output": {
+        "menuDate": "string",
+        "count": "number",
+        "orders": [
+          {
+            "id": "string",
+            "student": "string",
+            "restaurant": "string",
+            "item": "string",
+            "quantity": "number",
+            "unit_price_cents": "number",
+            "total_cents": "number",
+            "status": "string",
+            "created_at": "string"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads aggregated order data for a specific school on a specific date. Used by school masters and PAC members to see how many orders were placed and plan food preparation.",
+        "readOnlyJustification": "The tool only queries and aggregates order records. It does not modify orders.",
+        "openWorldJustification": "Data is scoped to orders at the specified school within Paxaver. No external systems are accessed."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "menuDate": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "student": {
+                  "type": "string"
+                },
+                "restaurant": {
+                  "type": "string"
+                },
+                "item": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit_price_cents": {
+                  "type": "number"
+                },
+                "total_cents": {
+                  "type": "number"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": ["menuDate", "count", "orders"]
+      }
+    },
+    "get_upcoming_events": {
+      "description": "Get upcoming events for a specific school within a date window (default: today to +30 days).",
+      "category": "School Management",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": false,
+          "description": "School slug (optional - defaults to the user's active school)"
+        },
+        "start_date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD",
+          "default": "today"
+        },
+        "end_date": {
+          "type": "string",
+          "required": false,
+          "format": "YYYY-MM-DD",
+          "default": "today+30days"
+        }
+      },
+      "output": [
+        {
+          "id": "string",
+          "title": "string",
+          "date": "string",
+          "description": "string"
+        }
+      ],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads upcoming school events (fundraisers, volunteer opportunities, PAC meetings) for a specific school. Used by parents and PAC members to stay informed.",
+        "readOnlyJustification": "The tool only queries published event data. It does not create, modify, or cancel events.",
+        "openWorldJustification": "Data is scoped to the specified school's events within Paxaver. No external calendar systems are accessed."
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "list_school_restaurants": {
+      "description": "List restaurants linked to a specific school.",
+      "category": "School Management",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "output": [
+        {
+          "id": "string",
+          "name": "string",
+          "description": "string",
+          "contact_name": "string",
+          "contact_email": "string",
+          "contact_phone": "string",
+          "tax_percent": "number"
+        }
+      ],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads the list of restaurants linked to a specific school, including contact details and status. Used by school masters to manage food vendors.",
+        "readOnlyJustification": "The tool only queries restaurant records. It does not create or modify restaurants.",
+        "openWorldJustification": "Data is scoped to the specified school's restaurant links within Paxaver. No external systems are accessed."
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "contact_name": {
+              "type": "string"
+            },
+            "contact_email": {
+              "type": "string"
+            },
+            "contact_phone": {
+              "type": "string"
+            },
+            "tax_percent": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "create_restaurant": {
+      "description": "Create a restaurant for a specific school (school master/lunch coordinator). Each restaurant belongs to exactly one school; if the same restaurant serves two schools, create two rows.",
+      "category": "School Management",
+      "readOnly": false,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "required": false
+        },
+        "contact_name": {
+          "type": "string",
+          "required": false
+        },
+        "contact_email": {
+          "type": "string",
+          "required": false
+        },
+        "contact_phone": {
+          "type": "string",
+          "required": false
+        },
+        "tax_percent": {
+          "type": "number",
+          "required": false
+        }
+      },
+      "output": {
+        "id": "string",
+        "name": "string",
+        "school_slug": "string"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Creates a new restaurant record linked to a specific school, including name, description, and contact information. Used by school masters to onboard new food vendors.",
+        "mutationJustification": "School masters need to add restaurants to the platform so that menus can be created and orders placed. Without write access, the app cannot fulfill its purpose of enabling lunch programs.",
+        "destructiveJustification": "Not applicable - the tool creates a new record. It does not delete or overwrite existing data.",
+        "openWorldJustification": "All operations are within the Paxaver platform. The new restaurant record is scoped to the specified school."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "school_slug": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "school_slug"]
+      }
+    },
+    "list_menu_items": {
+      "description": "List menu items for a restaurant with school-specific prices.",
+      "category": "School Management",
+      "readOnly": true,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "restaurant_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "output": [
+        {
+          "id": "string",
+          "name": "string",
+          "description": "string",
+          "cost_cents": "number",
+          "price_cents": "number|null",
+          "is_available": "boolean",
+          "ingredients": "string",
+          "calories": "number"
+        }
+      ],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Reads menu items for a specific restaurant, including name, description, ingredients, calories, dietary tags, and pricing. Used by school masters to review and manage their menu catalog.",
+        "readOnlyJustification": "The tool only queries menu item records. It does not create or modify items.",
+        "openWorldJustification": "Data is scoped to the specified restaurant's menu items within Paxaver. No external systems are accessed."
+      },
+      "outputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "cost_cents": {
+              "type": "number"
+            },
+            "price_cents": {
+              "type": "number|null"
+            },
+            "is_available": {
+              "type": "boolean"
+            },
+            "ingredients": {
+              "type": "string"
+            },
+            "calories": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "create_menu_item": {
+      "description": "Create a menu item for a restaurant at a specific school.",
+      "category": "School Management",
+      "readOnly": false,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "restaurant_id": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "required": false
+        },
+        "cost_cents": {
+          "type": "number",
+          "required": false
+        },
+        "ingredients": {
+          "type": "string",
+          "required": false,
+          "notes": "Comma-separated list"
+        },
+        "calories": {
+          "type": "number",
+          "required": false
+        }
+      },
+      "output": {
+        "id": "string",
+        "name": "string",
+        "restaurant_id": "string"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Creates a new menu item for a specific restaurant, including name, description, ingredients, calories, dietary tags, and cost. Used by school masters to build their menu catalog.",
+        "mutationJustification": "School masters need to add menu items so they can be scheduled in daily menus and ordered by parents. Without write access, the lunch ordering workflow cannot function.",
+        "destructiveJustification": "Not applicable - the tool creates a new record. It does not delete or overwrite existing data.",
+        "openWorldJustification": "All operations are within the Paxaver platform. The new menu item is scoped to the specified restaurant."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "restaurant_id": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "restaurant_id"]
+      }
+    },
+    "update_menu_item": {
+      "description": "Update a menu item for a restaurant, including its school-specific price and availability (price_cents / is_available). Setting price_cents upserts the school-specific price row.",
+      "category": "School Management",
+      "readOnly": false,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "restaurant_id": {
+          "type": "string",
+          "required": true
+        },
+        "menu_item_id": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": false
+        },
+        "description": {
+          "type": "string",
+          "required": false
+        },
+        "cost_cents": {
+          "type": "number",
+          "required": false
+        },
+        "ingredients": {
+          "type": "string",
+          "required": false
+        },
+        "calories": {
+          "type": "number",
+          "required": false
+        },
+        "is_active": {
+          "type": "boolean",
+          "required": false
+        },
+        "price_cents": {
+          "type": "number",
+          "required": false,
+          "notes": "School-specific price in cents (upserts restaurant_school_items)"
+        },
+        "is_available": {
+          "type": "boolean",
+          "required": false,
+          "notes": "Whether the item is available at this school (used with price_cents)"
+        }
+      },
+      "output": {
+        "id": "string",
+        "updated": "boolean"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Updates an existing menu item's name, description, ingredients, calories, dietary tags, cost, or active status. Used by school masters to keep menu information current.",
+        "mutationJustification": "Menu items change over time - prices are adjusted, ingredients are updated, items are deactivated. Without write access, school masters cannot maintain accurate menus.",
+        "destructiveJustification": "Not applicable - the tool modifies an existing record. It does not delete data. Deactivation is a soft state change (is_active = 0), not destruction.",
+        "openWorldJustification": "All operations are within the Paxaver platform. The update is scoped to the specified menu item."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "updated"]
+      }
+    },
+    "delete_menu_item": {
+      "description": "Deactivate a menu item at a specific school (soft delete - sets is_active = false).",
+      "category": "School Management",
+      "readOnly": false,
+      "destructive": true,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "restaurant_id": {
+          "type": "string",
+          "required": true
+        },
+        "menu_item_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "output": {
+        "id": "string",
+        "deactivated": "boolean"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Permanently deletes a menu item from a restaurant's catalog. Used by school masters to remove items that are no longer offered.",
+        "mutationJustification": "School masters need to remove obsolete menu items to keep their catalog clean and prevent parents from ordering unavailable items.",
+        "destructiveJustification": "Deletion is necessary because keeping inactive items indefinitely would clutter the menu and confuse users. The tool is restricted to school_master and platform_admin roles. Soft deletion (is_active = 0) is preferred for items that may return; hard deletion is for items that are permanently discontinued.",
+        "openWorldJustification": "All operations are within the Paxaver platform. The deletion is scoped to the specified menu item."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deactivated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "deactivated"]
+      }
+    },
+    "set_daily_menu": {
+      "description": "Assign a menu item to a date on the daily menu for a specific school.",
+      "category": "School Management",
+      "readOnly": false,
+      "destructive": false,
+      "roles": ["school_master", "pac_member", "platform_admin"],
+      "inputs": {
+        "school_slug": {
+          "type": "string",
+          "required": true
+        },
+        "restaurant_id": {
+          "type": "string",
+          "required": true
+        },
+        "menu_item_id": {
+          "type": "string",
+          "required": true
+        },
+        "menu_date": {
+          "type": "string",
+          "required": true,
+          "format": "YYYY-MM-DD"
+        },
+        "available_qty": {
+          "type": "number",
+          "required": false,
+          "notes": "Max servings available"
+        }
+      },
+      "output": {
+        "id": "string",
+        "menu_date": "string",
+        "menu_item_id": "string",
+        "assigned": "boolean"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "justifications": {
+        "dataAccess": "Sets the daily menu for a specific school by linking menu items to dates with availability quantities. Used by school masters to publish what will be served each day.",
+        "mutationJustification": "Daily menus must be set before parents can place orders. Without write access, the core ordering workflow cannot function - there would be nothing to order.",
+        "destructiveJustification": "Not applicable - the tool creates or updates daily menu entries. It does not delete data.",
+        "openWorldJustification": "All operations are within the Paxaver platform. The daily menu is scoped to the specified school and date."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "menu_date": {
+            "type": "string"
+          },
+          "menu_item_id": {
+            "type": "string"
+          },
+          "assigned": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "menu_date", "menu_item_id", "assigned"]
+      }
+    },
+    "create_event": {
+      "category": "School Management",
+      "description": "Create a school event (fundraiser, meeting, PAC event, etc.). Admin only (school master / PAC). Returns the created event ID.",
+      "readOnly": false,
+      "roles": ["school_master", "pac_member", "platform_admin"]
+    },
+    "update_event": {
+      "category": "School Management",
+      "description": "Update a school event's properties (name, description, date, times, location, capacity, ticket price, status). Pass only the fields to change. Admin only (school master / PAC).",
+      "readOnly": false,
+      "roles": ["school_master", "pac_member", "platform_admin"]
+    },
+    "cancel_event": {
+      "category": "School Management",
+      "description": "Cancel a school event (sets status to 'cancelled'). The event is not deleted - it remains in the database for record-keeping. Admin only (school master / PAC).",
+      "readOnly": false,
+      "roles": ["school_master", "pac_member", "platform_admin"]
+    },
+    "get_monthly_orders": {
+      "category": "Lunch & Ordering",
+      "description": "List all lunch orders for a specific month (YYYY-MM). Admin view (school master / lunch coordinator): all orders for the school. Parent view: only their students' orders. Respects the school ordering window.",
+      "readOnly": true,
+      "roles": ["parent", "school_master", "pac_member", "lunch_coordinator", "platform_admin"]
+    },
+    "update_student": {
+      "category": "Student",
+      "description": "Update a student's profile fields (first_name, last_name, known_as, grade, division, allergies, notes, birthday). Only the authenticated user's own students can be updated. Pass only the fields to change.",
+      "readOnly": false,
+      "roles": ["parent", "school_master", "pac_member", "platform_admin"]
+    }
+  },
+  "testCases": {
+    "prerequisites": "All test cases require a Paxaver account with at least one active school membership, at least one student (for parent-role tests), wallet balance > $0 (for ordering tests), and at least one restaurant with menu items and a daily menu entry for the test date. The tester signs in via OAuth when ChatGPT first connects.",
+    "positive": [
+      {
+        "id": "pos-1",
+        "scenario": "View today's lunch menu",
+        "userPrompt": "What's for lunch at my kid's school today?",
+        "toolsTriggered": ["get_user_info", "get_daily_menu"],
+        "expectedOutput": "ChatGPT calls get_user_info to find the user's active school and student list. It then calls get_daily_menu with today's date. The response contains menu items with menuItemId, menuItemName, restaurantName, priceCents, and priceWithTax. ChatGPT summarizes the options in text, showing each item with its name, price (including tax), and restaurant."
+      },
+      {
+        "id": "pos-2",
+        "scenario": "Check wallet balance",
+        "userPrompt": "How much money do I have in my lunch wallet?",
+        "toolsTriggered": ["get_user_info", "get_wallet_balance"],
+        "expectedOutput": "ChatGPT calls get_user_info to confirm the active school, then calls get_wallet_balance. The response contains balanceCents (integer), balanceFormatted (e.g. \"$42.50\"), and currency (\"CAD\"). ChatGPT states the balance in text, e.g. \"Your lunch wallet balance is $42.50 CAD.\""
+      },
+      {
+        "id": "pos-3",
+        "scenario": "Place a lunch order",
+        "userPrompt": "Order a pepperoni pizza for Emma for lunch this Friday.",
+        "toolsTriggered": ["get_user_info", "get_daily_menu", "order_lunch"],
+        "expectedOutput": "ChatGPT calls get_user_info to find Emma's student_id. It calls get_daily_menu for Friday's date to find the pepperoni pizza menuItemId and confirms it's available. It calls order_lunch with the required parameters. The response contains orderId, item, quantity, unitPriceCents, totalCents, totalFormatted (e.g. \"$6.50\"), and status: \"confirmed\". ChatGPT confirms the order in text, e.g. \"Done - I've ordered 1 pepperoni pizza for Emma on Friday. Order total: $6.50. Your order ID is [id].\""
+      },
+      {
+        "id": "pos-4",
+        "scenario": "View order history",
+        "userPrompt": "Show me my recent lunch orders.",
+        "toolsTriggered": ["get_user_info", "get_orders"],
+        "expectedOutput": "ChatGPT calls get_user_info to find the school slug, then calls get_orders. The response is an array of up to 20 recent orders, each with id, student (name), item (name), menu_date, quantity, unit_price_cents, total_cents, status, and created_at. ChatGPT presents the orders in a readable list or table."
+      },
+      {
+        "id": "pos-5",
+        "scenario": "A PAC member wants to see all lunch orders for the school this month.",
+        "userPrompt": "Show me all the lunch orders for our school this month.",
+        "toolsTriggered": ["get_user_info", "get_monthly_orders"],
+        "expectedOutput": "ChatGPT calls get_user_info and sees the user's role is pac_member or school_master. It calls get_monthly_orders with the current month (YYYY-MM). The response contains month, count, and an orders array, each with id, student, restaurant, item, menu_date, quantity, total_cents, status, and created_at. ChatGPT summarizes the orders in text, presenting the total count and a breakdown by date or student."
+      },
+      {
+        "id": "pos-6",
+        "scenario": "Set the daily menu (school master)",
+        "userPrompt": "Add the cheese sandwich to the daily menu for next Tuesday at our school.",
+        "toolsTriggered": ["get_user_info", "list_school_restaurants", "list_menu_items", "set_daily_menu"],
+        "expectedOutput": "ChatGPT calls get_user_info to find the school slug, list_school_restaurants to find the restaurant, list_menu_items to find the cheese sandwich's menu_item_id, then set_daily_menu with the required parameters. The response confirms the menu item was assigned to the date."
+      }
+    ],
+    "negative": [
+      {
+        "id": "neg-1",
+        "scenario": "Order lunch for a non-existent student",
+        "userPrompt": "Order a pizza for student ID 00000000-0000-0000-0000-000000000000 for lunch tomorrow.",
+        "toolsTriggered": ["get_user_info", "order_lunch"],
+        "expectedOutput": "ChatGPT calls get_user_info and sees the requested student ID is not in the user's student list. It calls order_lunch which returns { error: 'Student not found' }. ChatGPT informs the user that the student was not found and asks them to verify the student name or ID. No order is placed."
+      },
+      {
+        "id": "neg-2",
+        "scenario": "Order a menu item not available on the requested date",
+        "userPrompt": "Order a sushi roll for Emma for lunch tomorrow.",
+        "toolsTriggered": ["get_user_info", "get_daily_menu", "order_lunch"],
+        "expectedOutput": "ChatGPT calls get_daily_menu for tomorrow and finds sushi is not listed. If it proceeds to call order_lunch with an invalid menu_item_id for that date, the server returns { error: 'Menu item not available for this date' }. ChatGPT informs the user that sushi is not available tomorrow and shows what is available instead. No order is placed."
+      },
+      {
+        "id": "neg-3",
+        "scenario": "A regular parent (no PAC or school master role) tries to view all orders for a school day.",
+        "userPrompt": "Show me all the lunch orders for the school today.",
+        "toolsTriggered": ["get_user_info", "get_daily_orders"],
+        "expectedOutput": "ChatGPT calls get_user_info and sees the user's role is parent (not pac_member, school_master, or lunch_coordinator). It calls get_daily_orders, which returns an error indicating admin access is required. ChatGPT informs the user that they don't have permission to view all orders and suggests using get_orders to see their own students' orders instead."
+      },
+      {
+        "id": "neg-4",
+        "scenario": "Order lunch with insufficient wallet balance",
+        "userPrompt": "Order 5 pizzas for Emma for lunch tomorrow.",
+        "toolsTriggered": ["get_user_info", "get_daily_menu", "get_wallet_balance", "order_lunch"],
+        "expectedOutput": "ChatGPT calls get_wallet_balance and sees the balance is less than the order total. It should warn the user that their wallet balance is insufficient before placing the order. If it proceeds with order_lunch and the server rejects it, the response contains an error. ChatGPT informs the user of the insufficient balance and suggests topping up at paxaver.com/wallet."
+      },
+      {
+        "id": "neg-5",
+        "scenario": "Call a tool without authentication",
+        "userPrompt": "(Server-level test - direct HTTP request without Authorization header)",
+        "toolsTriggered": [],
+        "expectedOutput": "The server returns 401 Unauthorized with a WWW-Authenticate header pointing to /.well-known/oauth-protected-resource. The JSON body is { error: 'Authorization required' }. ChatGPT should initiate the OAuth flow to obtain a valid token."
+      },
+      {
+        "id": "neg-6",
+        "scenario": "Call a tool with an invalid/revoked token",
+        "userPrompt": "(Server-level test - direct HTTP request with an expired or revoked Bearer token)",
+        "toolsTriggered": [],
+        "expectedOutput": "The server returns 401 Unauthorized with { error: 'Invalid, revoked or expired token' } (legacy token) or a JWT verification failure (OAuth token). ChatGPT should prompt the user to re-authorize via the OAuth flow."
+      }
+    ]
+  },
+  "branding": {
+    "logo": {
+      "required": true,
+      "minSize": "512x512px",
+      "format": ["PNG", "SVG"],
+      "notes": "Square app icon, recognizable at small sizes. Use Paxaver brand colors."
+    },
+    "screenshots": {
+      "required": true,
+      "count": "1-4",
+      "format": ["PNG", "JPG"],
+      "width": 706,
+      "heightRange": "400-860",
+      "retinaRequired": true,
+      "retinaWidth": 1412,
+      "notes": "Show ONLY the ChatGPT conversation content - no user prompts or model raw output.",
+      "recommended": [
+        "Lunch Menu - ChatGPT response to \"What's for lunch today?\" showing menu items with names, prices, and restaurants. Primary use case, screenshot #1.",
+        "Order Confirmation - ChatGPT response after placing an order, showing item name, date, quantity, total, and order ID.",
+        "Wallet Balance - ChatGPT response showing the current wallet balance with currency.",
+        "Monthly Orders (admin) - ChatGPT response showing all lunch orders for a month (admin/PAC view)."
+      ]
+    },
+    "videoDemo": {
+      "required": true,
+      "length": "30-60 seconds",
+      "format": ["MP4 (H.264)", "MOV"],
+      "content": [
+        "User asks 'What's for lunch today?' in ChatGPT",
+        "OAuth sign-in flow (brief - Paxaver login page and redirect back)",
+        "Lunch menu widget appears (ChatGPT responds with the daily menu)",
+        "User asks to place an order",
+        "Order confirmation widget appears (ChatGPT confirms the order)"
+      ],
+      "notes": "No narration needed. Ensure no real user PII is visible."
+    }
+  },
+  "global": {
+    "defaultLanguage": "en",
+    "supportedLocales": ["en", "fr", "es", "ar", "hi", "pa", "tl", "ur", "zh"],
+    "localeNames": {
+      "en": "English",
+      "fr": "Français",
+      "es": "Español",
+      "ar": "العربية",
+      "hi": "हिन्दी",
+      "pa": "ਪੰਜਾਬੀ",
+      "tl": "Tagalog",
+      "ur": "اردو",
+      "zh": "中文"
+    },
+    "localizations": {
+      "en": {
+        "shortDescription": "Paxaver is the school community operating system that connects PACs, schools, and families. Use this app to check lunch menus, place lunch orders, view wallet balances, and manage school restaurant menus - all from ChatGPT."
+      },
+      "fr": {
+        "shortDescription": "Paxaver est la plateforme communautaire scolaire qui connecte les comités de parents (PAC), les écoles et les familles. Utilisez cette application pour consulter les menus du dîner, passer des commandes de dîner chaud, voir le solde du portefeuille et gérer les menus de restaurant scolaire - le tout depuis ChatGPT."
+      },
+      "es": {
+        "shortDescription": "Paxaver es la plataforma de comunidad escolar que conecta los PAC, las escuelas y las familias. Use esta aplicación para consultar los menús del almuerzo, hacer pedidos de almuerzo caliente, ver los saldos de la billetera y gestionar los menús del restaurante escolar - todo desde ChatGPT."
+      },
+      "ar": {
+        "shortDescription": "Paxaver هو نظام تشغيل المجتمع المدرسي الذي يربط لجان الآباء (PAC) والمدارس والعائلات. استخدم هذا التطبيق لعرض قوائم الغداء وتقديم طلبات الغداء الساخن وعرض أرصدة المحفظة وإدارة قوائم مطاعم المدارس - كل ذلك من ChatGPT."
+      },
+      "hi": {
+        "shortDescription": "Paxaver वह स्कूल समुदाय मंच है जो PAC, स्कूलों और परिवारों को जोड़ता है। इस ऐप का उपयोग लंच मेनू देखने, हॉट लंच ऑर्डर करने, वॉलेट बैलेंस देखने और स्कूल रेस्टोरेंट मेनू प्रबंधित करने के लिए करें - यह सब ChatGPT से।"
+      },
+      "pa": {
+        "shortDescription": "Paxaver ਇੱਕ ਸਕੂਲ ਭਾਈਚਾਰਾ ਪਲੇਟਫਾਰਮ ਹੈ ਜੋ PAC, ਸਕੂਲਾਂ ਅਤੇ ਪਰਿਵਾਰਾਂ ਨੂੰ ਜੋੜਦਾ ਹੈ। ਇਸ ਐਪ ਦੀ ਵਰਤੋਂ ਲੰਚ ਮੀਨੂ ਵੇਖਣ, ਹੌਟ ਲੰਚ ਆਰਡਰ ਕਰਨ, ਵਾਲਿਟ ਬੈਲੇਨਸ ਵੇਖਣ ਅਤੇ ਸਕੂਲ ਰੈਸਟੋਰੈਂਟ ਮੀਨੂ ਪ੍ਰਬੰਧਿਤ ਕਰਨ ਲਈ ਕਰੋ - ਇਹ ਸਭ ChatGPT ਤੋਂ।"
+      },
+      "tl": {
+        "shortDescription": "Ang Paxaver ay ang platform ng school community na nag-uugnay sa mga PAC, paaralan, at pamilya. Gamitin ang app na ito para tingnan ang mga menu ng tanghalian, mag-order ng mainit na tanghalian, tingnan ang balanse ng wallet, at pamahalaan ang mga menu ng restaurant ng paaralan - lahat mula sa ChatGPT."
+      },
+      "ur": {
+        "shortDescription": "Paxaver وہ اسکول کمیونٹی پلیٹ فارم ہے جو PAC، اسکولوں اور خاندانوں کو جوڑتا ہے۔ اس ایپ کا استعمال لنچ مینو دیکھنے، ہاٹ لنچ آرڈر کرنے، والٹ بیلنس دیکھنے اور اسکول ریستوران مینو کے انتظام کے لیے کریں - یہ سب ChatGPT سے۔"
+      },
+      "zh": {
+        "shortDescription": "Paxaver 是连接家委会（PAC）、学校和家庭的学校社区平台。使用此应用查看午餐菜单、下热午餐订单、查看钱包余额并管理学校餐厅菜单 - 全部通过 ChatGPT 完成。"
+      }
+    },
+    "countriesByListing": {
+      "Paxaver (Canada)": ["CA"],
+      "Paxaver (US)": ["US"]
+    }
+  },
+  "submit": {
+    "version": "1.0.0",
+    "releaseNotes": "Initial release of the Paxaver ChatGPT app.\n\nFeatures:\n- View daily and monthly lunch menus for your school\n- Place lunch orders for your students\n- Check wallet balance and view order history\n- Visual menu, order confirmation, and wallet balance widgets\n- School management tools for PAC members and school masters: financial summaries, school statistics, restaurant and menu item management, daily menu scheduling, and daily order views\n- Secure OAuth 2.1 sign-in with your Paxaver account\n- Canada and US regional deployments",
+    "compliance": {
+      "collectsPersonalData": true,
+      "personalDataNotes": "The MCP server accesses the user's Paxaver account data (name, email, school memberships, student information, wallet balance, order history). Data is not stored by the app - it is fetched from the existing Paxaver D1 database in real time. Data is not shared with third parties, not used for advertising. The user explicitly authorizes access via OAuth and can revoke at any time.",
+      "makesFinancialTransactions": false,
+      "financialTransactionsNotes": "No payments processed through ChatGPT. Orders placed against existing wallet balance (pre-funded via paxaver.com). No credit card info transmitted through MCP.",
+      "accessesSensitiveData": true,
+      "sensitiveDataNotes": "Wallet balance and order history (financial), student allergy info (health-adjacent). Only accessible after explicit OAuth authorization, scoped to user's own data, protected by JWT with 1-hour expiry.",
+      "targetsChildren": false,
+      "targetsChildrenNotes": "Designed for parents, school staff, and PAC members (adults). Students do not use the ChatGPT app.",
+      "usesAiToGenerateContent": false,
+      "usesAiNotes": "MCP server returns structured data from the Paxaver database. ChatGPT (host) generates natural language responses.",
+      "hasPrivacyPolicy": true,
+      "privacyPolicyUrl": "https://paxaver.com/privacy",
+      "hasTermsOfService": true,
+      "termsOfServiceUrl": "https://paxaver.com/privacy/terms",
+      "isOpenSource": false,
+      "license": "Proprietary - All rights reserved."
+    },
+    "preSubmissionChecklist": [
+      "Deploy both MCP servers with CHATGPT_VERIFY_TOKEN secret set",
+      "Verify verification endpoint returns 200: curl https://mcp-ca.paxaver.com/.well-known/chatgpt-verification/<token>",
+      "Verify OAuth discovery endpoints return valid JSON: curl https://mcp-ca.paxaver.com/.well-known/oauth-authorization-server",
+      "Complete a full OAuth flow test (sign in, get token, call get_user_info)",
+      "Upload the app logo (512x512px)",
+      "Upload 1-4 screenshots (706px wide, at least one 2x retina)",
+      "Upload the video demo",
+      "Enter all App Info fields (description, website, support, privacy, terms URLs)",
+      "Enter the MCP server URL and verification token",
+      "Enter all 6 positive + 6 negative test cases",
+      "Select countries (Canada for CA listing, US for US listing)",
+      "Enter release notes",
+      "Complete all compliance questions",
+      "Submit and wait for OpenAI review"
+    ]
+  },
+  "deployment": {
+    "platform": "Cloudflare Workers",
+    "repository": "smartoire/paxaver",
+    "mcpServerPath": "mcp-server/",
+    "verificationEndpoint": {
+      "method": "GET",
+      "path": "/.well-known/chatgpt-verification/:token",
+      "successResponse": "verify Ownership (200, text/plain)",
+      "failureResponse": "Not found (404)",
+      "envVar": "CHATGPT_VERIFY_TOKEN",
+      "setupCommands": [
+        "cd mcp-server",
+        "wrangler secret put CHATGPT_VERIFY_TOKEN --config wrangler.ca.toml",
+        "wrangler secret put CHATGPT_VERIFY_TOKEN --config wrangler.us.toml",
+        "npm run deploy"
+      ]
+    }
+  }
+}

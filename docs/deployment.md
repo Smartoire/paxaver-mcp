@@ -16,7 +16,7 @@ Config lives in [`wrangler.jsonc`](../wrangler.jsonc). Key fields:
   "compatibility_flags": ["nodejs_compat"],
   "preview_urls": false,
   "observability": { "enabled": true, "head_sampling_rate": 1 },
-  "vars": { /* top-level defaults for local dev */ }
+  "vars": {/* top-level defaults for local dev */},
 }
 ```
 
@@ -26,10 +26,10 @@ Config lives in [`wrangler.jsonc`](../wrangler.jsonc). Key fields:
 
 ## Environments
 
-| `--env` | Worker name | Domain | API backends |
-| ------- | ----------- | ------ | ------------ |
-| `staging` | `paxaver-mcp-staging` | `mcp.paxaver.dev` | `api.paxaver.dev` |
-| `production` | `paxaver-mcp` | `mcp.paxaver.com` | `api.paxaver.ca` + `api.paxaver.com` |
+| `--env`      | Worker name           | Domain            | API backends                         |
+| ------------ | --------------------- | ----------------- | ------------------------------------ |
+| `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev` | `api.paxaver.dev`                    |
+| `production` | `paxaver-mcp`         | `mcp.paxaver.com` | `api.paxaver.ca` + `api.paxaver.com` |
 
 Each environment declares its own `vars` (region, currency, allowed origins,
 API base URL) and `routes` (custom domain). The top-level config is used for
@@ -78,12 +78,12 @@ binding is required for production.
 
 Set per environment with `wrangler secret put --env <env> <NAME>`:
 
-| Secret | Required | Purpose |
-| ------ | -------- | ------- |
-| `JWT_SECRET` | **yes** | Signs OAuth access tokens **and** short-lived service-binding JWTs. Shared with the backend Worker. |
-| `GOOGLE_CLIENT_ID` | no | Google sign-in. |
-| `GOOGLE_CLIENT_SECRET` | no | Google sign-in. |
-| `CHATGPT_VERIFY_TOKEN` | no | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`). |
+| Secret                 | Required | Purpose                                                                                             |
+| ---------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET`           | **yes**  | Signs OAuth access tokens **and** short-lived service-binding JWTs. Shared with the backend Worker. |
+| `GOOGLE_CLIENT_ID`     | no       | Google sign-in.                                                                                     |
+| `GOOGLE_CLIENT_SECRET` | no       | Google sign-in.                                                                                     |
+| `CHATGPT_VERIFY_TOKEN` | no       | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`).                     |
 
 > `JWT_SECRET` must be identical between the MCP Worker and the Paxaver API
 > Worker in the same region, because both sign and verify service JWTs with it.

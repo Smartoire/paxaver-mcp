@@ -1,0 +1,256 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "Paxaver",
+    "subtitle": "Manage school activities",
+    "description": "Paxaver helps families and PACs manage school activities. Parents can check menus, place orders, review wallet activity, buy event tickets, and volunteer. School staff can manage menus, restaurants, events, and order reports.",
+    "category": "EDUCATION"
+  },
+  "tools": {
+    "get_user_info": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves the signed-in user's school memberships and linked students without changing records.",
+        "open_world_justification": "Only reads data from the user's private Paxaver account.",
+        "destructive_justification": "Does not delete, overwrite, send, or revoke anything."
+      }
+    },
+    "update_student": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Updates profile fields for a student linked to the signed-in user.",
+        "open_world_justification": "Changes a private student record within Paxaver only.",
+        "destructive_justification": "Edits student fields but does not delete the student or send external communications."
+      }
+    },
+    "get_wallet_balance": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Reads the current balance of the user's active-school wallet.",
+        "open_world_justification": "Only retrieves private Paxaver wallet data.",
+        "destructive_justification": "Does not change wallet funds or account settings."
+      }
+    },
+    "add_funds": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": true, "destructiveHint": true },
+      "justifications": {
+        "read_only_justification": "Creates a pending wallet deposit and a Stripe Checkout session.",
+        "open_world_justification": "Creates a Stripe payment session and sends a payment-link email to the user's email address.",
+        "destructive_justification": "Sends a payment-link email that cannot be recalled after delivery."
+      }
+    },
+    "get_wallet_status": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves the wallet balance, recent transactions, and pending deposits.",
+        "open_world_justification": "Only reads private Paxaver wallet information.",
+        "destructive_justification": "Does not create, modify, or remove financial records."
+      }
+    },
+    "order_lunch": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Creates a lunch order and charges the user's Paxaver wallet.",
+        "open_world_justification": "Changes private school-order and wallet records within Paxaver.",
+        "destructive_justification": "Creates an order and payment record but does not delete data or send an irreversible external message."
+      }
+    },
+    "get_orders": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves recent lunch orders for the user's linked students.",
+        "open_world_justification": "Only reads private Paxaver order records.",
+        "destructive_justification": "Does not create, alter, or cancel orders."
+      }
+    },
+    "get_daily_orders": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves school-day order records for authorized staff.",
+        "open_world_justification": "Only reads private Paxaver school data.",
+        "destructive_justification": "Does not change any order or student record."
+      }
+    },
+    "get_monthly_orders": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves a month's orders scoped to the user or authorized school staff.",
+        "open_world_justification": "Only reads private Paxaver order records.",
+        "destructive_justification": "Does not alter orders or wallet balances."
+      }
+    },
+    "get_updates": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Compiles the user's wallet, upcoming orders, events, and attention items without changing data.",
+        "open_world_justification": "Only reads private Paxaver account data.",
+        "destructive_justification": "Does not modify records or send notifications."
+      }
+    },
+    "get_upcoming_events": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves upcoming events in the user's school context.",
+        "open_world_justification": "Only reads private Paxaver school data.",
+        "destructive_justification": "Does not create, modify, or cancel events."
+      }
+    },
+    "create_event": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Creates an event in the authorized school's Paxaver workspace.",
+        "open_world_justification": "Creates a record in a private school system and does not publish externally.",
+        "destructive_justification": "Creates an event but does not delete or revoke existing data."
+      }
+    },
+    "update_event": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Updates fields on an existing event in the authorized school.",
+        "open_world_justification": "Changes a private Paxaver event record only.",
+        "destructive_justification": "Edits an event but does not delete it or send an external message."
+      }
+    },
+    "cancel_event": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": true },
+      "justifications": {
+        "read_only_justification": "Changes an event's status to cancelled in the authorized school.",
+        "open_world_justification": "Changes a private Paxaver event record only.",
+        "destructive_justification": "Cancels an event, making it unavailable to participants."
+      }
+    },
+    "list_school_restaurants": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves active restaurants linked to the authorized school.",
+        "open_world_justification": "Only reads private Paxaver school data.",
+        "destructive_justification": "Does not create, modify, or deactivate restaurants."
+      }
+    },
+    "create_restaurant": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Creates a restaurant record for the authorized school.",
+        "open_world_justification": "Creates a private Paxaver school record and does not publish externally.",
+        "destructive_justification": "Creates a restaurant without deleting or overwriting existing records."
+      }
+    },
+    "list_menu_items": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves active menu items and school-specific prices for a restaurant.",
+        "open_world_justification": "Only reads private Paxaver school data.",
+        "destructive_justification": "Does not modify menu items or prices."
+      }
+    },
+    "create_menu_item": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Creates a menu item and optional price for an authorized school's restaurant.",
+        "open_world_justification": "Creates a private Paxaver school record and does not publish externally.",
+        "destructive_justification": "Creates a menu item without deleting existing menu data."
+      }
+    },
+    "update_menu_item": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Updates menu-item details, availability, costs, or school-specific prices.",
+        "open_world_justification": "Changes private Paxaver school data only.",
+        "destructive_justification": "Edits item fields but does not delete the menu item."
+      }
+    },
+    "delete_menu_item": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": true },
+      "justifications": {
+        "read_only_justification": "Deactivates a menu item in the authorized school's restaurant.",
+        "open_world_justification": "Changes a private Paxaver school record only.",
+        "destructive_justification": "Makes the selected menu item inactive, removing it from active use."
+      }
+    },
+    "set_daily_menu": {
+      "annotations": { "readOnlyHint": false, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Creates or updates a daily-menu assignment and its available quantity.",
+        "open_world_justification": "Changes private Paxaver school menu data only.",
+        "destructive_justification": "Changes a menu assignment but does not delete menu records."
+      }
+    },
+    "get_daily_menu": {
+      "annotations": { "readOnlyHint": true, "openWorldHint": false, "destructiveHint": false },
+      "justifications": {
+        "read_only_justification": "Retrieves daily-menu entries for the requested date or month.",
+        "open_world_justification": "Only reads private Paxaver school menu data.",
+        "destructive_justification": "Does not change menu entries or orders."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "View lunch choices for a linked student’s school.",
+      "user_prompt": "What's for lunch at my kid's school tomorrow?",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_user_info, get_daily_menu",
+      "expected_output": "Returns the active school and available lunch items for tomorrow with names, restaurants, and prices.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Review the current lunch-wallet balance.",
+      "user_prompt": "How much is in my lunch wallet?",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_wallet_balance",
+      "expected_output": "Returns the current balance in a readable currency format.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Place a lunch order from the selected daily menu.",
+      "user_prompt": "Order one of the pizza options for Emma this Friday.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_user_info, get_daily_menu, order_lunch",
+      "expected_output": "After confirmation, creates the order and returns its item, quantity, total, and status.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Review this month’s lunch orders.",
+      "user_prompt": "Show my children's lunch orders for this month.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_monthly_orders",
+      "expected_output": "Returns the month's scoped order history with the date, student, item, total, and status.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Assign an existing menu item to an upcoming date for authorized staff.",
+      "user_prompt": "Add the cheese sandwich to next Tuesday's daily menu.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_user_info, list_school_restaurants, list_menu_items, set_daily_menu",
+      "expected_output": "For an authorized staff account, confirms that the selected item was assigned to the requested date.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Do not invoke Paxaver for a general weather question.",
+      "user_prompt": "Will it rain in Vancouver tomorrow?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because weather is outside Paxaver's school-account workflows.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not invoke Paxaver for unrelated personal email management.",
+      "user_prompt": "Find the last email from my dentist.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because it cannot access personal email.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not invoke Paxaver to create a restaurant reservation.",
+      "user_prompt": "Book a table for two at a sushi restaurant tonight.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because it manages school activities for parents and PACs, not public restaurant reservations.",
+      "expected_output_url": null
+    }
+  ]
+}

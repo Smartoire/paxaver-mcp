@@ -1,8 +1,8 @@
 # Authorization
 
 Authorization is enforced in **two layers** — defense-in-depth. The MCP server
-enforces the *interface-level* policy (who can see and call which tool). The
-backend re-enforces the *data-level* policy (which school, which student, whether
+enforces the _interface-level_ policy (who can see and call which tool). The
+backend re-enforces the _data-level_ policy (which school, which student, whether
 the entitlement is active) on every service-binding call.
 
 ## How it works
@@ -23,44 +23,44 @@ gating in both functions.
 Every tool has an explicit entry in `TOOL_POLICIES` (`src/lib/policy.ts`).
 Fields:
 
-| Field | Meaning |
-| ----- | ------- |
-| `capability` | Canonical capability the tool exercises (`null` = admin-only, gated by role) |
-| `requiresEntitlement` | Whether an active paid entitlement is required (backend enforces) |
-| `classifications` | Safety labels: `READ`, `WRITE`, `FINANCIAL`, `DESTRUCTIVE`, `ADMIN`, `PRIVACY_SENSITIVE` |
-| `requiredRoles` | Roles that may invoke at the active school. Empty = any member |
-| `mutates` | Whether the tool mutates persistent state |
-| `financial` | Whether the tool has financial impact |
-| `destructive` | Whether the tool is irreversible |
-| `requiresConfirmation` | Whether the AI client should prompt the user before calling |
+| Field                  | Meaning                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `capability`           | Canonical capability the tool exercises (`null` = admin-only, gated by role)             |
+| `requiresEntitlement`  | Whether an active paid entitlement is required (backend enforces)                        |
+| `classifications`      | Safety labels: `READ`, `WRITE`, `FINANCIAL`, `DESTRUCTIVE`, `ADMIN`, `PRIVACY_SENSITIVE` |
+| `requiredRoles`        | Roles that may invoke at the active school. Empty = any member                           |
+| `mutates`              | Whether the tool mutates persistent state                                                |
+| `financial`            | Whether the tool has financial impact                                                    |
+| `destructive`          | Whether the tool is irreversible                                                         |
+| `requiresConfirmation` | Whether the AI client should prompt the user before calling                              |
 
 ### Full table
 
-| Tool | Capability | Entitlement | Classifications | Required roles | Mutates | Financial | Destructive | Confirm |
-| ---- | ---------- | ----------- | --------------- | -------------- | ------- | --------- | ----------- | ------- |
-| `get_user_info` | `view_account` | no | READ | *(any)* | no | no | no | no |
-| `update_student` | `view_account` | no | WRITE, PRIVACY_SENSITIVE | *(any)* | yes | no | no | **yes** |
-| `get_wallet_balance` | `view_balance` | no | READ, PRIVACY_SENSITIVE | *(any)* | no | no | no | no |
-| `get_wallet_status` | `view_balance` | no | READ, PRIVACY_SENSITIVE | *(any)* | no | no | no | no |
-| `add_funds` | `view_balance` | yes | FINANCIAL, WRITE | *(any)* | yes | yes | no | **yes** |
-| `order_lunch` | `ai_write` | yes | FINANCIAL, WRITE | *(any)* | yes | yes | no | **yes** |
-| `get_orders` | `view_orders` | no | READ | *(any)* | no | no | no | no |
-| `get_daily_menu` | `view_menu` | no | READ | *(any)* | no | no | no | no |
-| `get_updates` | `view_orders` | no | READ | *(any)* | no | no | no | no |
-| `get_upcoming_events` | `view_events` | no | READ | *(any)* | no | no | no | no |
-| `create_event` | `ai_write` | yes | WRITE, ADMIN | school_master, event_cordinator | yes | no | no | **yes** |
-| `update_event` | `ai_write` | yes | WRITE, ADMIN | school_master, event_cordinator | yes | no | no | **yes** |
-| `cancel_event` | `ai_write` | yes | DESTRUCTIVE, ADMIN | school_master, event_cordinator | yes | no | yes | **yes** |
-| `list_school_restaurants` | *(null)* | no | READ, ADMIN | school_master, pac_member, lunch_cordinator | no | no | no | no |
-| `create_restaurant` | *(null)* | no | WRITE, ADMIN | school_master | yes | no | no | **yes** |
-| `list_menu_items` | *(null)* | no | READ, ADMIN | school_master, lunch_cordinator | no | no | no | no |
-| `create_menu_item` | *(null)* | no | WRITE, ADMIN | school_master, lunch_cordinator | yes | no | no | **yes** |
-| `update_menu_item` | *(null)* | no | WRITE, ADMIN | school_master, lunch_cordinator | yes | no | no | **yes** |
-| `set_menu_item_price` | *(null)* | no | WRITE, ADMIN, FINANCIAL | school_master, lunch_cordinator | yes | yes | no | **yes** |
-| `delete_menu_item` | *(null)* | no | DESTRUCTIVE, ADMIN | school_master, lunch_cordinator | yes | no | yes | **yes** |
-| `set_daily_menu` | *(null)* | no | WRITE, ADMIN | school_master, lunch_cordinator | yes | no | no | **yes** |
-| `get_daily_orders` | *(null)* | no | READ, ADMIN | school_master, lunch_cordinator | no | no | no | no |
-| `get_monthly_orders` | *(null)* | no | READ, ADMIN | *(any)* | no | no | no | no |
+| Tool                      | Capability     | Entitlement | Classifications          | Required roles                              | Mutates | Financial | Destructive | Confirm |
+| ------------------------- | -------------- | ----------- | ------------------------ | ------------------------------------------- | ------- | --------- | ----------- | ------- |
+| `get_user_info`           | `view_account` | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
+| `update_student`          | `view_account` | no          | WRITE, PRIVACY_SENSITIVE | _(any)_                                     | yes     | no        | no          | **yes** |
+| `get_wallet_balance`      | `view_balance` | no          | READ, PRIVACY_SENSITIVE  | _(any)_                                     | no      | no        | no          | no      |
+| `get_wallet_status`       | `view_balance` | no          | READ, PRIVACY_SENSITIVE  | _(any)_                                     | no      | no        | no          | no      |
+| `add_funds`               | `view_balance` | yes         | FINANCIAL, WRITE         | _(any)_                                     | yes     | yes       | no          | **yes** |
+| `order_lunch`             | `ai_write`     | yes         | FINANCIAL, WRITE         | _(any)_                                     | yes     | yes       | no          | **yes** |
+| `get_orders`              | `view_orders`  | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
+| `get_daily_menu`          | `view_menu`    | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
+| `get_updates`             | `view_orders`  | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
+| `get_upcoming_events`     | `view_events`  | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
+| `create_event`            | `ai_write`     | yes         | WRITE, ADMIN             | school_master, event_cordinator             | yes     | no        | no          | **yes** |
+| `update_event`            | `ai_write`     | yes         | WRITE, ADMIN             | school_master, event_cordinator             | yes     | no        | no          | **yes** |
+| `cancel_event`            | `ai_write`     | yes         | DESTRUCTIVE, ADMIN       | school_master, event_cordinator             | yes     | no        | yes         | **yes** |
+| `list_school_restaurants` | _(null)_       | no          | READ, ADMIN              | school_master, pac_member, lunch_cordinator | no      | no        | no          | no      |
+| `create_restaurant`       | _(null)_       | no          | WRITE, ADMIN             | school_master                               | yes     | no        | no          | **yes** |
+| `list_menu_items`         | _(null)_       | no          | READ, ADMIN              | school_master, lunch_cordinator             | no      | no        | no          | no      |
+| `create_menu_item`        | _(null)_       | no          | WRITE, ADMIN             | school_master, lunch_cordinator             | yes     | no        | no          | **yes** |
+| `update_menu_item`        | _(null)_       | no          | WRITE, ADMIN             | school_master, lunch_cordinator             | yes     | no        | no          | **yes** |
+| `set_menu_item_price`     | _(null)_       | no          | WRITE, ADMIN, FINANCIAL  | school_master, lunch_cordinator             | yes     | yes       | no          | **yes** |
+| `delete_menu_item`        | _(null)_       | no          | DESTRUCTIVE, ADMIN       | school_master, lunch_cordinator             | yes     | no        | yes         | **yes** |
+| `set_daily_menu`          | _(null)_       | no          | WRITE, ADMIN             | school_master, lunch_cordinator             | yes     | no        | no          | **yes** |
+| `get_daily_orders`        | _(null)_       | no          | READ, ADMIN              | school_master, lunch_cordinator             | no      | no        | no          | no      |
+| `get_monthly_orders`      | _(null)_       | no          | READ, ADMIN              | _(any)_                                     | no      | no        | no          | no      |
 
 ## Role gating
 
@@ -68,15 +68,15 @@ Fields:
 user's `AuthContext`. These are the school-scoped roles mirrored from the
 backend (`src/lib/contracts.ts`):
 
-| Role | Typical capabilities |
-| ---- | -------------------- |
-| `school_master` | Full school admin: restaurants, menu, events, orders |
-| `pac_member` | Parent advisory committee — read restaurants/orders |
-| `lunch_cordinator` | Manage menu items, daily menu, view daily orders |
-| `event_cordinator` | Create/update/cancel events |
-| `treasurer` | Financial oversight (future) |
-| `liaison` | Communication roles (future) |
-| `restaurant_manager` | Per-restaurant management (future) |
+| Role                 | Typical capabilities                                 |
+| -------------------- | ---------------------------------------------------- |
+| `school_master`      | Full school admin: restaurants, menu, events, orders |
+| `pac_member`         | Parent advisory committee — read restaurants/orders  |
+| `lunch_cordinator`   | Manage menu items, daily menu, view daily orders     |
+| `event_cordinator`   | Create/update/cancel events                          |
+| `treasurer`          | Financial oversight (future)                         |
+| `liaison`            | Communication roles (future)                         |
+| `restaurant_manager` | Per-restaurant management (future)                   |
 
 Rules:
 
@@ -117,14 +117,14 @@ round trip for obviously-disallowed calls.
 The MCP layer's role check is **necessary but not sufficient**. The backend
 re-checks on every call:
 
-| Check | Enforced by |
-| ----- | ----------- |
-| Authentication (valid user) | MCP (JWT) + backend (service JWT `sub`) |
-| School membership | Backend (user ↔ school) |
-| Student guardianship | Backend (user ↔ student) |
-| Active entitlement (`requiresEntitlement`) | Backend (entitlement record) |
-| Role at active school | MCP (`checkToolAuthorization`) + backend (re-check) |
-| Resource ownership (event_id, restaurant_id, etc.) | Backend |
+| Check                                              | Enforced by                                         |
+| -------------------------------------------------- | --------------------------------------------------- |
+| Authentication (valid user)                        | MCP (JWT) + backend (service JWT `sub`)             |
+| School membership                                  | Backend (user ↔ school)                             |
+| Student guardianship                               | Backend (user ↔ student)                            |
+| Active entitlement (`requiresEntitlement`)         | Backend (entitlement record)                        |
+| Role at active school                              | MCP (`checkToolAuthorization`) + backend (re-check) |
+| Resource ownership (event_id, restaurant_id, etc.) | Backend                                             |
 
 If the MCP layer's role check were somehow bypassed (e.g. a policy table bug),
 the backend would still reject the call. The two layers use the same role names

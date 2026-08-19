@@ -35,12 +35,12 @@ Only the latest minor release of v2 receives security fixes. The legacy v1
 
 ## Disclosure timeline
 
-| Step | Timing |
-| ---- | ------ |
-| Report acknowledged | within 2 business days |
-| Initial assessment | within 5 business days |
-| Fix or mitigation developed | depends on severity; target ≤ 30 days for high/critical |
-| Coordinated disclosure | after fix is deployed, or after 90 days from report (whichever is sooner), unless an extension is agreed |
+| Step                        | Timing                                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Report acknowledged         | within 2 business days                                                                                   |
+| Initial assessment          | within 5 business days                                                                                   |
+| Fix or mitigation developed | depends on severity; target ≤ 30 days for high/critical                                                  |
+| Coordinated disclosure      | after fix is deployed, or after 90 days from report (whichever is sooner), unless an extension is agreed |
 
 We request a **90-day embargo** on public disclosure to allow time for fix
 development and deployment. We will credit reporters in release notes unless

@@ -9,15 +9,15 @@ repository.
 The entire `mcp-server/` package from the private monorepo was extracted into
 this repo. Specifically:
 
-| Source (private monorepo) | Destination (this repo) | Notes |
-| ------------------------- | ----------------------- | ----- |
-| `mcp-server/src/index.ts` | `src/index.ts` | Rewritten as Hono app with CORS, security headers, auth middleware. |
-| `mcp-server/src/tools/*` | `src/tools/dispatch.ts` + `src/schemas/*` | Tool definitions split into schema files; dispatch centralized. |
-| `mcp-server/src/auth/*` | `src/auth/*` | OAuth 2.1 added; static-token path retained as legacy. |
-| `mcp-server/src/policy.ts` | `src/lib/policy.ts` | Expanded to full per-tool policy table. |
-| `mcp-server/src/contracts.ts` | `src/lib/contracts.ts` | Vendored; no longer imports private packages. |
-| `mcp-server/wrangler.toml` | `wrangler.jsonc` | Migrated to JSONC; three environments added. |
-| `mcp-server/package.json` | `package.json` | Scoped as `@paxaver/mcp`, private, UNLICENSED. |
+| Source (private monorepo)     | Destination (this repo)                   | Notes                                                               |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
+| `mcp-server/src/index.ts`     | `src/index.ts`                            | Rewritten as Hono app with CORS, security headers, auth middleware. |
+| `mcp-server/src/tools/*`      | `src/tools/dispatch.ts` + `src/schemas/*` | Tool definitions split into schema files; dispatch centralized.     |
+| `mcp-server/src/auth/*`       | `src/auth/*`                              | OAuth 2.1 added; static-token path retained as legacy.              |
+| `mcp-server/src/policy.ts`    | `src/lib/policy.ts`                       | Expanded to full per-tool policy table.                             |
+| `mcp-server/src/contracts.ts` | `src/lib/contracts.ts`                    | Vendored; no longer imports private packages.                       |
+| `mcp-server/wrangler.toml`    | `wrangler.jsonc`                          | Migrated to JSONC; three environments added.                        |
+| `mcp-server/package.json`     | `package.json`                            | Scoped as `@paxaver/mcp`, private, UNLICENSED.                      |
 
 ## What changed
 
@@ -51,15 +51,15 @@ To support the service-binding architecture, the following endpoints were added
 to the Paxaver backend (private repo). They are the contract this MCP server
 depends on:
 
-| Endpoint | Purpose |
-| -------- | ------- |
-| `GET /api/users/me/context` | Returns the `AuthContext` (permissions, schoolSlug, studentIds, isPlatformAdmin) for the authenticated user. Called on every MCP request. |
-| `GET /api/mcp/whoami` | Validates a legacy static MCP token and returns `AuthContext`. Backwards-compat for v1 tokens. |
-| `POST /api/auth/mcp-login` | Authenticates email/password for the OAuth login form. Returns `userId`. |
-| `POST /api/mcp/oauth-codes` | Issues an authorization code (stores code + PKCE challenge + redirect URI). |
-| `POST /api/mcp/oauth-token-exchange` | Exchanges a code for user ID + scope (validates code, PKCE, redirect URI, client). |
-| `POST /api/mcp/oauth-clients` | Registers an OAuth client (RFC 7591). |
-| `GET /api/mcp/oauth-clients/validate` | Validates a registered client ID and returns redirect URIs. |
+| Endpoint                              | Purpose                                                                                                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/users/me/context`           | Returns the `AuthContext` (permissions, schoolSlug, studentIds, isPlatformAdmin) for the authenticated user. Called on every MCP request. |
+| `GET /api/mcp/whoami`                 | Validates a legacy static MCP token and returns `AuthContext`. Backwards-compat for v1 tokens.                                            |
+| `POST /api/auth/mcp-login`            | Authenticates email/password for the OAuth login form. Returns `userId`.                                                                  |
+| `POST /api/mcp/oauth-codes`           | Issues an authorization code (stores code + PKCE challenge + redirect URI).                                                               |
+| `POST /api/mcp/oauth-token-exchange`  | Exchanges a code for user ID + scope (validates code, PKCE, redirect URI, client).                                                        |
+| `POST /api/mcp/oauth-clients`         | Registers an OAuth client (RFC 7591).                                                                                                     |
+| `GET /api/mcp/oauth-clients/validate` | Validates a registered client ID and returns redirect URIs.                                                                               |
 
 ### Vendored contracts
 

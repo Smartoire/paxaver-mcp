@@ -3,42 +3,56 @@
   "version": "2.1.1",
   "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school community operating system. Streamable HTTP, OAuth 2.1, capability-first authorization.",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "apps/mcp/src/index.ts",
+  "packageManager": "pnpm@10.25.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "dev:staging": "wrangler dev --env staging",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "security:audit": "pnpm audit --audit-level=high",
     "test": "vitest run && vitest run --config vitest.node.config.ts",
     "test:watch": "vitest",
     "test:node": "vitest run --config vitest.node.config.ts",
+    "test:api": "vitest run --config vitest.api.config.ts",
     "build": "wrangler deploy --dry-run",
     "build:staging": "wrangler deploy --dry-run --env staging",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:prod": "wrangler deploy --env production",
-    "smoke:staging": "vitest run --config vitest.smoke.config.ts tests/smoke/staging.smoke.ts",
-    "smoke:prod": "vitest run --config vitest.smoke.config.ts tests/smoke/prod.smoke.ts",
+    "smoke:staging": "vitest run --config vitest.smoke.config.ts apps/mcp/tests/smoke/staging.smoke.ts",
+    "smoke:prod": "vitest run --config vitest.smoke.config.ts apps/mcp/tests/smoke/prod.smoke.ts",
     "wrangler:check": "wrangler deploy --dry-run --env staging && wrangler deploy --dry-run --env production"
   },
   "dependencies": {
-    "hono": "^4.13.2",
-    "jose": "^6.2.9"
+    "hono": "catalog:",
+    "jose": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.22.0",
-    "@cloudflare/workers-types": "^5.20260817.1",
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^26.2.0",
-    "eslint": "^10.8.1",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.67.0",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.124.0"
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@cloudflare/workers-types": "catalog:",
+    "@eslint/js": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
   },
-  "engines": {
-    "node": ">=22.12.0",
-    "npm": ">=9.6.5"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
   }
 }
