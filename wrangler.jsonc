@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "paxaver-mcp",
+  "main": "apps/mcp/src/index.ts",
+  "compatibility_date": "2026-08-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "preview_urls": false,
+
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+
+  "vars": {
+    "ENVIRONMENT": "development",
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:8787",
+    "API_BASE_URL_CA": "http://localhost:8787",
+    "API_BASE_URL_US": "http://localhost:8787",
+  },
+
+  "env": {
+    "staging": {
+      "name": "paxaver-mcp-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "ALLOWED_ORIGINS": "https://paxaver.dev,https://*.paxaver.dev",
+        "API_BASE_URL_CA": "https://paxaver.dev",
+        "API_BASE_URL_US": "https://paxaver.dev",
+      },
+      "services": [
+        {
+          "binding": "PAXAVER_API_CA",
+          "service": "paxaver-api-ca",
+        },
+      ],
+      "routes": [{ "pattern": "mcp.paxaver.dev", "zone_name": "paxaver.dev", "custom_domain": true }],
+    },
+
+    "production": {
+      "name": "paxaver-mcp",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "ALLOWED_ORIGINS": "https://paxaver.com,https://*.paxaver.com,https://paxaver.ca,https://*.paxaver.ca,https://chatgpt.com,https://claude.ai,https://www.perplexity.ai",
+        "API_BASE_URL_CA": "https://paxaver.ca",
+        "API_BASE_URL_US": "https://paxaver.com",
+      },
+      "services": [
+        {
+          "binding": "PAXAVER_API_CA",
+          "service": "paxaver-api-ca",
+        },
+        {
+          "binding": "PAXAVER_API_US",
+          "service": "paxaver-api-us",
+        },
+      ],
+      "routes": [{ "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true }],
+    },
+  },
+}
