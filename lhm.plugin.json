@@ -1,5 +1,5 @@
 {
-  "identifier": "smartoire-paxaver-mcp",
+  "identifier": "paxaver",
   "name": "Paxaver MCP",
   "version": "2.1.6",
   "description": "MCP adapter for the Paxaver school community platform. Streamable HTTP, OAuth 2.1, capability auth.",
