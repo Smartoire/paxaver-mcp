@@ -1,6 +1,7 @@
 {
   "name": "@paxaver/mcp",
-  "version": "2.1.3",
+  "version": "2.1.4",
+  "mcpName": "io.github.Smartoire/paxaver-mcp",
   "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school community operating system. Streamable HTTP, OAuth 2.1, capability-first authorization.",
   "license": "Apache-2.0",
   "type": "module",
