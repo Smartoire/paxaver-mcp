@@ -1,10 +1,10 @@
 {
   "identifier": "paxaver",
   "name": "Paxaver MCP",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "MCP adapter for the Paxaver school community platform. Streamable HTTP, OAuth 2.1, capability auth.",
-  "author": "Vahid Ghafarpour",
-  "authorUrl": "https://github.com/vahix",
+  "author": "Smartoire",
+  "authorUrl": "https://github.com/Smartoire",
   "homepage": "https://github.com/Smartoire/paxaver-mcp",
   "cloudEndpoint": "https://mcp.paxaver.com/mcp",
   "category": "productivity",
