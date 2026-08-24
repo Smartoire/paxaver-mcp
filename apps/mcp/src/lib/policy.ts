@@ -8,13 +8,13 @@
  * via the service binding. This is defense-in-depth: even if the MCP
  * layer's role check is bypassed, the backend re-checks.
  *
- * The policy *definitions* live in `./policies/` (one file per tool
- * category). This module re-exports the aggregated `TOOL_POLICIES` table
- * and provides the authorization helper functions.
+ * The policy *definitions* live in `./policies.ts`. This module re-exports
+ * the aggregated `TOOL_POLICIES` table and provides the authorization
+ * helper functions.
  */
 
 import type { ToolPolicy } from './contracts.js';
-import { TOOL_POLICIES } from './policies/index.js';
+import { TOOL_POLICIES } from './policies.js';
 
 export { TOOL_POLICIES };
 

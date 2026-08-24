@@ -6,7 +6,6 @@
  */
 
 import type { Env, AppVariables } from '../env.js';
-import type { ApiCallResult } from '../api/client.js';
 
 export type RpcId = string | number | null;
 
@@ -28,12 +27,6 @@ export interface ToolHandlerArgs {
   args: Record<string, unknown>;
   idempotencyKey?: string;
 }
-
-/**
- * A category handler returns the backend API result, or `undefined` when
- * the requested tool name does not belong to its category.
- */
-export type ToolHandler = (args: ToolHandlerArgs) => Promise<ApiCallResult | undefined>;
 
 /**
  * Validate that a path-parameter ID contains only safe characters.

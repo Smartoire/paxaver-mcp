@@ -2,12 +2,6 @@
  * MCP error helpers. Consistent error codes that don't leak backend details.
  */
 
-export interface RpcRequest {
-  method: string;
-  params?: { name?: string; arguments?: Record<string, unknown>; uri?: string };
-  id: string | number | null;
-}
-
 export interface McpErrorResponse {
   jsonrpc: '2.0';
   id: string | number | null;

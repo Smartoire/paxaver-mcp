@@ -52,7 +52,6 @@ export interface AuthContext {
   };
 }
 
-export type AppBindings = Env;
 export type AppVariables = AuthContext & {
   sessionId?: string;
   correlationId: string;

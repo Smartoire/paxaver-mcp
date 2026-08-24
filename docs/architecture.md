@@ -123,12 +123,9 @@ backend's capability, classification, and permission names. It exists so this
 public repo compiles with zero dependency on private code.
 
 - `CapabilityId` — the canonical capabilities (`view_account`, `view_balance`,
-  `view_orders`, `view_menu`, `view_events`, `ai_write`, `assistant_actions`).
+  `view_orders`, `view_menu`, `view_events`, `ai_write`).
 - `ToolClassification` — safety labels (`READ`, `WRITE`, `FINANCIAL`,
   `DESTRUCTIVE`, `ADMIN`, `PRIVACY_SENSITIVE`).
-- `SchoolPermission` — role names (`school_master`, `pac_member`,
-  `lunch_cordinator`, `event_cordinator`, `treasurer`, `liaison`,
-  `restaurant_manager`).
 
 The backend is the **source of truth** for enforcement. If the private model
 changes, the names in `contracts.ts` must be updated to match. The MCP server

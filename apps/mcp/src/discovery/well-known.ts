@@ -116,9 +116,25 @@ wellKnownApp.get('/oauth/callback', (c) => {
 (function(){
   var data = { type: 'oauth_callback', code: ${JSON.stringify(code)}, state: ${JSON.stringify(state)}, error: ${JSON.stringify(error)}, error_description: ${JSON.stringify(errorDescription)} };
 
-  // Relay to opener (MCP Inspector popup flow).
+  // Relay to opener (MCP Inspector popup flow). The opener is typically
+  // cross-origin, so we can't read its origin directly — instead we post to
+  // each allowed origin; the browser only delivers to the one matching the
+  // opener's actual origin. Never use '*' as targetOrigin: the payload
+  // contains the authorization code. Unknown openers fall through to the
+  // manual copy UI below.
+  var ALLOWED_OPENER_ORIGINS = [
+    'https://inspector.modelcontextprotocol.io',
+    'https://chatgpt.com',
+    'https://chat.openai.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+  ];
   if (window.opener) {
-    try { window.opener.postMessage(data, '*'); } catch(e) {}
+    for (var i = 0; i < ALLOWED_OPENER_ORIGINS.length; i++) {
+      try { window.opener.postMessage(data, ALLOWED_OPENER_ORIGINS[i]); } catch(e) {}
+    }
   }
 
   var el = document.getElementById('content');

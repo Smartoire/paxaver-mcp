@@ -118,8 +118,18 @@ export async function authenticateRequest(
 
   // --- Legacy static MCP client token ---
   // Deprecated: static tokens are replaced by OAuth JWT authentication.
-  // Do not remove this path until all clients migrate to OAuth.
-  console.warn('[validate] Legacy static MCP token used — deprecated. Migrate to OAuth JWT authentication.');
+  // REMOVAL DATE: 2026-11-30. After this date, delete this entire legacy
+  // block (lines ~119-154) and reject any non-JWT bearer token. Track usage
+  // via the `legacy_static_token` log field below; when it stops appearing
+  // in production logs for 30 consecutive days, remove early.
+  // Structured log so legacy usage is observable/alertable in Cloudflare.
+  // Search logs with: level=warn legacy_static_token=1
+  console.warn(JSON.stringify({
+    level: 'warn',
+    msg: 'legacy static MCP token used',
+    legacy_static_token: 1,
+    action: 'migrate to OAuth JWT authentication',
+  }));
   // Without a JWT we do not know the user's region, so try CA first, then US.
   for (const country of ['ca', 'us'] as const) {
     const baseUrl = country === 'us' ? env.API_BASE_URL_US : env.API_BASE_URL_CA;

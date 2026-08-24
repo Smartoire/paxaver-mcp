@@ -8,9 +8,15 @@
 
 import { PROTOCOL_VERSION } from '../lib/protocol-version.js';
 import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from '../lib/policy.js';
-import { ALL_TOOLS } from '../schemas/index.js';
+import { ALL_TOOLS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
-import { mcpError, type RpcRequest } from '../lib/errors.js';
+import { mcpError } from '../lib/errors.js';
+
+interface RpcRequest {
+  method: string;
+  params?: { name?: string; arguments?: Record<string, unknown>; uri?: string };
+  id: string | number | null;
+}
 
 const SUPPORTED_VERSIONS = ['2026-07-28', PROTOCOL_VERSION];
 

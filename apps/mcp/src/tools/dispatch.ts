@@ -53,10 +53,35 @@ function makeIdempotencyKey(toolName: string, args: Record<string, unknown>, cor
   return `mcp-${toolName}-${correlationId}-${criticalArgs}`.slice(0, 200);
 }
 
+// ponytail: in-memory sliding-window rate limit for mutating tools. Ceiling:
+// per-isolate, so the effective limit is multiplied by the number of active
+// Worker isolates. The goal is to slow runaway loops and obvious abuse, not
+// to enforce an exact global limit. Upgrade: use a Durable Object or
+// Cloudflare edge rate-limiting rules for a global limit.
+const MUTATE_RATE_LIMIT = 30; // per minute per user
+const mutateWindow = new Map<string, number[]>();
+
+function rateLimitMutating(userId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - 60_000;
+  const arr = mutateWindow.get(userId) ?? [];
+  // Drop entries older than the window.
+  while (arr.length && arr[0]! < cutoff) arr.shift();
+  if (arr.length >= MUTATE_RATE_LIMIT) {
+    mutateWindow.set(userId, arr);
+    return false;
+  }
+  arr.push(now);
+  mutateWindow.set(userId, arr);
+  return true;
+}
+
 /**
  * Validate that user-supplied student_id and school_slug arguments are
  * owned by the authenticated user. Prevents cross-tenant access when the
  * MCP client sends an ID that does not belong to the user context.
+ *
+ * Platform admins are exempt — they may act on any school.
  */
 function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): void {
   // If the context has a non-empty studentIds list, the supplied
@@ -67,10 +92,15 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
       throw new Error('student_id is not permitted for this user');
     }
   }
-  // If the context has a schoolSlug and the caller supplies a school_slug
-  // that differs from it, reject the request.
-  if (args.school_slug !== undefined && ctx.schoolSlug) {
+  // school_slug: if the caller supplies one, it must match the user's own
+  // school. If we don't know the user's school (empty ctx.schoolSlug) and
+  // they aren't a platform admin, we can't validate it — reject rather than
+  // forward blindly. Platform admins can act on any school.
+  if (args.school_slug !== undefined && !ctx.isPlatformAdmin) {
     const slug = String(args.school_slug);
+    if (!ctx.schoolSlug) {
+      throw new Error('school_slug cannot be verified for this user');
+    }
     if (slug !== ctx.schoolSlug) {
       throw new Error('school_slug does not match the user school');
     }
@@ -90,6 +120,12 @@ export async function dispatchTool(
 
   try {
     const idempotencyKey = policy?.mutates ? makeIdempotencyKey(name, args, ctx.correlationId) : undefined;
+
+    // Rate-limit mutating tools per user to slow runaway loops and abuse.
+    // The backend enforces its own limits; this is a defense-in-depth gate.
+    if (policy?.mutates && !rateLimitMutating(ctx.userId)) {
+      return toolError(id, -32001, 'Rate limit exceeded for mutating actions. Try again in a moment.');
+    }
 
     // Verify that user-supplied student_id and school_slug arguments are
     // owned by the authenticated user before dispatching to the backend.

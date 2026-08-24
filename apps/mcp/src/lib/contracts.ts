@@ -12,7 +12,7 @@
  */
 
 export type CapabilityId =
-  'view_account' | 'view_balance' | 'view_orders' | 'view_menu' | 'view_events' | 'ai_write' | 'assistant_actions';
+  'view_account' | 'view_balance' | 'view_orders' | 'view_menu' | 'view_events' | 'ai_write';
 
 export type ToolClassification = 'READ' | 'WRITE' | 'FINANCIAL' | 'DESTRUCTIVE' | 'ADMIN' | 'PRIVACY_SENSITIVE';
 
@@ -34,17 +34,3 @@ export interface ToolPolicy {
   /** Whether the AI client should prompt the user for explicit confirmation. */
   requiresConfirmation: boolean;
 }
-
-/**
- * School permission roles (mirror of the private backend's permission names).
- * The backend enforces these; the MCP server uses them only for the
- * capability policy table and to filter tools/list.
- */
-export type SchoolPermission =
-  | 'school_master'
-  | 'pac_member'
-  | 'lunch_cordinator'
-  | 'event_cordinator'
-  | 'treasurer'
-  | 'liaison'
-  | 'restaurant_manager';
