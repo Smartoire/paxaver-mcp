@@ -6,6 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@paxaver/mcp.svg)](https://www.npmjs.com/package/@paxaver/mcp)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
+[![MCP Badge](https://lobehub.com/badge/mcp/paxaver)](https://lobehub.com/mcp/paxaver)
 
 ---
 
