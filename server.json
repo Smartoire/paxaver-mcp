@@ -6,24 +6,12 @@
     "url": "https://github.com/Smartoire/paxaver-mcp",
     "source": "github"
   },
-  "version": "2.1.4",
-  "packages": [
+  "version": "2.1.5",
+  "websiteUrl": "https://paxaver.com",
+  "remotes": [
     {
-      "registryType": "npm",
-      "identifier": "@paxaver/mcp",
-      "version": "2.1.4",
-      "transport": {
-        "type": "stdio"
-      },
-      "environmentVariables": [
-        {
-          "description": "Your API key for the service",
-          "isRequired": true,
-          "format": "string",
-          "isSecret": true,
-          "name": "YOUR_API_KEY"
-        }
-      ]
+      "type": "streamable-http",
+      "url": "https://mcp.paxaver.com/mcp"
     }
   ]
 }
