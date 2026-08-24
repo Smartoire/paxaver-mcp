@@ -7,6 +7,7 @@
 
 import { Hono } from 'hono';
 import type { Env, AppVariables } from '../env.js';
+import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 
 export const wellKnownApp = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -83,6 +84,42 @@ wellKnownApp.get('/.well-known/oauth-authorization-server', authorizationServerH
 wellKnownApp.get('/.well-known/oauth-authorization-server/mcp', authorizationServerHandler);
 wellKnownApp.get('/mcp/.well-known/oauth-protected-resource', protectedResourceHandler);
 wellKnownApp.get('/mcp/.well-known/oauth-authorization-server', authorizationServerHandler);
+
+// MCP Server Card (SEP-1649 / Smithery).
+// Static metadata so registries can index the server without completing
+// the OAuth flow. Served at /.well-known/mcp/server-card.json.
+wellKnownApp.get('/.well-known/mcp/server-card.json', (c) => {
+  const origin = new URL(c.req.url).origin.replace(/^http:/, 'https:');
+  return c.json({
+    serverInfo: {
+      name: 'paxaver-mcp',
+      version: '2.1.5',
+    },
+    authentication: {
+      required: true,
+      schemes: ['oauth2'],
+    },
+    tools: ALL_TOOLS.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    })),
+    resources: ALL_RESOURCES.map((r) => ({
+      uri: r.uri,
+      name: r.name,
+      description: r.description,
+      mimeType: r.mimeType,
+    })),
+    prompts: ALL_PROMPTS.map((p) => ({
+      name: p.name,
+      description: p.description,
+      arguments: p.arguments,
+    })),
+    _links: {
+      transport: `${origin}/mcp`,
+    },
+  });
+});
 
 // OAuth callback relay page.
 // Receives the authorization code from the auth worker redirect,

@@ -1,7 +1,7 @@
 /**
- * Tool schema registry. Each tool has name, description, inputSchema,
- * outputSchema, and annotations. The authorization policy lives in
- * lib/policies.ts.
+ * Tool, resource, and prompt schema registry. Each tool has name,
+ * description, inputSchema, outputSchema, and annotations. The
+ * authorization policy lives in lib/policies.ts.
  */
 
 export interface ToolDefinition {
@@ -23,6 +23,25 @@ export interface ToolDefinition {
     openWorldHint?: boolean;
     title?: string;
   };
+}
+
+export interface ResourceDefinition {
+  uri: string;
+  name: string;
+  description: string;
+  mimeType?: string;
+}
+
+export interface PromptArgument {
+  name: string;
+  description: string;
+  required: boolean;
+}
+
+export interface PromptDefinition {
+  name: string;
+  description: string;
+  arguments?: PromptArgument[];
 }
 
 export const ALL_TOOLS: ToolDefinition[] = [
@@ -533,5 +552,60 @@ export const ALL_TOOLS: ToolDefinition[] = [
       required: ['restaurant_id', 'menu_item_id', 'menu_date'],
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Set Daily Menu (Admin)' },
+  },
+];
+
+// --- Resources (read-only data sources) ---
+export const ALL_RESOURCES: ResourceDefinition[] = [
+  {
+    uri: 'paxaver://user/context',
+    name: 'User Context',
+    description: 'The authenticated user context: name, active school, students, and roles.',
+    mimeType: 'application/json',
+  },
+  {
+    uri: 'paxaver://menu/today',
+    name: 'Today Lunch Menu',
+    description: 'Today lunch menu for the user school, including available items and quantities.',
+    mimeType: 'application/json',
+  },
+  {
+    uri: 'paxaver://wallet/balance',
+    name: 'Wallet Balance',
+    description: 'Current wallet balance for the authenticated user.',
+    mimeType: 'application/json',
+  },
+  {
+    uri: 'paxaver://events/upcoming',
+    name: 'Upcoming Events',
+    description: 'Upcoming events at the user school.',
+    mimeType: 'application/json',
+  },
+];
+
+// --- Prompts (predefined templates) ---
+export const ALL_PROMPTS: PromptDefinition[] = [
+  {
+    name: 'daily_lunch_menu',
+    description: 'Show today lunch menu for the school.',
+  },
+  {
+    name: 'wallet_balance',
+    description: 'Check the current wallet balance.',
+  },
+  {
+    name: 'upcoming_events',
+    description: 'List upcoming events at the school.',
+  },
+  {
+    name: 'order_lunch_helper',
+    description: 'Guide the user through ordering lunch for a student.',
+    arguments: [
+      {
+        name: 'student_name',
+        description: 'The student name to order lunch for.',
+        required: false,
+      },
+    ],
   },
 ];

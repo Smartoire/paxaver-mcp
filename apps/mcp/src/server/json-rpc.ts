@@ -8,7 +8,7 @@
 
 import { PROTOCOL_VERSION } from '../lib/protocol-version.js';
 import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from '../lib/policy.js';
-import { ALL_TOOLS } from '../schemas.js';
+import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';
 
@@ -40,6 +40,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         capabilities: {
           tools: {},
           resources: {},
+          prompts: {},
         },
         _meta: {
           'io.modelcontextprotocol/serverInfo': {
@@ -87,6 +88,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         capabilities: {
           tools: { listChanged: false },
           resources: { listChanged: false },
+          prompts: { listChanged: false },
         },
         serverInfo: {
           name: 'paxaver-mcp',
@@ -157,7 +159,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
   }
 
   if (method === 'resources/list') {
-    return Response.json({ jsonrpc: '2.0', id, result: { resources: [] } });
+    return Response.json({ jsonrpc: '2.0', id, result: { resources: ALL_RESOURCES } });
   }
 
   if (method === 'resources/templates/list') {
@@ -165,15 +167,53 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
   }
 
   if (method === 'resources/read') {
-    return Response.json(mcpError(id, -32602, 'No resources available.'));
+    const uri = params?.uri ?? '';
+    const resource = ALL_RESOURCES.find((r) => r.uri === uri);
+    if (!resource) {
+      return Response.json(mcpError(id, -32602, `Unknown resource: ${uri}`));
+    }
+    return Response.json({
+      jsonrpc: '2.0',
+      id,
+      result: {
+        contents: [
+          {
+            uri: resource.uri,
+            name: resource.name,
+            mimeType: resource.mimeType ?? 'application/json',
+            text: JSON.stringify({ message: `Resource '${resource.name}' — use the corresponding MCP tool for live data.` }),
+          },
+        ],
+      },
+    });
   }
 
   if (method === 'prompts/list') {
-    return Response.json({ jsonrpc: '2.0', id, result: { prompts: [] } });
+    return Response.json({ jsonrpc: '2.0', id, result: { prompts: ALL_PROMPTS } });
   }
 
   if (method === 'prompts/get') {
-    return Response.json(mcpError(id, -32602, 'No prompts available.'));
+    const name = params?.name ?? '';
+    const prompt = ALL_PROMPTS.find((p) => p.name === name);
+    if (!prompt) {
+      return Response.json(mcpError(id, -32602, `Unknown prompt: ${name}`));
+    }
+    return Response.json({
+      jsonrpc: '2.0',
+      id,
+      result: {
+        description: prompt.description,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: prompt.description,
+            },
+          },
+        ],
+      },
+    });
   }
 
   return Response.json(mcpError(id, -32601, `Method not found: ${method}`));
