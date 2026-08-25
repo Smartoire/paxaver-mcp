@@ -44,8 +44,8 @@ describe('Authorization policy', () => {
     expect(canSeeTool('create_event', ctx)).toBe(false);
   });
 
-  it('admin tools are visible to school_master', () => {
-    const ctx = { isPlatformAdmin: false, permissions: ['school_master'] };
+  it('admin tools are visible to pac_cordinator', () => {
+    const ctx = { isPlatformAdmin: false, permissions: ['pac_cordinator'] };
     expect(canSeeTool('create_restaurant', ctx)).toBe(true);
     expect(canSeeTool('delete_menu_item', ctx)).toBe(true);
   });
@@ -69,7 +69,7 @@ describe('Authorization policy', () => {
   });
 
   it('authorized tool call returns "ok"', () => {
-    const ctx = { isPlatformAdmin: false, permissions: ['school_master'] };
+    const ctx = { isPlatformAdmin: false, permissions: ['pac_cordinator'] };
     expect(checkToolAuthorization('create_restaurant', ctx)).toBe('ok');
   });
 

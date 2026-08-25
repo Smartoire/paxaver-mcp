@@ -220,7 +220,7 @@
     },
     {
       "name": "get_daily_orders",
-      "description": "ADMIN: Returns all orders for the active school on a given date. Requires school_master or lunch_cordinator role. Read-only.",
+      "description": "ADMIN: Returns all orders for the active school on a given date. Requires pac_cordinator or lunch_cordinator role. Read-only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -378,7 +378,7 @@
     },
     {
       "name": "create_event",
-      "description": "ADMIN: Creates a school event. Requires school_master or event_cordinator role. This is a WRITE operation — confirm details with the user before creating. Do not create events without explicit user request.",
+      "description": "ADMIN: Creates a school event. Requires pac_cordinator or event_cordinator role. This is a WRITE operation — confirm details with the user before creating. Do not create events without explicit user request.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -421,7 +421,7 @@
     },
     {
       "name": "update_event",
-      "description": "ADMIN: Updates an existing school event. Requires school_master or event_cordinator role. WRITE operation — confirm changes with the user.",
+      "description": "ADMIN: Updates an existing school event. Requires pac_cordinator or event_cordinator role. WRITE operation — confirm changes with the user.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -469,7 +469,7 @@
     },
     {
       "name": "cancel_event",
-      "description": "ADMIN: Cancels a school event. Requires school_master or event_cordinator role. This is a DESTRUCTIVE operation — always confirm with the user before cancelling. Cancelled events cannot be reactivated.",
+      "description": "ADMIN: Cancels a school event. Requires pac_cordinator or event_cordinator role. This is a DESTRUCTIVE operation — always confirm with the user before cancelling. Cancelled events cannot be reactivated.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -538,7 +538,7 @@
     },
     {
       "name": "list_school_restaurants",
-      "description": "ADMIN: Lists restaurants for the active school. Requires school_master, pac_member, or lunch_cordinator role. Read-only.",
+      "description": "ADMIN: Lists restaurants for the active school. Requires pac_cordinator, pac_member, or lunch_cordinator role. Read-only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -551,7 +551,7 @@
     },
     {
       "name": "create_restaurant",
-      "description": "ADMIN: Creates a restaurant for the active school. Requires school_master role. WRITE operation — confirm with the user.",
+      "description": "ADMIN: Creates a restaurant for the active school. Requires pac_cordinator role. WRITE operation — confirm with the user.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -584,7 +584,7 @@
     },
     {
       "name": "list_menu_items",
-      "description": "ADMIN: Lists menu items for a restaurant. Requires school_master or lunch_cordinator role. Read-only.",
+      "description": "ADMIN: Lists menu items for a restaurant. Requires pac_cordinator or lunch_cordinator role. Read-only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -599,7 +599,7 @@
     },
     {
       "name": "create_menu_item",
-      "description": "ADMIN: Creates a menu item for a restaurant. Requires school_master or lunch_cordinator role. WRITE operation.",
+      "description": "ADMIN: Creates a menu item for a restaurant. Requires pac_cordinator or lunch_cordinator role. WRITE operation.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -633,7 +633,7 @@
     },
     {
       "name": "update_menu_item",
-      "description": "ADMIN: Updates a menu item. Requires school_master or lunch_cordinator role. WRITE operation.",
+      "description": "ADMIN: Updates a menu item. Requires pac_cordinator or lunch_cordinator role. WRITE operation.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -676,7 +676,7 @@
     },
     {
       "name": "set_menu_item_price",
-      "description": "ADMIN: Sets the price of a menu item. Requires school_master or lunch_cordinator role. FINANCIAL + WRITE operation — confirm the new price with the user.",
+      "description": "ADMIN: Sets the price of a menu item. Requires pac_cordinator or lunch_cordinator role. FINANCIAL + WRITE operation — confirm the new price with the user.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -700,7 +700,7 @@
     },
     {
       "name": "delete_menu_item",
-      "description": "ADMIN: Soft-deletes a menu item. Requires school_master or lunch_cordinator role. DESTRUCTIVE operation — confirm with the user.",
+      "description": "ADMIN: Soft-deletes a menu item. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation — confirm with the user.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -719,7 +719,7 @@
     },
     {
       "name": "set_daily_menu",
-      "description": "ADMIN: Sets the daily menu (assigns a menu item to a date with available quantity). Requires school_master or lunch_cordinator role. WRITE operation.",
+      "description": "ADMIN: Sets the daily menu (assigns a menu item to a date with available quantity). Requires pac_cordinator or lunch_cordinator role. WRITE operation.",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -204,7 +204,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'get_daily_orders',
     description:
-      'ADMIN: Returns all orders for the active school on a given date. Requires school_master or lunch_cordinator role. Read-only.',
+      'ADMIN: Returns all orders for the active school on a given date. Requires pac_cordinator or lunch_cordinator role. Read-only.',
     inputSchema: {
       type: 'object',
       properties: { menu_date: { type: 'string', description: 'YYYY-MM-DD' } },
@@ -315,7 +315,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'create_event',
     description:
-      'ADMIN: Creates a school event. Requires school_master or event_cordinator role. This is a WRITE operation — confirm details with the user before creating. Do not create events without explicit user request.',
+      'ADMIN: Creates a school event. Requires pac_cordinator or event_cordinator role. This is a WRITE operation — confirm details with the user before creating. Do not create events without explicit user request.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -336,7 +336,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'update_event',
     description:
-      'ADMIN: Updates an existing school event. Requires school_master or event_cordinator role. WRITE operation — confirm changes with the user.',
+      'ADMIN: Updates an existing school event. Requires pac_cordinator or event_cordinator role. WRITE operation — confirm changes with the user.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -358,7 +358,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'cancel_event',
     description:
-      'ADMIN: Cancels a school event. Requires school_master or event_cordinator role. This is a DESTRUCTIVE operation — always confirm with the user before cancelling. Cancelled events cannot be reactivated.',
+      'ADMIN: Cancels a school event. Requires pac_cordinator or event_cordinator role. This is a DESTRUCTIVE operation — always confirm with the user before cancelling. Cancelled events cannot be reactivated.',
     inputSchema: {
       type: 'object',
       properties: { event_id: { type: 'string' } },
@@ -402,7 +402,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'list_school_restaurants',
     description:
-      'ADMIN: Lists restaurants for the active school. Requires school_master, pac_member, or lunch_cordinator role. Read-only.',
+      'ADMIN: Lists restaurants for the active school. Requires pac_cordinator, pac_member, or lunch_cordinator role. Read-only.',
     inputSchema: {
       type: 'object',
       properties: { school_slug: { type: 'string', description: 'School slug (defaults to active school)' } },
@@ -417,7 +417,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'create_restaurant',
     description:
-      'ADMIN: Creates a restaurant for the active school. Requires school_master role. WRITE operation — confirm with the user.',
+      'ADMIN: Creates a restaurant for the active school. Requires pac_cordinator role. WRITE operation — confirm with the user.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -443,7 +443,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'list_menu_items',
     description:
-      'ADMIN: Lists menu items for a restaurant. Requires school_master or lunch_cordinator role. Read-only.',
+      'ADMIN: Lists menu items for a restaurant. Requires pac_cordinator or lunch_cordinator role. Read-only.',
     inputSchema: {
       type: 'object',
       properties: { restaurant_id: { type: 'string' } },
@@ -454,7 +454,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'create_menu_item',
     description:
-      'ADMIN: Creates a menu item for a restaurant. Requires school_master or lunch_cordinator role. WRITE operation.',
+      'ADMIN: Creates a menu item for a restaurant. Requires pac_cordinator or lunch_cordinator role. WRITE operation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -477,7 +477,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'update_menu_item',
-    description: 'ADMIN: Updates a menu item. Requires school_master or lunch_cordinator role. WRITE operation.',
+    description: 'ADMIN: Updates a menu item. Requires pac_cordinator or lunch_cordinator role. WRITE operation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -504,7 +504,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'set_menu_item_price',
     description:
-      'ADMIN: Sets the price of a menu item. Requires school_master or lunch_cordinator role. FINANCIAL + WRITE operation — confirm the new price with the user.',
+      'ADMIN: Sets the price of a menu item. Requires pac_cordinator or lunch_cordinator role. FINANCIAL + WRITE operation — confirm the new price with the user.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -524,7 +524,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'delete_menu_item',
     description:
-      'ADMIN: Soft-deletes a menu item. Requires school_master or lunch_cordinator role. DESTRUCTIVE operation — confirm with the user.',
+      'ADMIN: Soft-deletes a menu item. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation — confirm with the user.',
     inputSchema: {
       type: 'object',
       properties: { restaurant_id: { type: 'string' }, menu_item_id: { type: 'string' } },
@@ -540,7 +540,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'set_daily_menu',
     description:
-      'ADMIN: Sets the daily menu (assigns a menu item to a date with available quantity). Requires school_master or lunch_cordinator role. WRITE operation.',
+      'ADMIN: Sets the daily menu (assigns a menu item to a date with available quantity). Requires pac_cordinator or lunch_cordinator role. WRITE operation.',
     inputSchema: {
       type: 'object',
       properties: {

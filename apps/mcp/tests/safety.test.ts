@@ -13,7 +13,7 @@ const USER_CONTEXT = {
   userId: 'user-1',
   email: 'test@paxaver.com',
   schoolSlug: 'test-school',
-  permissions: ['school_master'],
+  permissions: ['pac_cordinator'],
   isPlatformAdmin: false,
   studentIds: ['student-1'],
   country: 'ca' as const,

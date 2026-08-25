@@ -48,7 +48,7 @@ Features:
 - Place hot-lunch orders for your students
 - Check wallet balance and view order history
 - Visual menu, order confirmation, and wallet balance widgets
-- School management tools for PAC members and school masters:
+- School management tools for PAC members and PAC Coordinators:
   financial summaries, school statistics, restaurant and menu item
   management, daily menu scheduling, and daily order views
 - Secure OAuth 2.1 sign-in with your Paxaver account

@@ -69,7 +69,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
   if (method === 'initialize') {
     const ctx = c.var;
     const admin =
-      ctx.isPlatformAdmin || ctx.permissions.includes('school_master') || ctx.permissions.includes('pac_member');
+      ctx.isPlatformAdmin || ctx.permissions.includes('pac_cordinator') || ctx.permissions.includes('pac_member');
     const subStatus = ctx.subscription?.status ?? 'none';
     const needsRegistration = !ctx.isPlatformAdmin && subStatus !== 'active';
     const baseInstructions = admin

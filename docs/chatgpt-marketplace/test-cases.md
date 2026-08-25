@@ -50,11 +50,11 @@ The tester signs in via the OAuth flow when ChatGPT first connects to the app.
 - **Scenario:** A PAC member wants to see all lunch orders for the school this month.
 - **User prompt:** "Show me all the lunch orders for our school this month."
 - **Tool triggered:** `get_user_info` (to confirm admin role), then `get_monthly_orders` (with `month` = current month).
-- **Expected output:** ChatGPT calls `get_user_info` and sees the user's role is `pac_member` or `school_master`. It calls `get_monthly_orders` with the current month (YYYY-MM). The response contains `month`, `count`, and an `orders` array, each with `id`, `student`, `restaurant`, `item`, `menu_date`, `quantity`, `total_cents`, `status`, and `created_at`. ChatGPT summarizes the orders in text, presenting the total count and a breakdown by date or student.
+- **Expected output:** ChatGPT calls `get_user_info` and sees the user's role is `pac_member` or `pac_cordinator`. It calls `get_monthly_orders` with the current month (YYYY-MM). The response contains `month`, `count`, and an `orders` array, each with `id`, `student`, `restaurant`, `item`, `menu_date`, `quantity`, `total_cents`, `status`, and `created_at`. ChatGPT summarizes the orders in text, presenting the total count and a breakdown by date or student.
 
-### Test 6: Set the daily menu (school master)
+### Test 6: Set the daily menu (PAC Coordinator)
 
-- **Scenario:** A school master wants to assign a menu item to a specific date on the daily menu.
+- **Scenario:** A PAC Coordinator wants to assign a menu item to a specific date on the daily menu.
 - **User prompt:** "Add the cheese sandwich to the daily menu for next Tuesday at our school."
 - **Tool triggered:** `get_user_info` (to confirm admin role), then `list_school_restaurants` (with `school_slug`), then `list_menu_items` (to find the `menu_item_id` for "cheese sandwich"), then `set_daily_menu` (with `restaurant_id`, `menu_item_id`, `menu_date` = next Tuesday).
 - **Expected output:** ChatGPT calls `get_user_info` to confirm admin role. It calls `list_school_restaurants` with the school slug to find the restaurant, then `list_menu_items` to find the cheese sandwich's `menu_item_id`. It calls `set_daily_menu` with the required parameters. The response confirms the menu item was assigned to the date. ChatGPT confirms in text, e.g. "Done - I've added the cheese sandwich to the daily menu for Tuesday, [date]."
@@ -79,10 +79,10 @@ The tester signs in via the OAuth flow when ChatGPT first connects to the app.
 
 ### Negative Test 3: Access daily orders without admin role
 
-- **Scenario:** A regular parent (no PAC or school master role) tries to view all orders for a school day.
+- **Scenario:** A regular parent (no PAC or PAC Coordinator role) tries to view all orders for a school day.
 - **User prompt:** "Show me all the lunch orders for the school today."
 - **Tool triggered:** `get_user_info` (role check), then `get_daily_orders` (which will be denied).
-- **Expected output:** ChatGPT calls `get_user_info` and sees the user's role is `parent` (not `pac_member`, `school_master`, or `lunch_coordinator`). It calls `get_daily_orders`, which returns an error indicating admin access is required. ChatGPT should inform the user that they don't have permission to view all orders and that this feature is available to PAC members, school masters, and lunch coordinators only. It may suggest using `get_orders` to see their own students' orders instead.
+- **Expected output:** ChatGPT calls `get_user_info` and sees the user's role is `parent` (not `pac_member`, `pac_cordinator`, or `lunch_coordinator`). It calls `get_daily_orders`, which returns an error indicating admin access is required. ChatGPT should inform the user that they don't have permission to view all orders and that this feature is available to PAC members, PAC Coordinators, and lunch coordinators only. It may suggest using `get_orders` to see their own students' orders instead.
 
 ### Negative Test 4: Order lunch with insufficient wallet balance
 

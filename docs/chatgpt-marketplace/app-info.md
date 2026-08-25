@@ -21,7 +21,7 @@ Paxaver is the operating system connecting Parent Advisory Committees (PACs), sc
 - Check your wallet balance and recent transactions
 - Review your order history
 
-**For school masters, PAC members & lunch coordinators:**
+**For PAC Coordinators, PAC members & lunch coordinators:**
 
 - View financial summaries (revenue, orders, gateway balances)
 - See school-level statistics (student counts, order volume)

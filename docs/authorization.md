@@ -48,18 +48,18 @@ Fields:
 | `get_daily_menu`          | `view_menu`    | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
 | `get_updates`             | `view_orders`  | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
 | `get_upcoming_events`     | `view_events`  | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
-| `create_event`            | `ai_write`     | yes         | WRITE, ADMIN             | school_master, event_cordinator             | yes     | no        | no          | **yes** |
-| `update_event`            | `ai_write`     | yes         | WRITE, ADMIN             | school_master, event_cordinator             | yes     | no        | no          | **yes** |
-| `cancel_event`            | `ai_write`     | yes         | DESTRUCTIVE, ADMIN       | school_master, event_cordinator             | yes     | no        | yes         | **yes** |
-| `list_school_restaurants` | _(null)_       | no          | READ, ADMIN              | school_master, pac_member, lunch_cordinator | no      | no        | no          | no      |
-| `create_restaurant`       | _(null)_       | no          | WRITE, ADMIN             | school_master                               | yes     | no        | no          | **yes** |
-| `list_menu_items`         | _(null)_       | no          | READ, ADMIN              | school_master, lunch_cordinator             | no      | no        | no          | no      |
-| `create_menu_item`        | _(null)_       | no          | WRITE, ADMIN             | school_master, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `update_menu_item`        | _(null)_       | no          | WRITE, ADMIN             | school_master, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `set_menu_item_price`     | _(null)_       | no          | WRITE, ADMIN, FINANCIAL  | school_master, lunch_cordinator             | yes     | yes       | no          | **yes** |
-| `delete_menu_item`        | _(null)_       | no          | DESTRUCTIVE, ADMIN       | school_master, lunch_cordinator             | yes     | no        | yes         | **yes** |
-| `set_daily_menu`          | _(null)_       | no          | WRITE, ADMIN             | school_master, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `get_daily_orders`        | _(null)_       | no          | READ, ADMIN              | school_master, lunch_cordinator             | no      | no        | no          | no      |
+| `create_event`            | `ai_write`     | yes         | WRITE, ADMIN             | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
+| `update_event`            | `ai_write`     | yes         | WRITE, ADMIN             | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
+| `cancel_event`            | `ai_write`     | yes         | DESTRUCTIVE, ADMIN       | pac_cordinator, event_cordinator             | yes     | no        | yes         | **yes** |
+| `list_school_restaurants` | _(null)_       | no          | READ, ADMIN              | pac_cordinator, pac_member, lunch_cordinator | no      | no        | no          | no      |
+| `create_restaurant`       | _(null)_       | no          | WRITE, ADMIN             | pac_cordinator                               | yes     | no        | no          | **yes** |
+| `list_menu_items`         | _(null)_       | no          | READ, ADMIN              | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
+| `create_menu_item`        | _(null)_       | no          | WRITE, ADMIN             | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
+| `update_menu_item`        | _(null)_       | no          | WRITE, ADMIN             | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
+| `set_menu_item_price`     | _(null)_       | no          | WRITE, ADMIN, FINANCIAL  | pac_cordinator, lunch_cordinator             | yes     | yes       | no          | **yes** |
+| `delete_menu_item`        | _(null)_       | no          | DESTRUCTIVE, ADMIN       | pac_cordinator, lunch_cordinator             | yes     | no        | yes         | **yes** |
+| `set_daily_menu`          | _(null)_       | no          | WRITE, ADMIN             | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
+| `get_daily_orders`        | _(null)_       | no          | READ, ADMIN              | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
 | `get_monthly_orders`      | _(null)_       | no          | READ, ADMIN              | _(any)_                                     | no      | no        | no          | no      |
 
 ## Role gating
@@ -70,7 +70,7 @@ backend (`src/lib/contracts.ts`):
 
 | Role                 | Typical capabilities                                 |
 | -------------------- | ---------------------------------------------------- |
-| `school_master`      | Full school admin: restaurants, menu, events, orders |
+| `pac_cordinator`      | Full school admin: restaurants, menu, events, orders |
 | `pac_member`         | Parent advisory committee — read restaurants/orders  |
 | `lunch_cordinator`   | Manage menu items, daily menu, view daily orders     |
 | `event_cordinator`   | Create/update/cancel events                          |

@@ -274,7 +274,7 @@ Returns all orders for the active school on a given date.
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | READ, ADMIN                     |
 | **Confirmation**    | no                              |
 
@@ -343,7 +343,7 @@ Creates a school event. Do not create events without explicit user request.
 | ------------------------ | ------------------------------- |
 | **Capability**           | `ai_write`                      |
 | **Entitlement required** | yes                             |
-| **Required roles**       | school_master, event_cordinator |
+| **Required roles**       | pac_cordinator, event_cordinator |
 | **Classifications**      | WRITE, ADMIN                    |
 | **Confirmation**         | **yes**                         |
 
@@ -373,7 +373,7 @@ Updates an existing school event.
 | ------------------------ | ------------------------------- |
 | **Capability**           | `ai_write`                      |
 | **Entitlement required** | yes                             |
-| **Required roles**       | school_master, event_cordinator |
+| **Required roles**       | pac_cordinator, event_cordinator |
 | **Classifications**      | WRITE, ADMIN                    |
 | **Confirmation**         | **yes**                         |
 
@@ -404,7 +404,7 @@ Cancels a school event. **DESTRUCTIVE** — cancelled events cannot be reactivat
 | ------------------------ | ------------------------------- |
 | **Capability**           | `ai_write`                      |
 | **Entitlement required** | yes                             |
-| **Required roles**       | school_master, event_cordinator |
+| **Required roles**       | pac_cordinator, event_cordinator |
 | **Classifications**      | DESTRUCTIVE, ADMIN              |
 | **Confirmation**         | **yes**                         |
 
@@ -427,7 +427,7 @@ Lists restaurants for the active school.
 |                     |                                             |
 | ------------------- | ------------------------------------------- |
 | **Capability**      | _(null — admin only)_                       |
-| **Required roles**  | school_master, pac_member, lunch_cordinator |
+| **Required roles**  | pac_cordinator, pac_member, lunch_cordinator |
 | **Classifications** | READ, ADMIN                                 |
 | **Confirmation**    | no                                          |
 
@@ -448,7 +448,7 @@ Creates a restaurant for the active school.
 |                     |                       |
 | ------------------- | --------------------- |
 | **Capability**      | _(null — admin only)_ |
-| **Required roles**  | school_master         |
+| **Required roles**  | pac_cordinator         |
 | **Classifications** | WRITE, ADMIN          |
 | **Confirmation**    | **yes**               |
 
@@ -475,7 +475,7 @@ Lists menu items for a restaurant.
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | READ, ADMIN                     |
 | **Confirmation**    | no                              |
 
@@ -496,7 +496,7 @@ Creates a menu item for a restaurant.
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | WRITE, ADMIN                    |
 | **Confirmation**    | **yes**                         |
 
@@ -523,7 +523,7 @@ Updates a menu item.
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | WRITE, ADMIN                    |
 | **Confirmation**    | **yes**                         |
 
@@ -554,7 +554,7 @@ user.
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | WRITE, ADMIN, FINANCIAL         |
 | **Confirmation**    | **yes**                         |
 
@@ -577,7 +577,7 @@ Soft-deletes a menu item. **DESTRUCTIVE**.
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | DESTRUCTIVE, ADMIN              |
 | **Confirmation**    | **yes**                         |
 
@@ -599,7 +599,7 @@ Sets the daily menu (assigns a menu item to a date with available quantity).
 |                     |                                 |
 | ------------------- | ------------------------------- |
 | **Capability**      | _(null — admin only)_           |
-| **Required roles**  | school_master, lunch_cordinator |
+| **Required roles**  | pac_cordinator, lunch_cordinator |
 | **Classifications** | WRITE, ADMIN                    |
 | **Confirmation**    | **yes**                         |
 
