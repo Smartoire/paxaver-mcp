@@ -72,8 +72,6 @@ the API directly. This means:
   role checks, entitlement) applies to every MCP-initiated request.
 - There is no separate service token or shared secret between the MCP worker and
   the backend for user-attributed calls.
-- The MCP worker's `JWT_SECRET` binding is reserved for future internal use and
-  is not currently used for service-to-service authentication.
 
 ## Regional isolation
 

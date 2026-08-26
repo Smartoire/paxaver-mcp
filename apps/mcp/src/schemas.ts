@@ -110,20 +110,6 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Wallet Status' },
   },
   {
-    name: 'add_funds',
-    description:
-      "Creates a Stripe checkout session to add funds to the user's wallet and emails the payment link. This is a FINANCIAL operation — always confirm the exact amount with the user before calling. The minimum top-up is $5.00 (500 cents). The wallet is only credited after the user completes the Stripe payment; this tool does not directly move money. Returns a masked email and transaction reference. Idempotent per transaction.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        amount_cents: { type: 'integer', description: 'Amount in cents (minimum 500 = $5.00)', minimum: 500 },
-        description: { type: 'string', description: 'Optional note for the deposit' },
-      },
-      required: ['amount_cents'],
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, title: 'Add Funds to Wallet' },
-  },
-  {
     name: 'top_up_balance',
     description:
       "Creates a Stripe checkout session to add funds to the user's wallet and emails the payment link. This is a FINANCIAL operation — always confirm the exact amount with the user before calling. The minimum top-up is $5.00 (500 cents). The wallet is only credited after the user completes the Stripe payment. Idempotent per transaction.",
@@ -228,19 +214,6 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Monthly Orders' },
-  },
-  {
-    name: 'get_published_menu',
-    description:
-      "Returns the published daily lunch menu for the user's active school. Accepts either 'date' (YYYY-MM-DD) or 'month' (YYYY-MM). If neither is given, returns today's menu. Read-only. Use this to find menu_item_id values for create_draft_order.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        date: { type: 'string', description: 'YYYY-MM-DD' },
-        month: { type: 'string', description: 'YYYY-MM' },
-      },
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Published Menu' },
   },
   {
     name: 'create_draft_order',

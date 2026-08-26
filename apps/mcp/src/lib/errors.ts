@@ -16,7 +16,7 @@ export function mcpError(id: string | number | null, code: number, message: stri
  * Map a backend API error status to a user-safe MCP error message.
  * Never expose D1/Stripe/internal error text to the AI client.
  */
-export function apiErrorToMcp(status: number, _toolName: string): { code: number; message: string } {
+export function apiErrorToMcp(status: number): { code: number; message: string } {
   switch (status) {
     case 401:
       return { code: -32001, message: 'Authentication failed. Please reconnect your Paxaver account.' };

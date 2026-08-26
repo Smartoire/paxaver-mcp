@@ -99,7 +99,7 @@ The server exposes **23 tools** across four categories. Full schemas are in `doc
 | `get_user_info`      | User info, school memberships, and student list  | Yes       |
 | `get_wallet_balance` | Current wallet balance at the active school      | Yes       |
 | `get_wallet_status`  | Balance + recent transactions + pending deposits | Yes       |
-| `add_funds`          | Create Stripe checkout session to top up wallet  | No        |
+| `top_up_balance`     | Create Stripe checkout session to top up wallet  | No        |
 
 ### Lunch & Ordering Tools (6)
 

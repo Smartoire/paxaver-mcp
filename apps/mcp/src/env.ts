@@ -2,9 +2,6 @@
  * Paxaver MCP server environment bindings.
  *
  * Secrets (set via `wrangler secret put`):
- *   - JWT_SECRET            — used only for service-binding JWTs to call the
- *                             Paxaver API. OAuth tokens are RS256 JWTs from
- *                             the auth worker, validated via JWKS.
  *   - CHATGPT_VERIFY_TOKEN  — ChatGPT marketplace domain verification (optional)
  *
  * Service bindings (configured in wrangler.jsonc):
@@ -30,7 +27,6 @@ export interface Env {
   API_BASE_URL_US: string;
 
   // --- Secrets (wrangler secret) ---
-  JWT_SECRET: string;
   CHATGPT_VERIFY_TOKEN?: string;
 }
 

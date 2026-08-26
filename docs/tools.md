@@ -142,7 +142,7 @@ Returns the wallet balance plus recent transactions and pending deposits.
 
 ---
 
-### `add_funds`
+### `top_up_balance`
 
 Creates a Stripe checkout session to add funds to the user's wallet and emails
 the payment link. **FINANCIAL** — confirm the exact amount with the user first.

@@ -20,7 +20,6 @@ npm install
 Create a `.dev.vars` file (gitignored) for local development:
 
 ```
-JWT_SECRET=local-dev-secret-change-me
 OAUTH_STATE_SECRET=local-dev-state-secret
 ```
 

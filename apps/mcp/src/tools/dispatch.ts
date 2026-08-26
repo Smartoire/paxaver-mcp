@@ -150,7 +150,7 @@ export async function dispatchTool(
     }
 
     if (!result.ok) {
-      const err = apiErrorToMcp(result.status, name);
+      const err = apiErrorToMcp(result.status);
       return toolError(id, err.code, err.message);
     }
 

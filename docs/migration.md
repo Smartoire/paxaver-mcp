@@ -98,7 +98,6 @@ must use `POST /mcp` (Streamable HTTP).
 ## Migration checklist for operators
 
 - [ ] Deploy the backend with the new `/api/*` endpoints listed above.
-- [ ] Set `JWT_SECRET` on the MCP Worker **identical** to the backend's.
 - [ ] Set `OAUTH_STATE_SECRET` on the MCP Worker.
 - [ ] Configure `PAXAVER_API_CA` and `PAXAVER_API_US` service bindings in
       `wrangler.jsonc` (production environment).

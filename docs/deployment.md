@@ -80,25 +80,19 @@ Set per environment with `wrangler secret put --env <env> <NAME>`:
 
 | Secret                 | Required | Purpose                                                                                             |
 | ---------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `JWT_SECRET`           | **yes**  | Signs OAuth access tokens **and** short-lived service-binding JWTs. Shared with the backend Worker. |
 | `GOOGLE_CLIENT_ID`     | no       | Google sign-in.                                                                                     |
 | `GOOGLE_CLIENT_SECRET` | no       | Google sign-in.                                                                                     |
 | `CHATGPT_VERIFY_TOKEN` | no       | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`).                     |
 
-> `JWT_SECRET` must be identical between the MCP Worker and the Paxaver API
-> Worker in the same region, because both sign and verify service JWTs with it.
-
 Example:
 
 ```bash
-wrangler secret put JWT_SECRET --env production
 wrangler secret put CHATGPT_VERIFY_TOKEN --env production
 ```
 
 For local development, use a `.dev.vars` file (gitignored):
 
 ```
-JWT_SECRET=local-dev-secret-change-me
 OAUTH_STATE_SECRET=local-dev-state-secret
 ```
 

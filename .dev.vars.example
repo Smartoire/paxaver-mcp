@@ -1,6 +1,4 @@
 # Copy to .dev.vars and fill with real values. Never commit .dev.vars.
-# JWT signing secret for local development (RS256 keys not needed locally)
-JWT_SECRET=generate-a-32-byte-hex-secret
 # Optional: ChatGPT marketplace verification token
 CHATGPT_VERIFY_TOKEN=
 # Optional: Google OAuth (for authenticated MCP clients)

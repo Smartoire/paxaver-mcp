@@ -53,16 +53,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     destructive: false,
     requiresConfirmation: false,
   },
-  add_funds: {
-    capability: 'view_balance',
-    requiresEntitlement: true,
-    classifications: ['FINANCIAL', 'WRITE'],
-    requiredRoles: [],
-    mutates: true,
-    financial: true,
-    destructive: false,
-    requiresConfirmation: true,
-  },
   top_up_balance: {
     capability: 'view_balance',
     requiresEntitlement: true,
@@ -106,16 +96,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     requiresConfirmation: false,
   },
   get_daily_menu: {
-    capability: 'view_menu',
-    requiresEntitlement: false,
-    classifications: ['READ'],
-    requiredRoles: [],
-    mutates: false,
-    financial: false,
-    destructive: false,
-    requiresConfirmation: false,
-  },
-  get_published_menu: {
     capability: 'view_menu',
     requiresEntitlement: false,
     classifications: ['READ'],

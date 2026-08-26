@@ -62,15 +62,6 @@ export async function handleOrderTools({
           studentId: args.student_id as string | undefined,
         },
       });
-    case 'get_published_menu':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'GET',
-        path: `/api/lunch/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
-        query: {
-          date: args.date as string | undefined,
-          month: args.month as string | undefined,
-        },
-      });
     case 'create_draft_order':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',

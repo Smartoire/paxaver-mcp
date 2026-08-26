@@ -77,7 +77,7 @@ npm install @paxaver/mcp
 npm install
 
 # 2. Configure local secrets
-cp .dev.vars.example .dev.vars   # then fill in JWT_SECRET, OAUTH_STATE_SECRET, ...
+cp .dev.vars.example .dev.vars   # then fill in OAUTH_STATE_SECRET, ...
 
 # 3. Run the worker locally (Miniflare)
 npm run dev
@@ -119,7 +119,7 @@ npm run deploy:prod      # wrangler deploy --env production
 ```
 
 Secrets must be set with `wrangler secret put --env production`:
-`JWT_SECRET`, `OAUTH_STATE_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`OAUTH_STATE_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `CHATGPT_VERIFY_TOKEN`. See [`docs/deployment.md`](./docs/deployment.md).
 
 ---
@@ -133,8 +133,8 @@ before dispatch, and the backend re-checks data-level access (defense-in-depth).
 | Category           | Tools                                                                                                                                                                                |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | User / account     | `get_user_info`, `update_student`                                                                                                                                                    |
-| Wallet             | `get_wallet_balance`, `get_wallet_status`, `add_funds`, `top_up_balance`, `donate_to_school`                                                                                         |
-| Orders & menu      | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `get_published_menu`, `create_draft_order`, `finalize_order`, `cancel_order` |
+| Wallet             | `get_wallet_balance`, `get_wallet_status`, `top_up_balance`, `donate_to_school`                                                                                         |
+| Orders & menu      | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `create_draft_order`, `finalize_order`, `cancel_order` |
 | Events             | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register_event`, `request_volunteer`                                                                         |
 | Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `set_menu_item_price`, `delete_menu_item`, `set_daily_menu`               |
 

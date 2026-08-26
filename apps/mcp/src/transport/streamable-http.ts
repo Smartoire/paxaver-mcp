@@ -12,7 +12,6 @@
 import { Hono } from 'hono';
 import type { Env, AppVariables } from '../env.js';
 import { handleJsonRpc } from '../server/json-rpc.js';
-import { generateSessionId } from '../lib/crypto.js';
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 
@@ -69,7 +68,7 @@ transportApp.post('/mcp', async (c) => {
     const response = await handleJsonRpc(c, body);
     if (!response.ok) return response;
     cleanupSessions();
-    const sessionId = generateSessionId();
+    const sessionId = crypto.randomUUID();
     sessions.set(sessionId, {
       createdAt: Date.now(),
       userId: c.var.userId,

@@ -12,7 +12,7 @@ describe('Authorization policy', () => {
       'update_student',
       'get_wallet_balance',
       'get_wallet_status',
-      'add_funds',
+      'top_up_balance',
       'order_lunch',
       'get_orders',
       'get_daily_menu',
@@ -74,8 +74,8 @@ describe('Authorization policy', () => {
   });
 
   it('financial tools are marked financial + require confirmation', () => {
-    expect(getToolPolicy('add_funds')?.financial).toBe(true);
-    expect(getToolPolicy('add_funds')?.requiresConfirmation).toBe(true);
+    expect(getToolPolicy('top_up_balance')?.financial).toBe(true);
+    expect(getToolPolicy('top_up_balance')?.requiresConfirmation).toBe(true);
     expect(getToolPolicy('order_lunch')?.financial).toBe(true);
     expect(getToolPolicy('order_lunch')?.requiresConfirmation).toBe(true);
   });

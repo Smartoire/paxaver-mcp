@@ -33,41 +33,41 @@ describe('mcpError', () => {
 
 describe('apiErrorToMcp', () => {
   it('maps 401 to authentication error', () => {
-    const { code, message } = apiErrorToMcp(401, 'get_daily_menu');
+    const { code, message } = apiErrorToMcp(401);
     expect(code).toBe(-32001);
     expect(message).toContain('Authentication failed');
   });
 
   it('maps 403 to permission error', () => {
-    const { code, message } = apiErrorToMcp(403, 'order_lunch');
+    const { code, message } = apiErrorToMcp(403);
     expect(code).toBe(-32002);
     expect(message).toContain('permission');
   });
 
   it('maps 404 to not-found error', () => {
-    const { code } = apiErrorToMcp(404, 'get_wallet_balance');
+    const { code } = apiErrorToMcp(404);
     expect(code).toBe(-32001);
   });
 
   it('maps 409 to conflict error', () => {
-    const { code, message } = apiErrorToMcp(409, 'order_lunch');
+    const { code, message } = apiErrorToMcp(409);
     expect(code).toBe(-32003);
     expect(message).toContain('conflict');
   });
 
   it('maps 429 to rate-limit error', () => {
-    const { code, message } = apiErrorToMcp(429, 'get_daily_menu');
+    const { code, message } = apiErrorToMcp(429);
     expect(code).toBe(-32004);
     expect(message).toContain('Too many requests');
   });
 
   it('maps 422 to invalid-params error', () => {
-    const { code } = apiErrorToMcp(422, 'order_lunch');
+    const { code } = apiErrorToMcp(422);
     expect(code).toBe(-32602);
   });
 
   it('maps unknown status to internal error', () => {
-    const { code, message } = apiErrorToMcp(500, 'get_daily_menu');
+    const { code, message } = apiErrorToMcp(500);
     expect(code).toBe(-32603);
     expect(message).not.toContain('D1');
     expect(message).not.toContain('Stripe');
@@ -75,7 +75,7 @@ describe('apiErrorToMcp', () => {
 
   it('never leaks backend details', () => {
     for (const status of [401, 403, 404, 409, 429, 422, 500, 502, 503]) {
-      const { message } = apiErrorToMcp(status, 'any_tool');
+      const { message } = apiErrorToMcp(status);
       expect(message).not.toMatch(/D1|SQLite|Stripe|internal|stack|trace|query/i);
     }
   });

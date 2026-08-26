@@ -25,7 +25,6 @@ export async function handleWalletTools({
         method: 'GET',
         path: '/api/wallet/transactions',
       });
-    case 'add_funds':
     case 'top_up_balance':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
