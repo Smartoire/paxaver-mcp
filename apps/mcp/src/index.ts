@@ -8,23 +8,20 @@
  * AI-facing adapter over the existing Paxaver platform.
  */
 
-import { Hono } from 'hono';
 import type { Env, AppVariables } from './env.js';
 import { authenticateRequest } from './auth/validate.js';
 import { transportApp, originFrom } from './transport/streamable-http.js';
 import { wellKnownApp } from './discovery/well-known.js';
 
-type AppContext = { Bindings: Env; Variables: AppVariables };
+interface RequestContext {
+  env: Env;
+  request: Request;
+  var: Partial<AppVariables>;
+}
 
-const app = new Hono<AppContext>();
-
-// --- CORS (allowlist, not reflect-any-origin) ---
-app.use('*', async (c, next) => {
-  const origin = c.req.header('Origin') || '';
-  const allowed = c.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
-
-  // Check exact match and wildcard subdomain match (*.domain)
-  const isAllowed = allowed.some((pattern) => {
+function isAllowedOrigin(origin: string, allowed: string): boolean {
+  const list = allowed.split(',').map((o) => o.trim());
+  return list.some((pattern) => {
     if (pattern === origin) return true;
     if (pattern.startsWith('*.')) {
       const base = pattern.slice(2);
@@ -37,106 +34,124 @@ app.use('*', async (c, next) => {
     }
     return false;
   });
+}
 
-  if (origin && isAllowed) {
-    c.header('Access-Control-Allow-Origin', origin);
-    c.header('Vary', 'Origin');
-    c.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    c.header(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name',
-    );
-    c.header('Access-Control-Expose-Headers', 'MCP-Session-Id');
-    c.header('Access-Control-Max-Age', '86400');
+function corsHeaders(origin: string, allowed: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (origin && isAllowedOrigin(origin, allowed)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Vary'] = 'Origin';
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS';
+    headers[
+      'Access-Control-Allow-Headers'
+    ] = 'Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name';
+    headers['Access-Control-Expose-Headers'] = 'MCP-Session-Id';
+    headers['Access-Control-Max-Age'] = '86400';
   }
-  if (c.req.method === 'OPTIONS') {
-    return c.body(null, 204);
+  return headers;
+}
+
+function mergeHeaders(response: Response, extra: Record<string, string>): Response {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(extra)) {
+    headers.set(key, value);
   }
-  await next();
-});
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
-// --- Security headers ---
-app.use('*', async (c, next) => {
-  c.header('X-Content-Type-Options', 'nosniff');
-  c.header('X-Frame-Options', 'DENY');
-  c.header('Referrer-Policy', 'no-referrer');
-  await next();
-});
+async function mcpAuth(request: Request, ctx: RequestContext): Promise<Response | null> {
+  const url = new URL(request.url);
 
-// --- Correlation ID ---
-app.use('*', async (c, next) => {
-  const correlationId = c.req.header('X-Correlation-Id') || crypto.randomUUID();
-  c.set('correlationId', correlationId);
-  c.header('X-Correlation-Id', correlationId);
-  await next();
-});
-
-// --- Auth middleware for MCP endpoints ---
-// Applied only to /mcp (transport). OAuth discovery and
-// well-known endpoints are public, including under /mcp/.
-app.use('/mcp', mcpAuthMiddleware);
-app.use('/mcp/*', mcpAuthMiddleware);
-
-async function mcpAuthMiddleware(c: any, next: any): Promise<Response | void> {
   // Well-known endpoints under /mcp/ are public (some clients construct
   // the metadata URL by appending /.well-known/ to the connector path).
-  if (c.req.path.includes('/.well-known/')) {
-    await next();
-    return;
+  if (url.pathname.includes('/.well-known/')) {
+    return null;
   }
 
   // The 2026-07-28 `server/discover` RPC is a public capability probe.
   // It carries no user data and must answer before authentication.
-  if (c.req.header('Mcp-Method')?.toLowerCase() === 'server/discover') {
-    await next();
-    return;
+  if (request.headers.get('Mcp-Method')?.toLowerCase() === 'server/discover') {
+    return null;
   }
 
-  const origin = originFrom(c.req.url);
-  const result = await authenticateRequest(c.env, c.req.header('Authorization'), origin);
+  const origin = originFrom(request.url);
+  const result = await authenticateRequest(ctx.env, request.headers.get('Authorization') || undefined, origin);
 
   if (!result.ok) {
     const headers: Record<string, string> = {};
     if (result.wwwAuthenticate) headers['WWW-Authenticate'] = result.wwwAuthenticate;
-    return c.json(result.error, result.status as 401 | 403 | 500, headers);
+    return Response.json(result.error, { status: result.status, headers });
   }
 
   if (result.context) {
-    c.set('userId', result.context.userId);
-    c.set('email', result.context.email);
-    c.set('schoolSlug', result.context.schoolSlug);
-    c.set('permissions', result.context.permissions);
-    c.set('isPlatformAdmin', result.context.isPlatformAdmin);
-    c.set('studentIds', result.context.studentIds);
-    c.set('userToken', result.context.userToken ?? '');
-    c.set('subscription', result.context.subscription ?? null);
+    ctx.var = {
+      ...ctx.var,
+      ...(result.context as any),
+      subscription: result.context.subscription ?? null,
+    };
   }
 
-  // Subscription gating is handled in handleJsonRpc where the parsed
-  // JSON-RPC method and id are available. The middleware only does auth.
-
-  await next();
+  return null;
 }
 
-// --- Mount routes ---
-app.route('/', wellKnownApp);
-app.route('/', transportApp);
+async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Promise<Response> {
+  const origin = request.headers.get('Origin') || '';
+  const cors = corsHeaders(origin, env.ALLOWED_ORIGINS);
 
-// --- Health ---
-app.get('/health', (c) =>
-  c.json({
-    status: 'ok',
-    version: '2.1.1',
-  }),
-);
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: cors });
+  }
 
-// --- 404 ---
-app.notFound((c) => c.json({ error: 'Not found' }, 404));
+  const correlationId = request.headers.get('X-Correlation-Id') || crypto.randomUUID();
+  const securityHeaders: Record<string, string> = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'X-Correlation-Id': correlationId,
+  };
 
-// --- Error handler (never leak stack traces) ---
-app.onError((err, c) => {
-  console.error(`[unhandled] ${c.req.method} ${c.req.path}:`, err instanceof Error ? err.message : String(err));
-  return c.json({ error: 'Internal error' }, 500);
-});
+  const url = new URL(request.url);
+  let response: Response;
+  const ctx: RequestContext = { env, request, var: { correlationId } };
+
+  try {
+    if (url.pathname === '/health') {
+      response = Response.json({ status: 'ok', version: '2.1.1' });
+    } else if (
+      url.pathname.startsWith('/.well-known') ||
+      url.pathname.startsWith('/mcp/.well-known') ||
+      url.pathname === '/oauth/callback' ||
+      url.pathname === '/oauth' ||
+      url.pathname === '/oauth/'
+    ) {
+      response = await wellKnownApp.fetch(request, env);
+    } else if (url.pathname === '/mcp') {
+      const authResult = await mcpAuth(request, ctx);
+      if (authResult) {
+        response = authResult;
+      } else {
+        response = await transportApp.fetch(request, {
+          env,
+          var: ctx.var as AppVariables,
+          request,
+        });
+      }
+    } else {
+      response = Response.json({ error: 'Not found' }, { status: 404 });
+    }
+  } catch (err) {
+    console.error(`[unhandled] ${request.method} ${url.pathname}:`, err instanceof Error ? err.message : String(err));
+    response = Response.json({ error: 'Internal error' }, { status: 500 });
+  }
+
+  return mergeHeaders(response, { ...cors, ...securityHeaders });
+}
+
+async function request(input: string, init: RequestInit = {}, env: Record<string, unknown>, executionCtx?: unknown): Promise<Response> {
+  const req = new Request(input, init);
+  return mcpFetch(req, env as unknown as Env, executionCtx);
+}
+
+const app = { fetch: mcpFetch, request };
 
 export default app;

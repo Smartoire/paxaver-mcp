@@ -5,36 +5,29 @@
  * The MCP server is a resource server, not an authorization server.
  */
 
-import { Hono } from 'hono';
-import type { Env, AppVariables } from '../env.js';
+import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { authUrl } from '../auth/validate.js';
 
-export const wellKnownApp = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+function withCache(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', 'no-store, max-age=0');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
-// No-cache headers for all well-known endpoints so CDN and clients
-// always get fresh metadata.
-wellKnownApp.use('/*', async (c, next) => {
-  await next();
-  c.header('Cache-Control', 'no-store, max-age=0');
-});
-
-// ChatGPT Marketplace — domain verification
-wellKnownApp.get('/.well-known/openai-apps-challenge', (c) => {
-  const token = c.env.CHATGPT_VERIFY_TOKEN;
-  if (!token) return c.text('Not configured', 404);
-  return c.text(token, 200, { 'Content-Type': 'text/plain' });
-});
+function originFrom(url: string): string {
+  return new URL(url).origin.replace(/^http:/, 'https:');
+}
 
 // RFC 9728: Protected Resource Metadata
 // Points to the auth worker as the authorization server. Cross-domain
 // OAuth is explicitly supported by ChatGPT (see OpenAI apps-sdk auth docs).
 // The `resource` field MUST match the MCP endpoint URL that ChatGPT
 // connects to (including the /mcp path), not just the origin.
-function protectedResourceHandler(c: any) {
-  const origin = new URL(c.req.url).origin.replace(/^http:/, 'https:');
-  const authServer = authUrl(c.env);
-  return c.json({
+function protectedResourceHandler(request: Request, env: Env): Response {
+  const origin = originFrom(request.url);
+  const authServer = authUrl(env);
+  return Response.json({
     resource: `${origin}/mcp`,
     authorization_servers: [authServer],
     scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
@@ -48,9 +41,9 @@ function protectedResourceHandler(c: any) {
 // /.well-known/oauth-authorization-server on the MCP server directly
 // instead of following the protected-resource → authorization_servers chain.
 // All endpoint URLs point to the real auth server (auth.paxaver.com).
-function authorizationServerHandler(c: any) {
-  const authServer = authUrl(c.env);
-  return c.json({
+function authorizationServerHandler(env: Env): Response {
+  const authServer = authUrl(env);
+  return Response.json({
     issuer: authServer,
     authorization_endpoint: `${authServer}/authorize`,
     token_endpoint: `${authServer}/token`,
@@ -67,25 +60,9 @@ function authorizationServerHandler(c: any) {
   });
 }
 
-// RFC 9728 discovery: the well-known URL is derived by inserting
-// /.well-known/oauth-protected-resource between the host and the path.
-// For resource https://mcp.paxaver.com/mcp, the metadata URL is
-// https://mcp.paxaver.com/.well-known/oauth-protected-resource/mcp.
-// We also serve at /.well-known/ (no path suffix) and /mcp/.well-known/
-// for clients that use different discovery strategies.
-wellKnownApp.get('/.well-known/oauth-protected-resource', protectedResourceHandler);
-wellKnownApp.get('/.well-known/oauth-protected-resource/mcp', protectedResourceHandler);
-wellKnownApp.get('/.well-known/oauth-authorization-server', authorizationServerHandler);
-wellKnownApp.get('/.well-known/oauth-authorization-server/mcp', authorizationServerHandler);
-wellKnownApp.get('/mcp/.well-known/oauth-protected-resource', protectedResourceHandler);
-wellKnownApp.get('/mcp/.well-known/oauth-authorization-server', authorizationServerHandler);
-
-// MCP Server Card (SEP-1649 / Smithery).
-// Static metadata so registries can index the server without completing
-// the OAuth flow. Served at /.well-known/mcp/server-card.json.
-wellKnownApp.get('/.well-known/mcp/server-card.json', (c) => {
-  const origin = new URL(c.req.url).origin.replace(/^http:/, 'https:');
-  return c.json({
+function serverCardHandler(request: Request): Response {
+  const origin = originFrom(request.url);
+  return Response.json({
     serverInfo: {
       name: 'paxaver-mcp',
       version: '2.1.5',
@@ -114,17 +91,20 @@ wellKnownApp.get('/.well-known/mcp/server-card.json', (c) => {
       transport: `${origin}/mcp`,
     },
   });
-});
+}
 
-// OAuth callback relay page.
-// Receives the authorization code from the auth worker redirect,
-// relays it to the MCP Inspector (or other AI client) via postMessage,
-// and shows a manual copy fallback for guided flows.
-wellKnownApp.get('/oauth/callback', (c) => {
-  const code = c.req.query('code') ?? '';
-  const state = c.req.query('state') ?? '';
-  const error = c.req.query('error') ?? '';
-  const errorDescription = c.req.query('error_description') ?? '';
+function openaiChallengeHandler(request: Request, env: Env): Response {
+  const token = env.CHATGPT_VERIFY_TOKEN;
+  if (!token) return new Response('Not configured', { status: 404 });
+  return new Response(token, { status: 200, headers: { 'Content-Type': 'text/plain' } });
+}
+
+function oauthCallbackHandler(request: Request): Response {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code') ?? '';
+  const state = url.searchParams.get('state') ?? '';
+  const error = url.searchParams.get('error') ?? '';
+  const errorDescription = url.searchParams.get('error_description') ?? '';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -199,10 +179,50 @@ wellKnownApp.get('/oauth/callback', (c) => {
 </body>
 </html>`;
 
-  return c.html(html);
-});
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
 
-// NOTE: Do NOT add /oauth or /oauth/ redirect endpoints. A 302 redirect
-// from mcp.paxaver.com to auth.paxaver.com causes ChatGPT's safety scanner
-// to reject the discovery with "Unsafe URL". All OAuth metadata is served
-// directly on this domain via the /.well-known/ endpoints above.
+async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
+  const { pathname } = new URL(request.url);
+
+  const protectedPaths = [
+    '/.well-known/oauth-protected-resource',
+    '/.well-known/oauth-protected-resource/mcp',
+    '/mcp/.well-known/oauth-protected-resource',
+  ];
+  const authPaths = [
+    '/.well-known/oauth-authorization-server',
+    '/.well-known/oauth-authorization-server/mcp',
+    '/mcp/.well-known/oauth-authorization-server',
+  ];
+
+  if (pathname === '/.well-known/openai-apps-challenge') {
+    return withCache(openaiChallengeHandler(request, env));
+  }
+  if (protectedPaths.includes(pathname)) {
+    return withCache(protectedResourceHandler(request, env));
+  }
+  if (authPaths.includes(pathname)) {
+    return withCache(authorizationServerHandler(env));
+  }
+  if (pathname === '/.well-known/mcp/server-card.json') {
+    return withCache(serverCardHandler(request));
+  }
+  if (pathname === '/oauth/callback') {
+    return withCache(oauthCallbackHandler(request));
+  }
+  if (pathname === '/oauth' || pathname === '/oauth/') {
+    return withCache(new Response('Not found', { status: 404 }));
+  }
+
+  return withCache(new Response('Not found', { status: 404 }));
+}
+
+// Test helper that matches the shape of Hono's app.request(path, init, env)
+async function request(path: string, init: RequestInit = {}, env: Record<string, unknown>): Promise<Response> {
+  const req = new Request(new URL(path, 'http://localhost'), init);
+  return wellKnownFetch(req, env as unknown as Env);
+}
+
+export const wellKnownApp = { fetch: wellKnownFetch, request };
+export default wellKnownApp;

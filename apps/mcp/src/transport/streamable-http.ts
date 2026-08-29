@@ -7,7 +7,6 @@
  *   - GET /mcp opens an SSE stream for server-to-client notifications
  */
 
-import { Hono } from 'hono';
 import type { Env, AppVariables } from '../env.js';
 import { handleJsonRpc } from '../server/json-rpc.js';
 
@@ -15,54 +14,56 @@ export function originFrom(url: string): string {
   return new URL(url).origin.replace(/^http:/, 'https:');
 }
 
-export const transportApp = new Hono<{
-  Bindings: Env;
-  Variables: AppVariables;
-}>();
+interface TransportContext {
+  env: Env;
+  var: AppVariables;
+  request: Request;
+}
 
 // --- Streamable HTTP: POST /mcp ---
-transportApp.post('/mcp', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body) {
-    return c.json(
+async function handlePost(request: Request, ctx: TransportContext): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json(
       {
         jsonrpc: '2.0',
         error: { code: -32700, message: 'Parse error' },
         id: null,
       },
-      400,
+      { status: 400 },
     );
   }
 
-  // Accept header negotiation: we always return JSON for POST.
-  // SSE is only available via GET /mcp.
-
   // initialize returns a correlation session id but does not store state
-  if (!Array.isArray(body) && body.method === 'initialize') {
-    const response = await handleJsonRpc(c, body);
+  if (!Array.isArray(body) && (body as any).method === 'initialize') {
+    const c = { env: ctx.env, var: ctx.var, req: request };
+    const response = await handleJsonRpc(c, body as any);
     if (!response.ok) return response;
     const sessionId = crypto.randomUUID();
     const json = await response.json();
-    return c.json(json, 200, { 'Mcp-Session-Id': sessionId });
+    return Response.json(json, { status: 200, headers: { 'Mcp-Session-Id': sessionId } });
   }
 
   if (Array.isArray(body)) {
+    const c = { env: ctx.env, var: ctx.var, req: request };
     const results = await Promise.all(body.map((r) => handleJsonRpc(c, r)));
-    return c.json(results);
+    return Response.json(results);
   }
 
-  const response = await handleJsonRpc(c, body);
-  return response;
-});
+  const c = { env: ctx.env, var: ctx.var, req: request };
+  return handleJsonRpc(c, body as any);
+}
 
 // --- Streamable HTTP: GET /mcp (SSE stream for server→client) ---
-transportApp.get('/mcp', async (c) => {
+function handleGet(request: Request): Response {
   // Per spec, GET opens an SSE stream. We send a single endpoint event
   // pointing back to /mcp, then keep-alive. Server-initiated notifications
   // are not generated in this stateless deployment.
   const stream = new ReadableStream({
     start(controller) {
-      const origin = originFrom(c.req.url);
+      const origin = originFrom(request.url);
       controller.enqueue(`event: endpoint\ndata: ${origin}/mcp\n\n`);
       const heartbeat = setInterval(() => {
         try {
@@ -71,7 +72,7 @@ transportApp.get('/mcp', async (c) => {
           clearInterval(heartbeat);
         }
       }, 15000);
-      c.req.raw.signal?.addEventListener('abort', () => {
+      request.signal?.addEventListener('abort', () => {
         clearInterval(heartbeat);
         try {
           controller.close();
@@ -89,5 +90,22 @@ transportApp.get('/mcp', async (c) => {
       Connection: 'keep-alive',
     },
   });
-});
+}
 
+async function transportFetch(request: Request, ctx: TransportContext): Promise<Response> {
+  if (request.method === 'POST') {
+    return handlePost(request, ctx);
+  }
+  if (request.method === 'GET') {
+    return handleGet(request);
+  }
+  return new Response('Method not allowed', { status: 405 });
+}
+
+async function request(path: string, init: RequestInit = {}, ctx: Record<string, unknown>): Promise<Response> {
+  const req = new Request(new URL(path, 'http://localhost'), init);
+  return transportFetch(req, ctx as unknown as TransportContext);
+}
+
+export const transportApp = { fetch: transportFetch, request };
+export default transportApp;
