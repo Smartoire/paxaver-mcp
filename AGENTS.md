@@ -28,7 +28,7 @@ The server is a thin adapter. It contains no business logic and never touches th
 
 - TypeScript 6
 - Cloudflare Workers
-- Hono (HTTP framework)
+- Native `fetch` handler
 - jose (JWT validation)
 - Vitest (testing)
 - Wrangler 4
