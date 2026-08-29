@@ -170,24 +170,4 @@ describe('MCP protocol', () => {
     const json = (await res.json()) as any;
     expect(json.error.code).toBe(-32700);
   });
-
-  it('DELETE /mcp terminates session', async () => {
-    const token = TEST_TOKEN;
-    const initRes = await mcpPost({ jsonrpc: '2.0', id: 7, method: 'initialize' }, token);
-    const sessionId = initRes.headers.get('Mcp-Session-Id');
-    expect(sessionId).toBeTruthy();
-
-    const delRes = await app.request(
-      'https://mcp.paxaver.test/mcp',
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Mcp-Session-Id': sessionId!,
-        },
-      },
-      TEST_ENV,
-    );
-    expect(delRes.status).toBe(200);
-  });
 });

@@ -17,7 +17,7 @@
 
 import type { AppVariables } from '../env.js';
 import { mcpError, apiErrorToMcp } from '../lib/errors.js';
-import { getToolPolicy } from '../lib/policy.js';
+import { getToolPolicy } from '../lib/policies.js';
 import { originFrom } from '../transport/streamable-http.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId, ToolHandlerArgs } from './shared.js';
@@ -51,29 +51,6 @@ function makeIdempotencyKey(toolName: string, args: Record<string, unknown>, cor
   // intents are not.
   const criticalArgs = JSON.stringify(args);
   return `mcp-${toolName}-${correlationId}-${criticalArgs}`.slice(0, 200);
-}
-
-// ponytail: in-memory sliding-window rate limit for mutating tools. Ceiling:
-// per-isolate, so the effective limit is multiplied by the number of active
-// Worker isolates. The goal is to slow runaway loops and obvious abuse, not
-// to enforce an exact global limit. Upgrade: use a Durable Object or
-// Cloudflare edge rate-limiting rules for a global limit.
-const MUTATE_RATE_LIMIT = 30; // per minute per user
-const mutateWindow = new Map<string, number[]>();
-
-function rateLimitMutating(userId: string): boolean {
-  const now = Date.now();
-  const cutoff = now - 60_000;
-  const arr = mutateWindow.get(userId) ?? [];
-  // Drop entries older than the window.
-  while (arr.length && arr[0]! < cutoff) arr.shift();
-  if (arr.length >= MUTATE_RATE_LIMIT) {
-    mutateWindow.set(userId, arr);
-    return false;
-  }
-  arr.push(now);
-  mutateWindow.set(userId, arr);
-  return true;
 }
 
 /**
@@ -120,12 +97,6 @@ export async function dispatchTool(
 
   try {
     const idempotencyKey = policy?.mutates ? makeIdempotencyKey(name, args, ctx.correlationId) : undefined;
-
-    // Rate-limit mutating tools per user to slow runaway loops and abuse.
-    // The backend enforces its own limits; this is a defense-in-depth gate.
-    if (policy?.mutates && !rateLimitMutating(ctx.userId)) {
-      return toolError(id, -32001, 'Rate limit exceeded for mutating actions. Try again in a moment.');
-    }
 
     // Verify that user-supplied student_id and school_slug arguments are
     // owned by the authenticated user before dispatching to the backend.

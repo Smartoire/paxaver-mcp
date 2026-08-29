@@ -22,22 +22,19 @@ export interface AuthResult {
   wwwAuthenticate?: string;
 }
 
-function authIssuer(env: Env): string {
+export function authUrl(env: Env): string {
   if (env.ENVIRONMENT === 'development') return 'http://localhost:8788';
   if (env.ENVIRONMENT === 'staging') return 'https://auth.paxaver.dev';
   return 'https://auth.paxaver.com';
 }
 
-// ponytail: JWKS cache is per-isolate. Workers isolates are short-lived,
-// so this cache is effectively per-request. No TTL needed.
+// ponytail: one issuer per worker environment; a plain cached variable is enough.
 // Upgrade path: use a KV-backed JWKS cache for long-lived isolates.
-const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+let jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
 
 function getJwks(issuer: string): ReturnType<typeof createRemoteJWKSet> {
-  let jwks = jwksCache.get(issuer);
   if (!jwks) {
     jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
-    jwksCache.set(issuer, jwks);
   }
   return jwks;
 }
@@ -63,7 +60,7 @@ export async function authenticateRequest(
   }
 
   // --- RS256 path (auth worker JWT via JWKS) ---
-  const issuer = authIssuer(env);
+  const issuer = authUrl(env);
   const jwks = getJwks(issuer);
 
   try {

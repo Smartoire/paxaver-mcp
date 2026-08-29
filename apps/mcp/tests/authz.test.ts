@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { canSeeTool, checkToolAuthorization, TOOL_POLICIES, getToolPolicy } from '../src/lib/policy.js';
+import { canSeeTool, checkToolAuthorization, TOOL_POLICIES, getToolPolicy } from '../src/lib/policies.js';
 
 describe('Authorization policy', () => {
   it('every tool has a policy entry', () => {

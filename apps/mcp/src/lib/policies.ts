@@ -7,7 +7,29 @@
  * enforced by the backend.
  */
 
-import type { ToolPolicy } from './contracts.js';
+export type CapabilityId =
+  'view_account' | 'view_balance' | 'view_orders' | 'view_menu' | 'view_events' | 'ai_write';
+
+export type ToolClassification = 'READ' | 'WRITE' | 'FINANCIAL' | 'DESTRUCTIVE' | 'ADMIN' | 'PRIVACY_SENSITIVE';
+
+export interface ToolPolicy {
+  /** Canonical capability this tool exercises (null = admin-only, gated by role). */
+  capability: CapabilityId | null;
+  /** Whether an active paid entitlement is required (server-side check in backend). */
+  requiresEntitlement: boolean;
+  /** Operation classifications for safety labeling. */
+  classifications: ToolClassification[];
+  /** Roles that may invoke this tool at the active school. Empty = any member. */
+  requiredRoles: string[];
+  /** Whether the tool mutates persistent state. */
+  mutates: boolean;
+  /** Whether the tool has financial impact. */
+  financial: boolean;
+  /** Whether the tool is irreversible / destructive. */
+  destructive: boolean;
+  /** Whether the AI client should prompt the user for explicit confirmation. */
+  requiresConfirmation: boolean;
+}
 
 export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   // --- User/account ---
@@ -312,3 +334,36 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     requiresConfirmation: true,
   },
 };
+
+/**
+ * Check whether the authenticated context is allowed to *see* a tool in
+ * tools/list. Data-level access is re-checked by the backend on call.
+ */
+export function canSeeTool(toolName: string, ctx: { isPlatformAdmin: boolean; permissions: string[] }): boolean {
+  const policy = TOOL_POLICIES[toolName];
+  if (!policy) return false;
+  if (ctx.isPlatformAdmin) return true;
+  if (policy.requiredRoles.length === 0) return true;
+  return policy.requiredRoles.some((r) => ctx.permissions.includes(r));
+}
+
+/**
+ * Check whether the authenticated context is allowed to *call* a tool.
+ * Returns null if allowed, or an error code string if denied.
+ */
+export function checkToolAuthorization(
+  toolName: string,
+  ctx: { isPlatformAdmin: boolean; permissions: string[] },
+): 'ok' | 'forbidden' | 'unknown_tool' {
+  const policy = TOOL_POLICIES[toolName];
+  if (!policy) return 'unknown_tool';
+  if (ctx.isPlatformAdmin) return 'ok';
+  if (policy.requiredRoles.length > 0 && !policy.requiredRoles.some((r) => ctx.permissions.includes(r))) {
+    return 'forbidden';
+  }
+  return 'ok';
+}
+
+export function getToolPolicy(toolName: string): ToolPolicy | undefined {
+  return TOOL_POLICIES[toolName];
+}

@@ -7,7 +7,7 @@
  */
 
 import { PROTOCOL_VERSION } from '../lib/protocol-version.js';
-import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from '../lib/policy.js';
+import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from '../lib/policies.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';

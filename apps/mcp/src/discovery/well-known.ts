@@ -8,6 +8,7 @@
 import { Hono } from 'hono';
 import type { Env, AppVariables } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
+import { authUrl } from '../auth/validate.js';
 
 export const wellKnownApp = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -32,7 +33,7 @@ wellKnownApp.get('/.well-known/openai-apps-challenge', (c) => {
 // connects to (including the /mcp path), not just the origin.
 function protectedResourceHandler(c: any) {
   const origin = new URL(c.req.url).origin.replace(/^http:/, 'https:');
-  const authServer = authServerUrl(c.env);
+  const authServer = authUrl(c.env);
   return c.json({
     resource: `${origin}/mcp`,
     authorization_servers: [authServer],
@@ -48,7 +49,7 @@ function protectedResourceHandler(c: any) {
 // instead of following the protected-resource → authorization_servers chain.
 // All endpoint URLs point to the real auth server (auth.paxaver.com).
 function authorizationServerHandler(c: any) {
-  const authServer = authServerUrl(c.env);
+  const authServer = authUrl(c.env);
   return c.json({
     issuer: authServer,
     authorization_endpoint: `${authServer}/authorize`,
@@ -64,12 +65,6 @@ function authorizationServerHandler(c: any) {
     require_pkce: true,
     resource_parameter_supported: true,
   });
-}
-
-function authServerUrl(env: any): string {
-  if (env.ENVIRONMENT === 'development') return 'http://localhost:8788';
-  if (env.ENVIRONMENT === 'staging') return 'https://auth.paxaver.dev';
-  return 'https://auth.paxaver.com';
 }
 
 // RFC 9728 discovery: the well-known URL is derived by inserting
