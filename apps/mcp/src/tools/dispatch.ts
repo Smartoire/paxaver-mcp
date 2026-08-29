@@ -20,13 +20,8 @@ import { mcpError, apiErrorToMcp } from '../lib/errors.js';
 import { getToolPolicy } from '../lib/policies.js';
 import { originFrom } from '../transport/streamable-http.js';
 import type { ApiCallResult } from '../api/client.js';
-import type { DispatchContext, RpcId, ToolHandlerArgs } from './shared.js';
-import { handleUserTools } from './user-tools.js';
-import { handleWalletTools } from './wallet-tools.js';
-import { handleOrderTools } from './order-tools.js';
-import { handleEventTools } from './event-tools.js';
-import { handleRestaurantTools } from './restaurant-tools.js';
-import { handleMenuTools } from './menu-tools.js';
+import type { DispatchContext, RpcId } from './shared.js';
+import { handleTool } from './tools.js';
 
 function toolResult(id: RpcId, data: unknown): Response {
   return Response.json({
@@ -102,19 +97,14 @@ export async function dispatchTool(
     // owned by the authenticated user before dispatching to the backend.
     validateOwnership(args, ctx);
 
-    const handlerArgs: ToolHandlerArgs = { env, ctx, origin, name, args, idempotencyKey };
-
-    // Delegate to the matching category handler. Each handler returns the
-    // backend API result, or undefined when the tool name is not in its
-    // category. The first defined result wins; if none match, the tool is
-    // unknown.
-    const result: ApiCallResult | undefined =
-      (await handleUserTools(handlerArgs)) ??
-      (await handleWalletTools(handlerArgs)) ??
-      (await handleOrderTools(handlerArgs)) ??
-      (await handleEventTools(handlerArgs)) ??
-      (await handleRestaurantTools(handlerArgs)) ??
-      (await handleMenuTools(handlerArgs));
+    const result: ApiCallResult | undefined = await handleTool({
+      env,
+      ctx,
+      origin,
+      name,
+      args,
+      idempotencyKey,
+    });
 
     if (result === undefined) {
       return toolError(id, -32601, `Unknown tool: ${name}`);
