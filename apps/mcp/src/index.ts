@@ -13,6 +13,16 @@ import { authenticateRequest } from './auth/validate.js';
 import { transportApp, originFrom } from './transport/streamable-http.js';
 import { wellKnownApp } from './discovery/well-known.js';
 
+const SECURITY_TXT = `# Paxaver security.txt (RFC 9116)
+# https://securitytxt.org/
+
+Contact: mailto:security@paxaver.com
+Expires: 2027-08-12T23:59:59Z
+Preferred-Languages: en, fr
+Canonical: https://paxaver.com/.well-known/security.txt
+Policy: https://paxaver.com/privacy/security
+`;
+
 interface RequestContext {
   env: Env;
   request: Request;
@@ -118,6 +128,8 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
   try {
     if (url.pathname === '/health') {
       response = Response.json({ status: 'ok', version: '2.1.1' });
+    } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
+      response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     } else if (
       url.pathname.startsWith('/.well-known') ||
       url.pathname.startsWith('/mcp/.well-known') ||
