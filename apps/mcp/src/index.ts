@@ -107,6 +107,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'no-referrer',
+    'X-Robots-Tag': 'noindex, nofollow',
     'X-Correlation-Id': correlationId,
   };
 
