@@ -126,7 +126,7 @@ Secrets must be set with `wrangler secret put --env production`:
 
 ## Tools
 
-The server exposes 31 tools grouped into six categories. Visibility in
+The server exposes 29 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
@@ -141,6 +141,14 @@ before dispatch, and the backend re-checks data-level access (defense-in-depth).
 Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 [`docs/authorization.md`](./docs/authorization.md).
+
+### Privacy
+
+No personal contact information (email, phone, address) is collected or
+returned through MCP tools. The `get_user_info` tool returns only the user's
+name, school, students, and roles. Student data is limited to IDs, names, and
+school slugs. Allergies, notes, birthday, and other PII are not exposed in
+read responses. The MCP server does not log user data.
 
 ---
 

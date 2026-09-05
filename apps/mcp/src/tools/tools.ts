@@ -26,9 +26,35 @@ export async function handleTool({
         path: '/api/users/me',
       });
       if (result.ok) {
-        const userData = (result.data as { data?: Record<string, unknown> })?.data ?? result.data;
-        if (ctx.subscription && userData && typeof userData === 'object') {
-          (userData as Record<string, unknown>).subscription = ctx.subscription;
+        const raw = (result.data as { data?: Record<string, unknown> })?.data ?? result.data;
+        const u = (raw ?? {}) as Record<string, unknown>;
+        // ponytail: filter PII — only return fields declared in the outputSchema.
+        // The backend returns email, phone, address, nationality, totp_secret, etc.
+        // These must never reach the AI client. Upgrade path: generate the filter
+        // from the outputSchema definition automatically.
+        const filtered: Record<string, unknown> = {
+          firstName: u.firstName,
+          lastName: u.lastName,
+          schoolSlug: u.schoolSlug,
+          schoolName: u.schoolName,
+          students: Array.isArray(u.students)
+            ? (u.students as Record<string, unknown>[]).map((s) => ({
+                id: s.id,
+                firstName: s.firstName,
+                lastName: s.lastName,
+                schoolSlug: s.schoolSlug,
+              }))
+            : u.students,
+          roles: u.roles,
+        };
+        if (ctx.subscription) {
+          filtered.subscription = ctx.subscription;
+        }
+        // Replace the data envelope so the dispatcher sends only filtered fields.
+        if (result.data && typeof result.data === 'object' && 'data' in (result.data as Record<string, unknown>)) {
+          (result.data as Record<string, unknown>).data = filtered;
+        } else {
+          result.data = filtered;
         }
       }
       return result;

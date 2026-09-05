@@ -11,6 +11,7 @@ export interface ToolDefinition {
     type: 'object';
     properties: Record<string, unknown>;
     required?: string[];
+    additionalProperties?: false;
   };
   outputSchema?: {
     type: 'object';
@@ -50,7 +51,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_user_info',
     description:
       'Returns the authenticated Paxaver user context: their name, active school, students they are a guardian for, and available roles. ALWAYS call this first before any other tool to establish context. This is a read-only operation.',
-    inputSchema: { type: 'object', properties: {} },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
       properties: {
@@ -82,6 +83,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         birthday: { type: 'string', description: 'YYYY-MM-DD' },
       },
       required: ['student_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -106,7 +108,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_wallet_balance',
     description:
       'Returns the current wallet balance for the authenticated user at their active school. Read-only. Use this to check funds before ordering lunch.',
-    inputSchema: { type: 'object', properties: {} },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
       properties: {
@@ -121,7 +123,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_wallet_status',
     description:
       'Returns the wallet balance plus recent transactions and pending deposits. Read-only. Use this for a wallet overview.',
-    inputSchema: { type: 'object', properties: {} },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
       properties: {
@@ -155,6 +157,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         description: { type: 'string', description: 'Optional note' },
       },
       required: ['amount_cents'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -178,6 +181,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         amount_cents: { type: 'integer', description: 'Donation amount in cents (minimum 100 = $1.00)', minimum: 100 },
       },
       required: ['school_slug', 'amount_cents'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -206,6 +210,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         quantity: { type: 'integer', description: 'Number of servings (default 1)', minimum: 1, default: 1 },
       },
       required: ['menu_item_id', 'menu_date'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -230,6 +235,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       properties: {
         student_id: { type: 'string', description: 'Filter to a specific student (must be your own)' },
       },
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -263,6 +269,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         date: { type: 'string', description: 'YYYY-MM-DD' },
         month: { type: 'string', description: 'YYYY-MM' },
       },
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -291,7 +298,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_updates',
     description:
       'Returns a summary of recent activity: wallet balance, recent orders, upcoming events. Read-only. Use this for a quick overview.',
-    inputSchema: { type: 'object', properties: {} },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
       properties: {
@@ -310,6 +317,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { menu_date: { type: 'string', description: 'YYYY-MM-DD' } },
       required: ['menu_date'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -346,6 +354,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         month: { type: 'string', description: 'YYYY-MM' },
         student_id: { type: 'string', description: 'Filter to a specific student (must be your own)' },
       },
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -392,6 +401,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
       required: ['student_id', 'school_slug', 'menu_date', 'items'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -418,6 +428,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         tip_cents: { type: 'integer', description: 'Tip in cents (donated to school PAC)', default: 0 },
       },
       required: ['order_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -442,6 +453,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         order_id: { type: 'string', description: 'Order ID to cancel' },
       },
       required: ['order_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -466,6 +478,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         start_date: { type: 'string', description: 'YYYY-MM-DD' },
         end_date: { type: 'string', description: 'YYYY-MM-DD' },
       },
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -507,6 +520,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         ticket_price_cents: { type: 'integer', description: 'Ticket price in cents (0 = free)' },
       },
       required: ['name', 'event_date'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -538,6 +552,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: { type: 'string', enum: ['active', 'cancelled', 'completed'] },
       },
       required: ['event_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -558,6 +573,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { event_id: { type: 'string' } },
       required: ['event_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -582,6 +598,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         last_name: { type: 'string', description: 'Last name' },
       },
       required: ['event_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -605,6 +622,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         notes: { type: 'string', description: 'Optional notes' },
       },
       required: ['shift_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -625,6 +643,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: { school_slug: { type: 'string', description: 'School slug (defaults to active school)' } },
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -667,6 +686,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         tax_percent: { type: 'number' },
       },
       required: ['name'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -693,6 +713,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { restaurant_id: { type: 'string' } },
       required: ['restaurant_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -734,6 +755,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         calories: { type: 'integer' },
       },
       required: ['restaurant_id', 'name'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -769,6 +791,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         is_available: { type: 'boolean' },
       },
       required: ['restaurant_id', 'menu_item_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -799,6 +822,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         price_cents: { type: 'integer', description: 'New price in cents' },
       },
       required: ['restaurant_id', 'menu_item_id', 'price_cents'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -823,6 +847,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { restaurant_id: { type: 'string' }, menu_item_id: { type: 'string' } },
       required: ['restaurant_id', 'menu_item_id'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
@@ -851,6 +876,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         available_qty: { type: 'integer' },
       },
       required: ['restaurant_id', 'menu_item_id', 'menu_date'],
+      additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
