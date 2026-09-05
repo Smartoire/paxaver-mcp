@@ -67,8 +67,8 @@ See `branding-assets.md` for specifications. A 30–60 second screen recording s
 
 ## Monetization
 
-Paxaver is free for families to use. Schools pay a subscription for the platform. The ChatGPT app itself does not charge users - it is an interface to an existing Paxaver account. No in-app purchases or transactions occur through the ChatGPT interface; wallet deposits and payments happen on the Paxaver website.
+Paxaver is free for families to use. Schools pay a subscription for the platform. The ChatGPT app itself does not charge users - it is an interface to an existing Paxaver account. Wallet top-ups can be initiated through ChatGPT: the tool creates a Stripe checkout session and emails the payment link to the user. The actual payment occurs on Stripe's secure checkout page, not in ChatGPT. The wallet is credited only after the user completes the Stripe payment. Orders and donations are placed against the user's existing wallet balance.
 
 - **Pricing model:** Free (requires existing Paxaver account)
 - **In-app purchases:** None
-- **Transactions through ChatGPT:** None (orders are placed against the user's existing wallet balance, which is topped up via the Paxaver website)
+- **Transactions through ChatGPT:** Orders and donations are placed against the user's existing wallet balance. Wallet top-ups can be initiated through ChatGPT; the actual payment occurs on Stripe's secure checkout page, and the wallet is credited only after the user completes the Stripe payment.
