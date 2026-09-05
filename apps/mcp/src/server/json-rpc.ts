@@ -45,7 +45,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         _meta: {
           'io.modelcontextprotocol/serverInfo': {
             name: 'paxaver-mcp',
-            version: '2.1.1',
+            version: '2.2.2',
           },
         },
         instructions:
@@ -92,7 +92,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         },
         serverInfo: {
           name: 'paxaver-mcp',
-          version: '2.1.1',
+          version: '2.2.2',
           title: 'Paxaver MCP',
           description:
             'School community operations: ordering, wallet, menus, events, fundraising, and school management.',

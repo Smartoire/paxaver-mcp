@@ -127,7 +127,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
 
   try {
     if (url.pathname === '/health') {
-      response = Response.json({ status: 'ok', version: '2.1.1' });
+      response = Response.json({ status: 'ok', version: '2.2.2' });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     } else if (

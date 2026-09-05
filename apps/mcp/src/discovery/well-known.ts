@@ -65,7 +65,7 @@ function serverCardHandler(request: Request): Response {
   return Response.json({
     serverInfo: {
       name: 'paxaver-mcp',
-      version: '2.1.5',
+      version: '2.2.2',
     },
     authentication: {
       required: true,
