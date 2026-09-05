@@ -18,16 +18,16 @@ transport layer, and the error handling path.
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Tool names are human-readable, specific, and descriptive (verb-based) | PASS | All 29 tools use verb-based names: `get_user_info`, `order_lunch`, `create_event`, etc. |
+| Tool names are human-readable, specific, and descriptive (verb-based) | PASS | All 27 tools use verb-based names: `get_user_info`, `order_lunch`, `create_event`, etc. |
 | Each tool has a description that explains its purpose clearly and accurately | PASS | Every tool has a description. Write tools mention the side effect and require confirmation. |
-| Tool annotations (`readOnlyHint`, `destructiveHint`, `openWorldHint`) are correctly set | PASS | Read tools have `readOnlyHint: true`. Cancel tools have `destructiveHint: true`. `top_up_balance` has `openWorldHint: true` (external Stripe redirect). |
+| Tool annotations (`readOnlyHint`, `destructiveHint`, `openWorldHint`) are correctly set | PASS | Read tools have `readOnlyHint: true`. Cancel tools have `destructiveHint: true`. |
 | Tools request minimum information necessary | PASS | Input schemas declare only the fields required for the operation. `additionalProperties: false` is set on all input schemas. |
 | No tool requests full conversation history or broad contextual fields | PASS | No tool accepts free-text context beyond its specific parameters. |
 | Side effects are never hidden or implicit | PASS | All mutating tools have `readOnlyHint: false` and descriptions that state the side effect. |
 | Tools are safe to retry where possible, or explicitly indicate when retries cause repeated effects | PASS | Mutating tools receive an idempotency key derived from tool name + args + correlation ID. The backend is expected to honor the `Idempotency-Key` header. |
 | Authentication flow is transparent and explicit | PASS | OAuth 2.1 with PKCE (S256) is required. The auth worker (`auth.paxaver.com`) serves as the authorization server. The MCP server validates RS256 JWTs via JWKS. |
-| No commerce for digital products or subscriptions | PASS | No tool sells digital products or subscriptions. `top_up_balance` creates a Stripe checkout session but does not process payment within ChatGPT. |
-| No link to checkout or transactional pages | PASS | The `top_up_balance` tool creates a checkout session server-side. The payment link is emailed to the user. No checkout URL is returned to the AI client. |
+| No commerce for digital products or subscriptions | PASS | No tool sells digital products or subscriptions. |
+| No link to checkout or transactional pages | PASS | No tool returns a checkout or payment URL to the AI client. |
 
 ---
 

@@ -142,33 +142,6 @@ Returns the wallet balance plus recent transactions and pending deposits.
 
 ---
 
-### `top_up_balance`
-
-Creates a Stripe checkout session to add funds to the user's wallet and emails
-the payment link. **FINANCIAL** — confirm the exact amount with the user first.
-Minimum top-up is $5.00 (500 cents). The wallet is only credited after the user
-completes the Stripe payment; this tool does not directly move money. Idempotent
-per transaction.
-
-|                          |                  |
-| ------------------------ | ---------------- |
-| **Capability**           | `view_balance`   |
-| **Entitlement required** | yes              |
-| **Required roles**       | _(any member)_   |
-| **Classifications**      | FINANCIAL, WRITE |
-| **Confirmation**         | **yes**          |
-
-**Input schema**
-
-| Property       | Type    | Required | Description                   |
-| -------------- | ------- | -------- | ----------------------------- |
-| `amount_cents` | integer | yes      | Amount in cents (min 500)     |
-| `description`  | string  | no       | Optional note for the deposit |
-
-**Backend:** `POST /api/wallet/deposits/stripe`
-
----
-
 ## Orders & menu
 
 ### `order_lunch`

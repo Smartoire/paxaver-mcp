@@ -14,8 +14,8 @@
 
 The Paxaver MCP server lets AI assistants (ChatGPT, Claude, Perplexity, and any
 MCP-compatible client) act on behalf of a Paxaver user: check a lunch menu, order
-lunch, top up a wallet, register for fundraising events, donate to a school,
-volunteer, and — for school administrators — manage restaurants, menu items,
+lunch, register for fundraising events, volunteer, and — for school administrators
+— manage restaurants, menu items,
 events, and daily orders.
 
 It is a **thin adapter**. It contains no business logic and never touches the
@@ -37,7 +37,7 @@ is not an authorization server.
 
 ## Architecture
 
-```
+```text
 ┌───────────────┐     MCP (Streamable HTTP)      ┌──────────────────────┐
 │   AI Client   │ ─────────────────────────────▶ │   Paxaver MCP Worker │
 │ ChatGPT/Claude│ ◀───────────────────────────── │  (this repo)         │
@@ -126,17 +126,17 @@ Secrets must be set with `wrangler secret put --env production`:
 
 ## Tools
 
-The server exposes 29 tools grouped into six categories. Visibility in
+The server exposes 27 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
-| Category           | Tools                                                                                                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| User / account     | `get_user_info`, `update_student`                                                                                                                                                    |
-| Wallet             | `get_wallet_balance`, `get_wallet_status`, `top_up_balance`, `donate_to_school`                                                                                         |
-| Orders & menu      | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `create_draft_order`, `finalize_order`, `cancel_order` |
-| Events             | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register_event`, `request_volunteer`                                                                         |
-| Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `set_menu_item_price`, `delete_menu_item`, `set_daily_menu`               |
+| Category           | Tools                                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User / account     | `get_user_info`, `update_student`                                                                                                                                      |
+| Wallet             | `get_wallet_balance`, `get_wallet_status`                                                                                                                              |
+| Orders & menu      | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `create_draft_order`, `finalize_order`, `cancel_order`         |
+| Events             | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register_event`, `be_volunteer`                                                                |
+| Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `set_menu_item_price`, `delete_menu_item`, `set_daily_menu` |
 
 Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:

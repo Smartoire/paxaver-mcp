@@ -78,20 +78,6 @@ export async function handleTool({
         method: 'GET',
         path: '/api/wallet/transactions',
       });
-    case 'top_up_balance':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: '/api/wallet/deposit',
-        body: args,
-        idempotencyKey,
-      });
-    case 'donate_to_school':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: '/api/donations',
-        body: args,
-        idempotencyKey,
-      });
 
     // Order
     case 'order_lunch':
@@ -198,7 +184,7 @@ export async function handleTool({
         body: args,
         idempotencyKey,
       });
-    case 'request_volunteer':
+    case 'be_volunteer':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
         path: '/api/volunteers/signups',

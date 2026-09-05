@@ -42,7 +42,6 @@ Fields:
 | `update_student`          | `view_account` | no          | WRITE, PRIVACY_SENSITIVE | _(any)_                                     | yes     | no        | no          | **yes** |
 | `get_wallet_balance`      | `view_balance` | no          | READ, PRIVACY_SENSITIVE  | _(any)_                                     | no      | no        | no          | no      |
 | `get_wallet_status`       | `view_balance` | no          | READ, PRIVACY_SENSITIVE  | _(any)_                                     | no      | no        | no          | no      |
-| `top_up_balance`          | `view_balance` | yes         | FINANCIAL, WRITE         | _(any)_                                     | yes     | yes       | no          | **yes** |
 | `order_lunch`             | `ai_write`     | yes         | FINANCIAL, WRITE         | _(any)_                                     | yes     | yes       | no          | **yes** |
 | `get_orders`              | `view_orders`  | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
 | `get_daily_menu`          | `view_menu`    | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
@@ -147,7 +146,7 @@ surfaces these to the AI client:
 
 ### Financial tools
 
-`top_up_balance`, `order_lunch`, `set_menu_item_price`. These move or commit money
+`order_lunch`, `set_menu_item_price`. These move or commit money
 (either directly debiting the wallet or creating a Stripe checkout). They are
 always `requiresConfirmation: true`.
 

@@ -75,26 +75,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     destructive: false,
     requiresConfirmation: false,
   },
-  top_up_balance: {
-    capability: 'view_balance',
-    requiresEntitlement: true,
-    classifications: ['FINANCIAL', 'WRITE'],
-    requiredRoles: [],
-    mutates: true,
-    financial: true,
-    destructive: false,
-    requiresConfirmation: true,
-  },
-  donate_to_school: {
-    capability: 'ai_write',
-    requiresEntitlement: true,
-    classifications: ['FINANCIAL', 'WRITE'],
-    requiredRoles: [],
-    mutates: true,
-    financial: true,
-    destructive: false,
-    requiresConfirmation: true,
-  },
 
   // --- Orders ---
   order_lunch: {
@@ -239,7 +219,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     destructive: false,
     requiresConfirmation: true,
   },
-  request_volunteer: {
+  be_volunteer: {
     capability: 'ai_write',
     requiresEntitlement: false,
     classifications: ['WRITE'],

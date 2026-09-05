@@ -54,7 +54,7 @@ The Protected Resource endpoint is served by the MCP server. All other OAuth end
 
 OpenAI will provide a verification token when you register the app in the developer portal. The MCP server includes a verification endpoint at:
 
-```
+```text
 /.well-known/chatgpt-verification/{token}
 ```
 
@@ -75,14 +75,14 @@ wrangler secret put CHATGPT_VERIFY_TOKEN --config wrangler.us.toml
 # paste the token when prompted
 ```
 
-3. Redeploy:
+1. Redeploy:
 
 ```bash
 npm run deploy:ca
 npm run deploy:us
 ```
 
-4. Enter the verification URL in the ChatGPT developer portal:
+1. Enter the verification URL in the ChatGPT developer portal:
    - Canada: `https://mcp-ca.paxaver.com/.well-known/chatgpt-verification/<token>`
    - US: `https://mcp-us.paxaver.com/.well-known/chatgpt-verification/<token>`
 
@@ -90,16 +90,15 @@ The endpoint returns `200` with body `verify Ownership` when the token matches, 
 
 ## Tools Overview
 
-The server exposes **23 tools** across four categories. Full schemas are in `docs/mcp/tools.md`.
+The server exposes **22 tools** across four categories. Full schemas are in `docs/tools.md`.
 
-### User & Wallet Tools (4)
+### User & Wallet Tools (3)
 
 | Tool                 | Description                                      | Read-only |
 | -------------------- | ------------------------------------------------ | --------- |
 | `get_user_info`      | User info, school memberships, and student list  | Yes       |
 | `get_wallet_balance` | Current wallet balance at the active school      | Yes       |
 | `get_wallet_status`  | Balance + recent transactions + pending deposits | Yes       |
-| `top_up_balance`     | Create Stripe checkout session to top up wallet  | No        |
 
 ### Lunch & Ordering Tools (6)
 
