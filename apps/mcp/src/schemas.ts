@@ -83,6 +83,21 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['student_id'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        firstName: { type: ['string', 'null'] },
+        lastName: { type: ['string', 'null'] },
+        knownAs: { type: ['string', 'null'] },
+        grade: { type: ['string', 'null'] },
+        division: { type: ['string', 'null'] },
+        allergies: { type: ['string', 'null'] },
+        notes: { type: ['string', 'null'] },
+        studentNumber: { type: ['string', 'null'] },
+        birthday: { type: ['string', 'null'] },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Update Student' },
   },
 
@@ -107,6 +122,26 @@ export const ALL_TOOLS: ToolDefinition[] = [
     description:
       'Returns the wallet balance plus recent transactions and pending deposits. Read-only. Use this for a wallet overview.',
     inputSchema: { type: 'object', properties: {} },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        balanceCents: { type: ['number', 'null'] },
+        balance: { type: ['string', 'null'] },
+        transactions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              type: { type: 'string' },
+              amountCents: { type: 'integer' },
+              description: { type: ['string', 'null'] },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Wallet Status' },
   },
   {
@@ -121,6 +156,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['amount_cents'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        transactionId: { type: 'string' },
+        status: { type: 'string' },
+        checkoutUrl: { type: ['string', 'null'] },
+        amountCents: { type: 'integer' },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, title: 'Top Up Balance' },
   },
   {
@@ -134,6 +178,16 @@ export const ALL_TOOLS: ToolDefinition[] = [
         amount_cents: { type: 'integer', description: 'Donation amount in cents (minimum 100 = $1.00)', minimum: 100 },
       },
       required: ['school_slug', 'amount_cents'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        schoolSlug: { type: 'string' },
+        amountCents: { type: 'integer' },
+        status: { type: 'string' },
+        balanceCents: { type: ['number', 'null'] },
+      },
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Donate to School' },
   },
@@ -153,6 +207,18 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['menu_item_id', 'menu_date'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        studentId: { type: 'string' },
+        schoolSlug: { type: 'string' },
+        menuDate: { type: 'string' },
+        status: { type: 'string' },
+        itemTotalCents: { type: 'integer' },
+        items: { type: 'array', items: { type: 'object' } },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Order Lunch' },
   },
   {
@@ -163,6 +229,26 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         student_id: { type: 'string', description: 'Filter to a specific student (must be your own)' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orders: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              studentId: { type: 'string' },
+              menuDate: { type: 'string' },
+              status: { type: 'string' },
+              itemTotalCents: { type: 'integer' },
+              items: { type: 'array', items: { type: 'object' } },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Orders' },
@@ -178,6 +264,27 @@ export const ALL_TOOLS: ToolDefinition[] = [
         month: { type: 'string', description: 'YYYY-MM' },
       },
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string' },
+        menuItems: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              dailyMenuId: { type: 'string' },
+              menuItemId: { type: 'string' },
+              menuItemName: { type: 'string' },
+              restaurantName: { type: ['string', 'null'] },
+              priceCents: { type: 'integer' },
+              availableQty: { type: ['integer', 'null'] },
+              dietaryTags: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+      },
+    },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Daily Menu' },
   },
   {
@@ -185,6 +292,14 @@ export const ALL_TOOLS: ToolDefinition[] = [
     description:
       'Returns a summary of recent activity: wallet balance, recent orders, upcoming events. Read-only. Use this for a quick overview.',
     inputSchema: { type: 'object', properties: {} },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        balanceCents: { type: ['number', 'null'] },
+        recentOrders: { type: 'array', items: { type: 'object' } },
+        upcomingEvents: { type: 'array', items: { type: 'object' } },
+      },
+    },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Updates' },
   },
   {
@@ -195,6 +310,25 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { menu_date: { type: 'string', description: 'YYYY-MM-DD' } },
       required: ['menu_date'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orders: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              studentId: { type: 'string' },
+              menuDate: { type: 'string' },
+              status: { type: 'string' },
+              itemTotalCents: { type: 'integer' },
+              items: { type: 'array', items: { type: 'object' } },
+            },
+          },
+        },
+      },
     },
     annotations: {
       readOnlyHint: true,
@@ -211,6 +345,24 @@ export const ALL_TOOLS: ToolDefinition[] = [
       properties: {
         month: { type: 'string', description: 'YYYY-MM' },
         student_id: { type: 'string', description: 'Filter to a specific student (must be your own)' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orders: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              studentId: { type: 'string' },
+              menuDate: { type: 'string' },
+              status: { type: 'string' },
+              itemTotalCents: { type: 'integer' },
+            },
+          },
+        },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Monthly Orders' },
@@ -241,6 +393,18 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['student_id', 'school_slug', 'menu_date', 'items'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        studentId: { type: 'string' },
+        schoolSlug: { type: 'string' },
+        menuDate: { type: 'string' },
+        status: { type: 'string' },
+        itemTotalCents: { type: 'integer' },
+        items: { type: 'array', items: { type: 'object' } },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Create Draft Order' },
   },
   {
@@ -255,6 +419,17 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['order_id'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        status: { type: 'string' },
+        itemTotalCents: { type: 'integer' },
+        tipCents: { type: 'integer' },
+        totalCents: { type: 'integer' },
+        balanceCents: { type: ['number', 'null'] },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Finalize Order' },
   },
   {
@@ -267,6 +442,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
         order_id: { type: 'string', description: 'Order ID to cancel' },
       },
       required: ['order_id'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        status: { type: 'string' },
+        refundCents: { type: 'integer' },
+        balanceCents: { type: ['number', 'null'] },
+      },
     },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, title: 'Cancel Order' },
   },
@@ -281,6 +465,26 @@ export const ALL_TOOLS: ToolDefinition[] = [
       properties: {
         start_date: { type: 'string', description: 'YYYY-MM-DD' },
         end_date: { type: 'string', description: 'YYYY-MM-DD' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        events: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              eventDate: { type: 'string' },
+              startsAt: { type: ['string', 'null'] },
+              endsAt: { type: ['string', 'null'] },
+              location: { type: ['string', 'null'] },
+              isClosed: { type: 'boolean' },
+            },
+          },
+        },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Upcoming Events' },
@@ -304,6 +508,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['name', 'event_date'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        eventDate: { type: 'string' },
+        status: { type: 'string' },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Create Event (Admin)' },
   },
   {
@@ -326,6 +539,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['event_id'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        eventDate: { type: 'string' },
+        status: { type: 'string' },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Update Event (Admin)' },
   },
   {
@@ -336,6 +558,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { event_id: { type: 'string' } },
       required: ['event_id'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        status: { type: 'string' },
+      },
     },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, title: 'Cancel Event (Admin)' },
   },
@@ -354,6 +583,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['event_id'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        eventId: { type: 'string' },
+        quantity: { type: 'integer' },
+        status: { type: 'string' },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Register for Event' },
   },
   {
@@ -368,6 +606,14 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['shift_id'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        shiftId: { type: 'string' },
+        status: { type: 'string' },
+      },
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Request Volunteer' },
   },
 
@@ -379,6 +625,24 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: { school_slug: { type: 'string', description: 'School slug (defaults to active school)' } },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        restaurants: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: ['string', 'null'] },
+              isActive: { type: 'boolean' },
+              logoUrl: { type: ['string', 'null'] },
+            },
+          },
+        },
+      },
     },
     annotations: {
       readOnlyHint: true,
@@ -404,6 +668,14 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['name'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        isActive: { type: 'boolean' },
+      },
+    },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -421,6 +693,28 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { restaurant_id: { type: 'string' } },
       required: ['restaurant_id'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: ['string', 'null'] },
+              priceCents: { type: 'integer' },
+              costCents: { type: ['integer', 'null'] },
+              isActive: { type: 'boolean' },
+              isAvailable: { type: 'boolean' },
+              calories: { type: ['integer', 'null'] },
+              ingredients: { type: ['string', 'null'] },
+            },
+          },
+        },
+      },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'List Menu Items (Admin)' },
   },
@@ -440,6 +734,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
         calories: { type: 'integer' },
       },
       required: ['restaurant_id', 'name'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        priceCents: { type: 'integer' },
+        isActive: { type: 'boolean' },
+      },
     },
     annotations: {
       readOnlyHint: false,
@@ -467,6 +770,16 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['restaurant_id', 'menu_item_id'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        priceCents: { type: 'integer' },
+        isActive: { type: 'boolean' },
+        isAvailable: { type: 'boolean' },
+      },
+    },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -487,6 +800,14 @@ export const ALL_TOOLS: ToolDefinition[] = [
       },
       required: ['restaurant_id', 'menu_item_id', 'price_cents'],
     },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        priceCents: { type: 'integer' },
+      },
+    },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -502,6 +823,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { restaurant_id: { type: 'string' }, menu_item_id: { type: 'string' } },
       required: ['restaurant_id', 'menu_item_id'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        deleted: { type: 'boolean' },
+      },
     },
     annotations: {
       readOnlyHint: false,
@@ -523,6 +851,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
         available_qty: { type: 'integer' },
       },
       required: ['restaurant_id', 'menu_item_id', 'menu_date'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        menuItemId: { type: 'string' },
+        menuDate: { type: 'string' },
+        availableQty: { type: ['integer', 'null'] },
+      },
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Set Daily Menu (Admin)' },
   },
