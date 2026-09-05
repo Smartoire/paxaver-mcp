@@ -90,7 +90,7 @@ The endpoint returns `200` with body `verify Ownership` when the token matches, 
 
 ## Tools Overview
 
-The server exposes **22 tools** across four categories. Full schemas are in `docs/tools.md`.
+The server exposes **21 tools** across three categories. Full schemas are in `docs/tools.md`.
 
 ### User & Wallet Tools (3)
 
@@ -127,12 +127,6 @@ The server exposes **22 tools** across four categories. Full schemas are in `doc
 | `set_menu_item_price`     | Set a menu item's price (admin)                | No               |
 | `delete_menu_item`        | Deactivate a menu item (admin)                 | No (destructive) |
 | `set_daily_menu`          | Assign item to a date (admin)                  | No               |
-
-### Student Tools (1)
-
-| Tool             | Description                                      | Read-only |
-| ---------------- | ------------------------------------------------ | --------- |
-| `update_student` | Update a student's profile fields (own students) | No        |
 
 ## How Tools Are Used
 

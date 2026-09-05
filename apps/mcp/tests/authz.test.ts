@@ -9,7 +9,6 @@ describe('Authorization policy', () => {
   it('every tool has a policy entry', () => {
     const toolNames = [
       'get_user_info',
-      'update_student',
       'get_wallet_balance',
       'get_wallet_status',
       'order_lunch',

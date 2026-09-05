@@ -43,17 +43,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     destructive: false,
     requiresConfirmation: false,
   },
-  update_student: {
-    capability: 'view_account',
-    requiresEntitlement: false,
-    classifications: ['WRITE', 'PRIVACY_SENSITIVE'],
-    requiredRoles: [],
-    mutates: true,
-    financial: false,
-    destructive: false,
-    requiresConfirmation: true,
-  },
-
   // --- Wallet ---
   get_wallet_balance: {
     capability: 'view_balance',

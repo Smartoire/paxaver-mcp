@@ -9,7 +9,7 @@
 
 ## Scope
 
-All 29 MCP tools, the authentication flow, the authorization policy, the
+All 26 MCP tools, the authentication flow, the authorization policy, the
 transport layer, and the error handling path.
 
 ---
@@ -18,7 +18,7 @@ transport layer, and the error handling path.
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Tool names are human-readable, specific, and descriptive (verb-based) | PASS | All 27 tools use verb-based names: `get_user_info`, `order_lunch`, `create_event`, etc. |
+| Tool names are human-readable, specific, and descriptive (verb-based) | PASS | All 26 tools use verb-based names: `get_user_info`, `order_lunch`, `create_event`, etc. |
 | Each tool has a description that explains its purpose clearly and accurately | PASS | Every tool has a description. Write tools mention the side effect and require confirmation. |
 | Tool annotations (`readOnlyHint`, `destructiveHint`, `openWorldHint`) are correctly set | PASS | Read tools have `readOnlyHint: true`. Cancel tools have `destructiveHint: true`. |
 | Tools request minimum information necessary | PASS | Input schemas declare only the fields required for the operation. `additionalProperties: false` is set on all input schemas. |
@@ -62,7 +62,7 @@ transport layer, and the error handling path.
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| `additionalProperties: false` on all input schemas | PASS | All 29 input schemas have `additionalProperties: false`. |
+| `additionalProperties: false` on all input schemas | PASS | All 26 input schemas have `additionalProperties: false`. |
 | Pattern validation on string fields where applicable | PASS | Date fields use `YYYY-MM-DD` format descriptions. `validatePathId` checks path parameters for safe characters. |
 | No shared tokens across servers | PASS | The service-binding JWT is short-lived (120 seconds) and scoped to `paxaver-internal` audience. No shared static tokens. |
 | Ephemeral, short-lived tokens | PASS | The service-binding JWT has a 120-second TTL. User JWTs are validated with configurable expiry. |

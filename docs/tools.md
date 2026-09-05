@@ -53,37 +53,6 @@ they are a guardian of, and available roles. **Always call this first.**
 
 ---
 
-### `update_student`
-
-Updates a student profile (allergies, notes, grade, division, etc.) for a
-student the authenticated user is a guardian of. The `student_id` must be one of
-the user's own students. Do **not** use this to look up arbitrary students.
-
-|                     |                          |
-| ------------------- | ------------------------ |
-| **Capability**      | `view_account`           |
-| **Required roles**  | _(any member)_           |
-| **Classifications** | WRITE, PRIVACY_SENSITIVE |
-| **Confirmation**    | **yes**                  |
-
-**Input schema**
-
-| Property     | Type   | Required | Description                              |
-| ------------ | ------ | -------- | ---------------------------------------- |
-| `student_id` | string | yes      | ID of the student (from `get_user_info`) |
-| `first_name` | string | no       |                                          |
-| `last_name`  | string | no       |                                          |
-| `known_as`   | string | no       |                                          |
-| `grade`      | string | no       |                                          |
-| `division`   | string | no       |                                          |
-| `allergies`  | string | no       | Comma-separated allergen list            |
-| `notes`      | string | no       |                                          |
-| `birthday`   | string | no       | YYYY-MM-DD                               |
-
-**Backend:** `PATCH /api/users/me/students/{student_id}`
-
----
-
 ## Wallet
 
 ### `get_wallet_balance`
@@ -244,12 +213,12 @@ events. Use for a quick overview.
 
 Returns all orders for the active school on a given date.
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
-| **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | READ, ADMIN                     |
-| **Confirmation**    | no                              |
+|                     | ---------------------------------- |
+| ------------------- | ---------------------------------- |
+| **Capability**      | _(null — admin only)_              |
+| **Required roles**  | pac_cordinator, lunch_cordinator   |
+| **Classifications** | READ, ADMIN                        |
+| **Confirmation**    | no                                 |
 
 **Input schema**
 
@@ -312,13 +281,13 @@ range.
 
 Creates a school event. Do not create events without explicit user request.
 
-|                          |                                 |
-| ------------------------ | ------------------------------- |
-| **Capability**           | `ai_write`                      |
-| **Entitlement required** | yes                             |
+|                          |                                  |
+| ------------------------ | -------------------------------- |
+| **Capability**           | `ai_write`                       |
+| **Entitlement required** | yes                              |
 | **Required roles**       | pac_cordinator, event_cordinator |
-| **Classifications**      | WRITE, ADMIN                    |
-| **Confirmation**         | **yes**                         |
+| **Classifications**      | WRITE, ADMIN                     |
+| **Confirmation**         | **yes**                          |
 
 **Input schema**
 
@@ -342,13 +311,13 @@ Creates a school event. Do not create events without explicit user request.
 
 Updates an existing school event.
 
-|                          |                                 |
-| ------------------------ | ------------------------------- |
-| **Capability**           | `ai_write`                      |
-| **Entitlement required** | yes                             |
+|                          |                                  |
+| ------------------------ | -------------------------------- |
+| **Capability**           | `ai_write`                       |
+| **Entitlement required** | yes                              |
 | **Required roles**       | pac_cordinator, event_cordinator |
-| **Classifications**      | WRITE, ADMIN                    |
-| **Confirmation**         | **yes**                         |
+| **Classifications**      | WRITE, ADMIN                     |
+| **Confirmation**         | **yes**                          |
 
 **Input schema**
 
@@ -373,13 +342,13 @@ Updates an existing school event.
 
 Cancels a school event. **DESTRUCTIVE** — cancelled events cannot be reactivated.
 
-|                          |                                 |
-| ------------------------ | ------------------------------- |
-| **Capability**           | `ai_write`                      |
-| **Entitlement required** | yes                             |
+|                          |                                  |
+| ------------------------ | -------------------------------- |
+| **Capability**           | `ai_write`                       |
+| **Entitlement required** | yes                              |
 | **Required roles**       | pac_cordinator, event_cordinator |
-| **Classifications**      | DESTRUCTIVE, ADMIN              |
-| **Confirmation**         | **yes**                         |
+| **Classifications**      | DESTRUCTIVE, ADMIN               |
+| **Confirmation**         | **yes**                          |
 
 **Input schema**
 
@@ -397,12 +366,12 @@ Cancels a school event. **DESTRUCTIVE** — cancelled events cannot be reactivat
 
 Lists restaurants for the active school.
 
-|                     |                                             |
-| ------------------- | ------------------------------------------- |
-| **Capability**      | _(null — admin only)_                       |
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Capability**      | _(null — admin only)_                        |
 | **Required roles**  | pac_cordinator, pac_member, lunch_cordinator |
-| **Classifications** | READ, ADMIN                                 |
-| **Confirmation**    | no                                          |
+| **Classifications** | READ, ADMIN                                  |
+| **Confirmation**    | no                                           |
 
 **Input schema**
 
@@ -421,21 +390,18 @@ Creates a restaurant for the active school.
 |                     |                       |
 | ------------------- | --------------------- |
 | **Capability**      | _(null — admin only)_ |
-| **Required roles**  | pac_cordinator         |
+| **Required roles**  | pac_cordinator        |
 | **Classifications** | WRITE, ADMIN          |
 | **Confirmation**    | **yes**               |
 
 **Input schema**
 
-| Property        | Type   | Required | Description |
-| --------------- | ------ | -------- | ----------- |
-| `name`          | string | yes      |             |
-| `school_slug`   | string | no       |             |
-| `description`   | string | no       |             |
-| `contact_name`  | string | no       |             |
-| `contact_email` | string | no       |             |
-| `contact_phone` | string | no       |             |
-| `tax_percent`   | number | no       |             |
+| Property      | Type   | Required | Description |
+| ------------- | ------ | -------- | ----------- |
+| `name`        | string | yes      |             |
+| `school_slug` | string | no       |             |
+| `description` | string | no       |             |
+| `tax_percent` | number | no       |             |
 
 **Backend:** `POST /api/schools/restaurants`
 
@@ -445,12 +411,12 @@ Creates a restaurant for the active school.
 
 Lists menu items for a restaurant.
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
 | **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | READ, ADMIN                     |
-| **Confirmation**    | no                              |
+| **Classifications** | READ, ADMIN                      |
+| **Confirmation**    | no                               |
 
 **Input schema**
 
@@ -466,12 +432,12 @@ Lists menu items for a restaurant.
 
 Creates a menu item for a restaurant.
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
 | **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | WRITE, ADMIN                    |
-| **Confirmation**    | **yes**                         |
+| **Classifications** | WRITE, ADMIN                     |
+| **Confirmation**    | **yes**                          |
 
 **Input schema**
 
@@ -493,12 +459,12 @@ Creates a menu item for a restaurant.
 
 Updates a menu item.
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
 | **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | WRITE, ADMIN                    |
-| **Confirmation**    | **yes**                         |
+| **Classifications** | WRITE, ADMIN                     |
+| **Confirmation**    | **yes**                          |
 
 **Input schema**
 
@@ -524,12 +490,12 @@ Updates a menu item.
 Sets the price of a menu item. **FINANCIAL** — confirm the new price with the
 user.
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
 | **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | WRITE, ADMIN, FINANCIAL         |
-| **Confirmation**    | **yes**                         |
+| **Classifications** | WRITE, ADMIN, FINANCIAL          |
+| **Confirmation**    | **yes**                          |
 
 **Input schema**
 
@@ -547,12 +513,12 @@ user.
 
 Soft-deletes a menu item. **DESTRUCTIVE**.
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
 | **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | DESTRUCTIVE, ADMIN              |
-| **Confirmation**    | **yes**                         |
+| **Classifications** | DESTRUCTIVE, ADMIN               |
+| **Confirmation**    | **yes**                          |
 
 **Input schema**
 
@@ -569,12 +535,12 @@ Soft-deletes a menu item. **DESTRUCTIVE**.
 
 Sets the daily menu (assigns a menu item to a date with available quantity).
 
-|                     |                                 |
-| ------------------- | ------------------------------- |
-| **Capability**      | _(null — admin only)_           |
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
 | **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | WRITE, ADMIN                    |
-| **Confirmation**    | **yes**                         |
+| **Classifications** | WRITE, ADMIN                     |
+| **Confirmation**    | **yes**                          |
 
 **Input schema**
 

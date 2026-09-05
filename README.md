@@ -126,13 +126,13 @@ Secrets must be set with `wrangler secret put --env production`:
 
 ## Tools
 
-The server exposes 27 tools grouped into six categories. Visibility in
+The server exposes 26 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
 | Category           | Tools                                                                                                                                                                  |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User / account     | `get_user_info`, `update_student`                                                                                                                                      |
+| User / account     | `get_user_info`                                                                                                                                                        |
 | Wallet             | `get_wallet_balance`, `get_wallet_status`                                                                                                                              |
 | Orders & menu      | `order_lunch`, `get_orders`, `get_daily_menu`, `get_updates`, `get_daily_orders`, `get_monthly_orders`, `create_draft_order`, `finalize_order`, `cancel_order`         |
 | Events             | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register_event`, `be_volunteer`                                                                |

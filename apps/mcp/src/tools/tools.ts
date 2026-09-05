@@ -59,14 +59,6 @@ export async function handleTool({
       }
       return result;
     }
-    case 'update_student':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'PATCH',
-        path: `/api/users/me/students/${validatePathId(args.student_id, 'student_id')}`,
-        body: args,
-        idempotencyKey,
-      });
-
     // Wallet
     case 'get_wallet_balance':
       return callPaxaverApi(env, ctx, origin, {

@@ -39,7 +39,6 @@ Fields:
 | Tool                      | Capability     | Entitlement | Classifications          | Required roles                              | Mutates | Financial | Destructive | Confirm |
 | ------------------------- | -------------- | ----------- | ------------------------ | ------------------------------------------- | ------- | --------- | ----------- | ------- |
 | `get_user_info`           | `view_account` | no          | READ                     | _(any)_                                     | no      | no        | no          | no      |
-| `update_student`          | `view_account` | no          | WRITE, PRIVACY_SENSITIVE | _(any)_                                     | yes     | no        | no          | **yes** |
 | `get_wallet_balance`      | `view_balance` | no          | READ, PRIVACY_SENSITIVE  | _(any)_                                     | no      | no        | no          | no      |
 | `get_wallet_status`       | `view_balance` | no          | READ, PRIVACY_SENSITIVE  | _(any)_                                     | no      | no        | no          | no      |
 | `order_lunch`             | `ai_write`     | yes         | FINANCIAL, WRITE         | _(any)_                                     | yes     | yes       | no          | **yes** |
