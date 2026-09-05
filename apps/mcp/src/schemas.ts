@@ -77,7 +77,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         known_as: { type: 'string' },
         grade: { type: 'string' },
         division: { type: 'string' },
-        allergies: { type: 'string', description: 'Comma-separated allergen list' },
+        allergies: { type: 'string', description: 'Student food allergies for lunch ordering safety. Optional. Comma-separated list (e.g., "gluten-free, no nuts").' },
         notes: { type: 'string' },
         birthday: { type: 'string', description: 'YYYY-MM-DD' },
       },
