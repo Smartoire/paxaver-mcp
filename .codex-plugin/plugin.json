@@ -1,0 +1,31 @@
+{
+  "name": "paxaver",
+  "version": "2.2.2",
+  "description": "Paxaver school community platform for lunch, events, wallet, and student management.",
+  "author": {
+    "name": "Vahid Ghafarpour",
+    "url": "https://paxaver.com"
+  },
+  "homepage": "https://github.com/Smartoire/paxaver-mcp#readme",
+  "repository": "https://github.com/Smartoire/paxaver-mcp.git",
+  "license": "Apache-2.0",
+  "keywords": ["mcp", "model-context-protocol", "paxaver", "school", "lunch", "education"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Paxaver",
+    "shortDescription": "School lunch, events, wallet, and student management",
+    "developerName": "Paxaver",
+    "category": "Education",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://paxaver.com",
+    "privacyPolicyURL": "https://paxaver.com/privacy",
+    "termsOfServiceURL": "https://paxaver.com/privacy/terms",
+    "brandColor": "#3B82F6",
+    "defaultPrompt": [
+      "Order lunch for my child today.",
+      "Show me today's lunch menu.",
+      "Check my Paxaver wallet balance."
+    ]
+  }
+}

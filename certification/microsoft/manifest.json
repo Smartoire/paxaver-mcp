@@ -1,0 +1,50 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "version": "1.0.0",
+  "id": "1DD321D3-24C6-4B2F-8AE4-C0DE98F34F39",
+  "developer": {
+    "name": "Smartoire",
+    "websiteUrl": "https://paxaver.com",
+    "privacyUrl": "https://paxaver.com/privacy",
+    "termsOfUseUrl": "https://paxaver.com/terms",
+    "contactInfo": {
+      "defaultSupport": {
+        "userEmailsForChatSupport": ["feedback@paxaver.com"],
+        "emailsForEmailSupport": ["feedback@paxaver.com"]
+      }
+    }
+  },
+  "name": {
+    "short": "Paxaver",
+    "full": "Paxaver School Community OS"
+  },
+  "description": {
+    "short": "School community tools: lunch menus, orders, wallet, and events.",
+    "full": "Paxaver is the operating system connecting Parent Advisory Committees (PACs), schools, and communities. This MCP server lets parents, school staff, and PAC members interact with their Paxaver school account through Microsoft 365 Copilot and Copilot Studio agents. Parents can view lunch menus, place hot-lunch orders, check wallet balances, and review order history. PAC coordinators can manage restaurants, menu items, daily menus, and school events. Authentication uses OAuth 2.1 with PKCE against the Paxaver account. The server stores no data; every action is delegated to the regional Paxaver backend."
+  },
+  "agentConnectors": [
+    {
+      "id": "7BF925D3-D4BA-42B3-BE31-91625A051CFC",
+      "displayName": "Paxaver",
+      "description": "Paxaver school account tools: lunch menus and orders, wallet, events, restaurants, and PAC menu management.",
+      "toolSource": {
+        "remoteMcpServer": {
+          "mcpServerUrl": "https://mcp.paxaver.com/mcp",
+          "mcpToolDescription": {
+            "file": "mcptools.json"
+          },
+          "authorization": {
+            "type": "AzureKeyVault",
+            "referenceId": "https://paxaver-mcp-kv.vault.azure.net/"
+          }
+        }
+      }
+    }
+  ],
+  "icons": {
+    "outline": "Outline.png",
+    "color": "Color.png"
+  },
+  "accentColor": "#0051CC"
+}

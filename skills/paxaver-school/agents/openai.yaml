@@ -1,0 +1,16 @@
+interface:
+  display_name: 'Paxaver School'
+  short_description: 'Manage restaurants, menus, events, and orders for Paxaver schools.'
+  brand_color: '#3B82F6'
+  default_prompt: 'Show me the lunch orders for today.'
+
+policy:
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: 'mcp'
+      value: 'paxaver'
+      description: 'Paxaver MCP server'
+      transport: 'streamable_http'
+      url: 'https://mcp.paxaver.com/mcp'

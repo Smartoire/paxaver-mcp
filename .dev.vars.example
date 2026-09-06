@@ -1,0 +1,6 @@
+# Copy to .dev.vars and fill with real values. Never commit .dev.vars.
+# Optional: ChatGPT marketplace verification token
+CHATGPT_VERIFY_TOKEN=
+# Optional: Google OAuth (for authenticated MCP clients)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

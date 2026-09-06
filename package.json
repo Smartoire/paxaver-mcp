@@ -1,0 +1,102 @@
+{
+  "name": "@paxaver/mcp",
+  "version": "2.2.2",
+  "mcpName": "io.github.Smartoire/paxaver-mcp",
+  "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school community operating system. Streamable HTTP, OAuth 2.1, capability-first authorization.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "apps/mcp/src/index.ts",
+  "packageManager": "pnpm@10.25.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "author": {
+    "name": "Vahid Ghafarpour",
+    "url": "https://paxaver.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Smartoire/paxaver-mcp.git"
+  },
+  "homepage": "https://github.com/Smartoire/paxaver-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/Smartoire/paxaver-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "paxaver",
+    "school",
+    "lunch",
+    "education",
+    "cloudflare-workers",
+    "ai",
+    "assistant",
+    "oauth"
+  ],
+  "files": [
+    "apps/mcp/src/",
+    "docs/",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    "README.md",
+    "wrangler.jsonc",
+    "tsconfig.json",
+    "eslint.config.mjs",
+    ".prettierrc.json",
+    ".editorconfig",
+    ".dev.vars.example"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:staging": "wrangler dev --env staging",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "security:audit": "pnpm audit --audit-level=high",
+    "test": "vitest run && vitest run --config vitest.node.config.ts",
+    "test:watch": "vitest",
+    "test:node": "vitest run --config vitest.node.config.ts",
+    "test:api": "vitest run --config vitest.api.config.ts",
+    "build": "wrangler deploy --dry-run",
+    "package:microsoft": "node scripts/generate-microsoft-package.mjs",
+    "build:staging": "wrangler deploy --dry-run --env staging",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:prod": "wrangler deploy --env production",
+    "smoke:staging": "vitest run --config vitest.smoke.config.ts apps/mcp/tests/smoke/staging.smoke.ts",
+    "smoke:prod": "vitest run --config vitest.smoke.config.ts apps/mcp/tests/smoke/prod.smoke.ts",
+    "wrangler:check": "wrangler deploy --dry-run --env staging && wrangler deploy --dry-run --env production",
+    "prepublishOnly": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "jose": "^6.2.11"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@cloudflare/workers-types": "^5.20260905.1",
+    "@eslint/js": "catalog:",
+    "@types/node": "^26.4.1",
+    "eslint": "^10.10.0",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "catalog:",
+    "wrangler": "^4.129.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
+  }
+}
