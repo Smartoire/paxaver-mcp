@@ -1,7 +1,7 @@
 /**
  * Well-known discovery endpoints (RFC 9728, RFC 8414) and ChatGPT domain verification.
  *
- * OAuth is delegated to the centralized auth worker (auth.paxaver.com).
+ * OAuth is delegated to the centralized auth worker (paxaver.com/auth).
  * The MCP server is a resource server, not an authorization server.
  */
 
@@ -41,7 +41,7 @@ function protectedResourceHandler(request: Request, env: Env): Response {
 // Served on the MCP server as a fallback for clients that try
 // /.well-known/oauth-authorization-server on the MCP server directly
 // instead of following the protected-resource → authorization_servers chain.
-// All endpoint URLs point to the real auth server (auth.paxaver.com).
+// All endpoint URLs point to the real auth server (paxaver.com/auth).
 function authorizationServerHandler(env: Env): Response {
   const authServer = authUrl(env);
   return Response.json({

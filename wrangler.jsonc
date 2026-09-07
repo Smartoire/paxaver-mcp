@@ -16,6 +16,7 @@
     "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:8787",
     "API_BASE_URL_CA": "http://localhost:8787",
     "API_BASE_URL_US": "http://localhost:8787",
+    "API_BASE_URL_MX": "http://localhost:8787",
   },
 
   "env": {
@@ -26,12 +27,10 @@
         "ALLOWED_ORIGINS": "https://paxaver.dev,https://*.paxaver.dev",
         "API_BASE_URL_CA": "https://paxaver.dev",
         "API_BASE_URL_US": "https://paxaver.dev",
+        "API_BASE_URL_MX": "https://paxaver.dev",
       },
       "services": [
-        {
-          "binding": "PAXAVER_API_CA",
-          "service": "paxaver-api-ca",
-        },
+        { "binding": "PAXAVER_API_CA", "service": "paxaver-api-ca" },
       ],
       "routes": [{ "pattern": "mcp.paxaver.dev", "zone_name": "paxaver.dev", "custom_domain": true }],
     },
@@ -40,19 +39,15 @@
       "name": "paxaver-mcp",
       "vars": {
         "ENVIRONMENT": "production",
-        "ALLOWED_ORIGINS": "https://paxaver.com,https://*.paxaver.com,https://paxaver.ca,https://*.paxaver.ca,https://chatgpt.com,https://claude.ai,https://www.perplexity.ai,https://glama.ai,https://*.glama.ai,https://policylayer.com,https://*.policylayer.com,https://openai.com,https://*.openai.com",
+        "ALLOWED_ORIGINS": "https://paxaver.com,https://*.paxaver.com,https://paxaver.ca,https://*.paxaver.ca,https://paxaver.mx,https://*.paxaver.mx,https://chatgpt.com,https://claude.ai,https://www.perplexity.ai,https://glama.ai,https://*.glama.ai,https://policylayer.com,https://*.policylayer.com,https://openai.com,https://*.openai.com",
         "API_BASE_URL_CA": "https://paxaver.ca",
         "API_BASE_URL_US": "https://paxaver.com",
+        "API_BASE_URL_MX": "https://paxaver.mx",
       },
       "services": [
-        {
-          "binding": "PAXAVER_API_CA",
-          "service": "paxaver-api-ca",
-        },
-        {
-          "binding": "PAXAVER_API_US",
-          "service": "paxaver-api-us",
-        },
+        { "binding": "PAXAVER_API_CA", "service": "paxaver-api-ca" },
+        { "binding": "PAXAVER_API_US", "service": "paxaver-api-us" },
+        { "binding": "PAXAVER_API_MX", "service": "paxaver-api-mx" },
       ],
       "routes": [{ "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true }],
     },

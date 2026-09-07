@@ -16,19 +16,23 @@
  */
 
 export interface Env {
-  // --- Cloudflare service bindings to both regional backends ---
+  // --- Cloudflare service bindings to regional backends ---
   PAXAVER_API_CA?: Fetcher;
   PAXAVER_API_US?: Fetcher;
+  PAXAVER_API_MX?: Fetcher;
 
   // --- Public vars (wrangler.jsonc) ---
   ENVIRONMENT: 'development' | 'staging' | 'production';
   ALLOWED_ORIGINS: string;
   API_BASE_URL_CA: string;
   API_BASE_URL_US: string;
+  API_BASE_URL_MX: string;
 
   // --- Secrets (wrangler secret) ---
   CHATGPT_VERIFY_TOKEN?: string;
 }
+
+export type McpCountry = 'ca' | 'us' | 'mx';
 
 export interface AuthContext {
   userId: string;
@@ -37,7 +41,7 @@ export interface AuthContext {
   permissions: string[];
   isPlatformAdmin: boolean;
   studentIds: string[];
-  country: 'ca' | 'us';
+  country: McpCountry;
   /** Original OAuth access token, used to call the Paxaver backend. */
   userToken?: string;
   /** Subscription status from the backend (undefined or null if none). */

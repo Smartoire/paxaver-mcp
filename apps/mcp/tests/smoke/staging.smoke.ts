@@ -29,7 +29,7 @@ describe('staging smoke (read-only)', () => {
     const res = await fetch(`${BASE}/.well-known/oauth-authorization-server`);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { issuer: string; authorization_endpoint: string };
-    expect(json.issuer).toContain('auth.paxaver');
+    expect(json.issuer).toContain('paxaver.dev/auth');
   });
 
   it('unauthenticated MCP request returns 401 with WWW-Authenticate', async () => {

@@ -22,15 +22,15 @@ describe('Production smoke (read-only)', () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as { resource: string; authorization_servers: string[] };
     expect(json.resource).toBe('https://mcp.paxaver.com');
-    expect(json.authorization_servers).toContain('https://auth.paxaver.com');
+    expect(json.authorization_servers).toContain('https://paxaver.com/auth');
   });
 
   it('authorization server metadata points to auth server', async () => {
     const res = await fetch(`${BASE}/.well-known/oauth-authorization-server`);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { issuer: string; authorization_endpoint: string };
-    expect(json.issuer).toBe('https://auth.paxaver.com');
-    expect(json.authorization_endpoint).toContain('auth.paxaver.com');
+    expect(json.issuer).toBe('https://paxaver.com/auth');
+    expect(json.authorization_endpoint).toContain('paxaver.com/auth');
   });
 
   it('unauthenticated MCP request returns 401', async () => {

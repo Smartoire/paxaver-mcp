@@ -14,7 +14,7 @@
  * token.
  */
 
-import type { Env, AuthContext } from '../env.js';
+import type { Env, AuthContext, McpCountry } from '../env.js';
 
 export interface ApiCallOptions {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -34,10 +34,9 @@ export interface ApiCallResult {
 /**
  * Resolve the service binding and API base URL for the user's region.
  */
-function resolveBackend(env: Env, country: 'ca' | 'us'): { fetcher: Fetcher | undefined; baseUrl: string } {
-  if (country === 'us') {
-    return { fetcher: env.PAXAVER_API_US, baseUrl: env.API_BASE_URL_US };
-  }
+function resolveBackend(env: Env, country: McpCountry): { fetcher: Fetcher | undefined; baseUrl: string } {
+  if (country === 'us') return { fetcher: env.PAXAVER_API_US, baseUrl: env.API_BASE_URL_US };
+  if (country === 'mx') return { fetcher: env.PAXAVER_API_MX, baseUrl: env.API_BASE_URL_MX };
   return { fetcher: env.PAXAVER_API_CA, baseUrl: env.API_BASE_URL_CA };
 }
 
