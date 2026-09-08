@@ -29,9 +29,7 @@
         "API_BASE_URL_US": "https://paxaver.dev",
         "API_BASE_URL_MX": "https://paxaver.dev",
       },
-      "services": [
-        { "binding": "PAXAVER_API_CA", "service": "paxaver-api-ca" },
-      ],
+      "services": [{ "binding": "PAXAVER_API_CA", "service": "paxaver-api-ca" }],
       "routes": [{ "pattern": "mcp.paxaver.dev", "zone_name": "paxaver.dev", "custom_domain": true }],
     },
 
@@ -49,7 +47,10 @@
         { "binding": "PAXAVER_API_US", "service": "paxaver-api-us" },
         { "binding": "PAXAVER_API_MX", "service": "paxaver-api-mx" },
       ],
-      "routes": [{ "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true }],
+      "routes": [
+        { "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true },
+        { "pattern": "mcp.paxaver.mx", "zone_name": "paxaver.mx", "custom_domain": true },
+      ],
     },
   },
 }
