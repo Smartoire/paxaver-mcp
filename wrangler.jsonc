@@ -47,10 +47,7 @@
         { "binding": "PAXAVER_API_US", "service": "paxaver-api-us" },
         { "binding": "PAXAVER_API_MX", "service": "paxaver-api-mx" },
       ],
-      "routes": [
-        { "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true },
-        { "pattern": "mcp.paxaver.mx", "zone_name": "paxaver.mx", "custom_domain": true },
-      ],
+      "routes": [{ "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true }],
     },
   },
 }

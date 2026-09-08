@@ -11,28 +11,16 @@
       "type": "object",
       "properties": {
         "firstName": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "lastName": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "schoolSlug": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "schoolName": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "students": {
           "type": "array",
@@ -67,22 +55,13 @@
       "type": "object",
       "properties": {
         "balanceCents": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         },
         "balanceFormatted": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "currency": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
@@ -105,16 +84,10 @@
       "type": "object",
       "properties": {
         "balanceCents": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         },
         "balance": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "transactions": {
           "type": "array",
@@ -131,10 +104,7 @@
                 "type": "integer"
               },
               "description": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "createdAt": {
                 "type": "string"
@@ -176,10 +146,7 @@
           "default": 1
         }
       },
-      "required": [
-        "menu_item_id",
-        "menu_date"
-      ],
+      "required": ["menu_item_id", "menu_date"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -313,19 +280,13 @@
                 "type": "string"
               },
               "restaurantName": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "priceCents": {
                 "type": "integer"
               },
               "availableQty": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+                "type": ["integer", "null"]
               },
               "dietaryTags": {
                 "type": "array",
@@ -356,9 +317,7 @@
           "description": "YYYY-MM-DD"
         }
       },
-      "required": [
-        "menu_date"
-      ],
+      "required": ["menu_date"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -491,21 +450,11 @@
                 "minimum": 1
               }
             },
-            "required": [
-              "menu_item_id",
-              "menu_item_name",
-              "price_cents",
-              "quantity"
-            ]
+            "required": ["menu_item_id", "menu_item_name", "price_cents", "quantity"]
           }
         }
       },
-      "required": [
-        "student_id",
-        "school_slug",
-        "menu_date",
-        "items"
-      ],
+      "required": ["student_id", "school_slug", "menu_date", "items"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -560,9 +509,7 @@
           "default": 0
         }
       },
-      "required": [
-        "order_id"
-      ],
+      "required": ["order_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -584,10 +531,7 @@
           "type": "integer"
         },
         "balanceCents": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         }
       }
     },
@@ -609,9 +553,7 @@
           "description": "Order ID to cancel"
         }
       },
-      "required": [
-        "order_id"
-      ],
+      "required": ["order_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -627,10 +569,7 @@
           "type": "integer"
         },
         "balanceCents": {
-          "type": [
-            "number",
-            "null"
-          ]
+          "type": ["number", "null"]
         }
       }
     },
@@ -676,22 +615,13 @@
                 "type": "string"
               },
               "startsAt": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "endsAt": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "location": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "isClosed": {
                 "type": "boolean"
@@ -745,10 +675,7 @@
           "description": "Ticket price in cents (0 = free)"
         }
       },
-      "required": [
-        "name",
-        "event_date"
-      ],
+      "required": ["name", "event_date"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -811,16 +738,10 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "active",
-            "cancelled",
-            "completed"
-          ]
+          "enum": ["active", "cancelled", "completed"]
         }
       },
-      "required": [
-        "event_id"
-      ],
+      "required": ["event_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -857,9 +778,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "event_id"
-      ],
+      "required": ["event_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -897,9 +816,7 @@
           "default": 1
         }
       },
-      "required": [
-        "event_id"
-      ],
+      "required": ["event_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -937,9 +854,7 @@
           "description": "Volunteer shift ID"
         }
       },
-      "required": [
-        "shift_id"
-      ],
+      "required": ["shift_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -991,19 +906,13 @@
                 "type": "string"
               },
               "description": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "isActive": {
                 "type": "boolean"
               },
               "logoUrl": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               }
             }
           }
@@ -1036,9 +945,7 @@
           "type": "number"
         }
       },
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1072,9 +979,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "restaurant_id"
-      ],
+      "required": ["restaurant_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1092,19 +997,13 @@
                 "type": "string"
               },
               "description": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "priceCents": {
                 "type": "integer"
               },
               "costCents": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+                "type": ["integer", "null"]
               },
               "isActive": {
                 "type": "boolean"
@@ -1113,16 +1012,10 @@
                 "type": "boolean"
               },
               "calories": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+                "type": ["integer", "null"]
               },
               "ingredients": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               }
             }
           }
@@ -1164,10 +1057,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "restaurant_id",
-        "name"
-      ],
+      "required": ["restaurant_id", "name"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1231,10 +1121,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id"
-      ],
+      "required": ["restaurant_id", "menu_item_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1281,11 +1168,7 @@
           "description": "New price in cents"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id",
-        "price_cents"
-      ],
+      "required": ["restaurant_id", "menu_item_id", "price_cents"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1322,10 +1205,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id"
-      ],
+      "required": ["restaurant_id", "menu_item_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1366,11 +1246,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id",
-        "menu_date"
-      ],
+      "required": ["restaurant_id", "menu_item_id", "menu_date"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1386,10 +1262,7 @@
           "type": "string"
         },
         "availableQty": {
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": ["integer", "null"]
         }
       }
     },

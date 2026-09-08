@@ -69,8 +69,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
   if (method === 'initialize') {
     const ctx = c.var;
     const permissions = ctx.permissions ?? [];
-    const admin =
-      ctx.isPlatformAdmin || permissions.includes('pac_cordinator') || permissions.includes('pac_member');
+    const admin = ctx.isPlatformAdmin || permissions.includes('pac_cordinator') || permissions.includes('pac_member');
     const subStatus = ctx.subscription?.status ?? 'none';
     const needsRegistration = !ctx.isPlatformAdmin && subStatus !== 'active';
     const baseInstructions = admin
@@ -78,9 +77,9 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
       : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.";
     const registrationNotice = needsRegistration
       ? subStatus === 'expired'
-        ? " IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to continue using Paxaver MCP tools."
-        : " IMPORTANT: You first need to register to the service. An active Paxaver AI subscription is required to use MCP tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp."
-      : "";
+        ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to continue using Paxaver MCP tools.'
+        : ' IMPORTANT: You first need to register to the service. An active Paxaver AI subscription is required to use MCP tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.'
+      : '';
     return Response.json({
       jsonrpc: '2.0',
       id,
@@ -201,7 +200,9 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
             uri: resource.uri,
             name: resource.name,
             mimeType: resource.mimeType ?? 'application/json',
-            text: JSON.stringify({ message: `Resource '${resource.name}' — use the corresponding MCP tool for live data.` }),
+            text: JSON.stringify({
+              message: `Resource '${resource.name}' — use the corresponding MCP tool for live data.`,
+            }),
           },
         ],
       },

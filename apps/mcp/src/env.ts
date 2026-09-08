@@ -45,13 +45,11 @@ export interface AuthContext {
   /** Original OAuth access token, used to call the Paxaver backend. */
   userToken?: string;
   /** Subscription status from the backend (undefined or null if none). */
-  subscription?:
-    | {
-        status: 'active' | 'expired' | 'none';
-        toolLevel: string | null;
-        expiry: string | null;
-      }
-    | null;
+  subscription?: {
+    status: 'active' | 'expired' | 'none';
+    toolLevel: string | null;
+    expiry: string | null;
+  } | null;
 }
 
 export type AppVariables = AuthContext & {

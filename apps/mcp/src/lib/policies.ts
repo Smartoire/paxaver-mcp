@@ -7,8 +7,7 @@
  * enforced by the backend.
  */
 
-export type CapabilityId =
-  'view_account' | 'view_balance' | 'view_orders' | 'view_menu' | 'view_events' | 'ai_write';
+export type CapabilityId = 'view_account' | 'view_balance' | 'view_orders' | 'view_menu' | 'view_events' | 'ai_write';
 
 export type ToolClassification = 'READ' | 'WRITE' | 'FINANCIAL' | 'DESTRUCTIVE' | 'ADMIN' | 'PRIVACY_SENSITIVE';
 

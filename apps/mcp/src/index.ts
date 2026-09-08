@@ -65,9 +65,8 @@ function corsHeaders(origin: string, allowed: string): Record<string, string> {
     headers['Access-Control-Allow-Origin'] = origin;
     headers['Vary'] = 'Origin';
     headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS';
-    headers[
-      'Access-Control-Allow-Headers'
-    ] = 'Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name';
+    headers['Access-Control-Allow-Headers'] =
+      'Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name';
     headers['Access-Control-Expose-Headers'] = 'MCP-Session-Id';
     headers['Access-Control-Max-Age'] = '86400';
   }
@@ -179,7 +178,10 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
   const ctx: RequestContext = { env, request, var: { correlationId } };
 
   try {
-    if (url.pathname === '/health' || (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))) {
+    if (
+      url.pathname === '/health' ||
+      (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
+    ) {
       const healthBody = request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', version: '2.2.2' });
       response = new Response(healthBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
@@ -229,7 +231,12 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
   return mergeHeaders(response, { ...cors, ...securityHeaders });
 }
 
-async function request(input: string, init: RequestInit = {}, env: Record<string, unknown>, executionCtx?: unknown): Promise<Response> {
+async function request(
+  input: string,
+  init: RequestInit = {},
+  env: Record<string, unknown>,
+  executionCtx?: unknown,
+): Promise<Response> {
   const req = new Request(input, init);
   return mcpFetch(req, env as unknown as Env, executionCtx);
 }

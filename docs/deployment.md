@@ -78,11 +78,11 @@ binding is required for production.
 
 Set per environment with `wrangler secret put --env <env> <NAME>`:
 
-| Secret                 | Required | Purpose                                                                                             |
-| ---------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `GOOGLE_CLIENT_ID`     | no       | Google sign-in.                                                                                     |
-| `GOOGLE_CLIENT_SECRET` | no       | Google sign-in.                                                                                     |
-| `CHATGPT_VERIFY_TOKEN` | no       | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`).                     |
+| Secret                 | Required | Purpose                                                                         |
+| ---------------------- | -------- | ------------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | no       | Google sign-in.                                                                 |
+| `GOOGLE_CLIENT_SECRET` | no       | Google sign-in.                                                                 |
+| `CHATGPT_VERIFY_TOKEN` | no       | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`). |
 
 Example:
 

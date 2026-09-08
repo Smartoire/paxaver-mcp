@@ -43,6 +43,13 @@ export function authUrl(env: Env): string {
   return 'https://paxaver.com/auth';
 }
 
+/** All supported authorization servers for the current environment. */
+export function authServers(env: Env): string[] {
+  if (env.ENVIRONMENT === 'development') return ['http://localhost:8788'];
+  if (env.ENVIRONMENT === 'staging') return ['https://paxaver.dev/auth'];
+  return ['https://paxaver.ca/auth', 'https://paxaver.com/auth', 'https://paxaver.mx/auth'];
+}
+
 // ponytail: one JWKS per issuer, cached in a Map. Enough for 3 regional issuers.
 // Upgrade path: use a KV-backed JWKS cache for long-lived isolates.
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
@@ -158,7 +165,8 @@ export async function authenticateRequest(
   );
   // Without a JWT we do not know the user's region, so try each region.
   for (const country of ['ca', 'us', 'mx'] as const) {
-    const baseUrl = country === 'us' ? env.API_BASE_URL_US : country === 'mx' ? env.API_BASE_URL_MX : env.API_BASE_URL_CA;
+    const baseUrl =
+      country === 'us' ? env.API_BASE_URL_US : country === 'mx' ? env.API_BASE_URL_MX : env.API_BASE_URL_CA;
     const fetcher = country === 'us' ? env.PAXAVER_API_US : country === 'mx' ? env.PAXAVER_API_MX : env.PAXAVER_API_CA;
     if (!baseUrl) continue;
     const whoamiUrl = new URL('/api/mcp/whoami', baseUrl);

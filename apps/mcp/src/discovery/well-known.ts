@@ -7,7 +7,7 @@
 
 import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
-import { authUrl } from '../auth/validate.js';
+import { authUrl, authServers } from '../auth/validate.js';
 
 function withCache(response: Response): Response {
   const headers = new Headers(response.headers);
@@ -27,10 +27,10 @@ function originFrom(url: string): string {
 // parameter, and the token audience must cover the whole server.
 function protectedResourceHandler(request: Request, env: Env): Response {
   const origin = originFrom(request.url);
-  const authServer = authUrl(env);
+  const servers = authServers(env);
   return Response.json({
     resource: origin,
-    authorization_servers: [authServer],
+    authorization_servers: servers,
     scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
     bearer_methods_supported: ['header'],
     resource_parameter_supported: true,

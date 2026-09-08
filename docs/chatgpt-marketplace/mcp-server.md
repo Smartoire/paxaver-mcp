@@ -102,13 +102,13 @@ The server exposes **21 tools** across three categories. Full schemas are in `do
 
 ### Lunch & Ordering Tools (5)
 
-| Tool                 | Description                             | Read-only |
-| -------------------- | --------------------------------------- | --------- |
-| `order_lunch`        | Place a lunch order for a student       | No        |
-| `get_orders`         | Recent orders (optionally per student)  | Yes       |
-| `get_daily_menu`     | Menu for a day or month                 | Yes       |
-| `get_daily_orders`   | All orders for a school day (admin)     | Yes       |
-| `get_monthly_orders` | All orders for a month (admin/parent)   | Yes       |
+| Tool                 | Description                            | Read-only |
+| -------------------- | -------------------------------------- | --------- |
+| `order_lunch`        | Place a lunch order for a student      | No        |
+| `get_orders`         | Recent orders (optionally per student) | Yes       |
+| `get_daily_menu`     | Menu for a day or month                | Yes       |
+| `get_daily_orders`   | All orders for a school day (admin)    | Yes       |
+| `get_monthly_orders` | All orders for a month (admin/parent)  | Yes       |
 
 ### School Management Tools (12)
 

@@ -42,7 +42,11 @@ describe('well-known endpoints', () => {
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.authorization_servers).toEqual(['https://paxaver.com/auth']);
+    expect(body.authorization_servers).toEqual([
+      'https://paxaver.ca/auth',
+      'https://paxaver.com/auth',
+      'https://paxaver.mx/auth',
+    ]);
     expect(body.scopes_supported).toEqual(['openid', 'profile', 'email', 'offline_access', 'tools']);
     expect(body.bearer_methods_supported).toEqual(['header']);
     expect(body.resource).toBe('https://localhost');
@@ -156,7 +160,11 @@ describe('well-known endpoints', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.resource).toBe('https://localhost');
-    expect(body.authorization_servers).toEqual(['https://paxaver.com/auth']);
+    expect(body.authorization_servers).toEqual([
+      'https://paxaver.ca/auth',
+      'https://paxaver.com/auth',
+      'https://paxaver.mx/auth',
+    ]);
   });
 
   it('RFC 9728 path-derived auth server metadata URL returns 200', async () => {
