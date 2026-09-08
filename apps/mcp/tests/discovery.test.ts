@@ -8,32 +8,11 @@ import { wellKnownApp } from '../src/discovery/well-known.js';
 function mockEnv(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     ENVIRONMENT: 'production',
-    CHATGPT_VERIFY_TOKEN: 'test-verify-token',
     ...overrides,
   };
 }
 
 describe('well-known endpoints', () => {
-  it('ChatGPT domain verification returns token when configured', async () => {
-    const res = await wellKnownApp.request(
-      '/.well-known/openai-apps-challenge',
-      {},
-      mockEnv({ CHATGPT_VERIFY_TOKEN: 'my-token-123' }),
-    );
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe('my-token-123');
-    expect(res.headers.get('Content-Type')).toContain('text/plain');
-  });
-
-  it('ChatGPT domain verification returns 404 when not configured', async () => {
-    const res = await wellKnownApp.request(
-      '/.well-known/openai-apps-challenge',
-      {},
-      mockEnv({ CHATGPT_VERIFY_TOKEN: '' }),
-    );
-    expect(res.status).toBe(404);
-  });
-
   it('RFC 9728 protected resource metadata returns correct shape', async () => {
     const res = await wellKnownApp.request(
       '/.well-known/oauth-protected-resource',

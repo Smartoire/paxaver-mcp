@@ -11,15 +11,6 @@
 - [`migration.md`](migration.md) — Migration notes
 - [`tools.md`](tools.md) — MCP tool reference
 
-## ChatGPT Marketplace
-
-- [`chatgpt-marketplace/README.md`](chatgpt-marketplace/README.md) — Submission overview
-- [`chatgpt-marketplace/app-info.md`](chatgpt-marketplace/app-info.md) — App Info tab values
-- [`chatgpt-marketplace/mcp-server.md`](chatgpt-marketplace/mcp-server.md) — MCP Server tab configuration
-- [`chatgpt-marketplace/branding-assets.md`](chatgpt-marketplace/branding-assets.md) — Visual asset checklist
-- [`chatgpt-marketplace/global-and-submit.md`](chatgpt-marketplace/global-and-submit.md) — Localization + submission
-- [`chatgpt-marketplace/test-cases.md`](chatgpt-marketplace/test-cases.md) — Test cases for the Testing tab
-
 ## Privacy
 
 - [`privacy/compliance.md`](privacy/compliance.md) — US/CA/EU privacy compliance

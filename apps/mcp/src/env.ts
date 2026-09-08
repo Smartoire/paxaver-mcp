@@ -1,9 +1,6 @@
 /**
  * Paxaver MCP server environment bindings.
  *
- * Secrets (set via `wrangler secret put`):
- *   - CHATGPT_VERIFY_TOKEN  — ChatGPT marketplace domain verification (optional)
- *
  * Service bindings (configured in wrangler.jsonc):
  *   - PAXAVER_API_CA        — Fetch interface to the CA Paxaver backend worker.
  *   - PAXAVER_API_US        — Fetch interface to the US Paxaver backend worker.
@@ -27,9 +24,6 @@ export interface Env {
   API_BASE_URL_CA: string;
   API_BASE_URL_US: string;
   API_BASE_URL_MX: string;
-
-  // --- Secrets (wrangler secret) ---
-  CHATGPT_VERIFY_TOKEN?: string;
 }
 
 export type McpCountry = 'ca' | 'us' | 'mx';

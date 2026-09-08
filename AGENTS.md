@@ -4,6 +4,13 @@
 
 This file defines the rules for AI agents that work in the Paxaver MCP repository.
 
+## Working rules
+
+- Follow system, developer, and user instructions first. Within repository guidance, more specific `AGENTS.md` files override parent guidance.
+- Run commands from this repository root. Use Node and pnpm versions from `package.json`.
+- Check `git status --short` before editing. Preserve user changes. Inspect existing code, consumers, and tests before adding a tool or dependency.
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) and relevant [documentation](docs/README.md). The sibling platform repository has its own instructions.
+
 ## Project Overview
 
 The Paxaver MCP server is an AI-facing adapter over the Paxaver school community platform. It implements the Model Context Protocol (MCP) on Cloudflare Workers with RS256 JWT validation, capability-first authorization, and Streamable HTTP transport.
@@ -17,7 +24,7 @@ The server is a thin adapter. It contains no business logic and never touches th
   - `auth/` — JWT validation and authorization
   - `discovery/` — Well-known endpoints (RFC 9728, RFC 8414)
   - `lib/` — Shared utilities (contracts, crypto, policy)
-  - `schemas/` — Tool input schemas
+  - `schemas.ts` — Tool schema exports
   - `server/` — MCP server implementation
   - `tools/` — Tool handlers
   - `transport/` — Streamable HTTP transport
@@ -37,7 +44,7 @@ The server is a thin adapter. It contains no business logic and never touches th
 
 ```bash
 # Install dependencies
-pnpm install
+pnpm install --frozen-lockfile
 
 # Typecheck
 pnpm typecheck
@@ -87,35 +94,23 @@ This is a public repository. It must contain only minimum necessary data:
 MCP tools are public integration contracts. Before adding or changing a tool:
 
 1. Check existing tools in `apps/mcp/src/tools/`.
-2. Check tool metadata and schemas in `apps/mcp/src/schemas/`.
-3. Check authorization and capability policy in `apps/mcp/src/lib/policy.ts`.
+2. Check tool metadata and schemas in `apps/mcp/src/schemas.ts`.
+3. Check authorization and capability policy in `apps/mcp/src/lib/policies.ts`.
 4. Check input validation.
 5. Check output behavior.
 6. Check existing consumers.
 
 Use clear tool names, precise input schemas, validated inputs, and predictable outputs.
 
-## Testing
-
-After making a change, run:
-
-1. `pnpm test` — unit and protocol tests.
-2. `pnpm typecheck` — type checking.
-3. `pnpm lint` — linting.
-4. `pnpm build` — build verification.
-
-Do not modify tests only to make them pass unless the existing test is incorrect.
-
 ## Verification
 
-Before reporting a task as complete:
+For code changes, run `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm build`. `pnpm test` runs both Worker and Node suites; `pnpm test:node` alone does not cover both. Use focused tests during development. Run `pnpm wrangler:check` when environment configuration changes.
 
-1. Run relevant tests.
-2. Run type checking.
-3. Run linting.
-4. Run the build.
-5. Review the final diff.
-6. Check for unintended changes.
+For documentation-only changes, check referenced paths, command names, formatting, and the final diff. Use `pnpm exec prettier --check AGENTS.md` for this file. Application tests and builds are not required for prose-only edits.
+
+Inspect targets and prerequisites before `test:api`, `smoke:staging`, or `smoke:prod`; do not assume that integration tests are offline. Deployment and publication are separate actions from dry-run builds and require task authorization.
+
+For contract or authorization changes, cover schema validation, denied access, sanitized backend errors, and affected transport behavior. Do not change tests solely to silence failures. Review the diff for unintended and generated changes, then report changes, checks actually run, and any blocked or failed checks.
 
 ## Git
 

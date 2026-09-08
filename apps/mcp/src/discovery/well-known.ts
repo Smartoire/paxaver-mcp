@@ -119,12 +119,6 @@ function serverCardHandler(request: Request): Response {
   });
 }
 
-function openaiChallengeHandler(request: Request, env: Env): Response {
-  const token = env.CHATGPT_VERIFY_TOKEN;
-  if (!token) return new Response('Not configured', { status: 404 });
-  return new Response(token, { status: 200, headers: { 'Content-Type': 'text/plain' } });
-}
-
 function oauthCallbackHandler(request: Request): Response {
   const url = new URL(request.url);
   const code = url.searchParams.get('code') ?? '';
@@ -227,9 +221,6 @@ async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
     '/mcp/.well-known/openid-configuration',
   ];
 
-  if (pathname === '/.well-known/openai-apps-challenge') {
-    return withCache(openaiChallengeHandler(request, env));
-  }
   if (protectedPaths.includes(pathname)) {
     return withCache(protectedResourceHandler(request, env));
   }

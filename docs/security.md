@@ -74,12 +74,9 @@ format is:
 
 ## Secrets
 
-| Secret                 | Purpose                                  |
-| ---------------------- | ---------------------------------------- |
-| `CHATGPT_VERIFY_TOKEN` | ChatGPT marketplace domain verification. |
-
-Secrets are set via `wrangler secret put` and never appear in source
-code or configuration files.
+The worker currently requires no secrets. If a future change adds one, secrets
+are set via `wrangler secret put` and never appear in source code or
+configuration files.
 
 ## Regional routing
 

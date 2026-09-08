@@ -76,25 +76,9 @@ binding is required for production.
 
 ## Secrets
 
-Set per environment with `wrangler secret put --env <env> <NAME>`:
-
-| Secret                 | Required | Purpose                                                                         |
-| ---------------------- | -------- | ------------------------------------------------------------------------------- |
-| `GOOGLE_CLIENT_ID`     | no       | Google sign-in.                                                                 |
-| `GOOGLE_CLIENT_SECRET` | no       | Google sign-in.                                                                 |
-| `CHATGPT_VERIFY_TOKEN` | no       | ChatGPT marketplace domain verification (`/.well-known/openai-apps-challenge`). |
-
-Example:
-
-```bash
-wrangler secret put CHATGPT_VERIFY_TOKEN --env production
-```
-
-For local development, use a `.dev.vars` file (gitignored):
-
-```
-OAUTH_STATE_SECRET=local-dev-state-secret
-```
+The worker currently requires no secrets. If a future change adds one, set it
+per environment with `wrangler secret put --env <env> <NAME>` and use a
+`.dev.vars` file (gitignored) for local development.
 
 ## Deploy commands
 

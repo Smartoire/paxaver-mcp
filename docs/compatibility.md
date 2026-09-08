@@ -41,7 +41,7 @@ Tested against:
 
 | Client                 | Transport       | Auth        | Notes                                                                           |
 | ---------------------- | --------------- | ----------- | ------------------------------------------------------------------------------- |
-| **ChatGPT** (OpenAI)   | Streamable HTTP | CIMD + PKCE | Marketplace connector; requires `CHATGPT_VERIFY_TOKEN` for domain verification. |
+| **ChatGPT** (OpenAI)   | Streamable HTTP | CIMD + PKCE | Marketplace connector. |
 | **Claude** (Anthropic) | Streamable HTTP | CIMD + PKCE |                                                                                 |
 | **Perplexity**         | Streamable HTTP | CIMD + PKCE |                                                                                 |
 

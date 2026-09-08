@@ -98,11 +98,9 @@ must use `POST /mcp` (Streamable HTTP).
 ## Migration checklist for operators
 
 - [ ] Deploy the backend with the new `/api/*` endpoints listed above.
-- [ ] Set `OAUTH_STATE_SECRET` on the MCP Worker.
 - [ ] Configure `PAXAVER_API_CA` and `PAXAVER_API_US` service bindings in
       `wrangler.jsonc` (production environment).
 - [ ] Configure custom domains (`mcp.paxaver.dev`, `.com`) in Cloudflare.
-- [ ] Set `CHATGPT_VERIFY_TOKEN` if listing on the ChatGPT marketplace.
 - [ ] Deploy staging first and run `npm run smoke:staging`.
 - [ ] Notify existing static-token users to migrate to OAuth; revoke old tokens
       when ready.

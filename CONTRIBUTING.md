@@ -17,11 +17,7 @@ npm install
 
 ### Local secrets
 
-Create a `.dev.vars` file (gitignored) for local development:
-
-```
-OAUTH_STATE_SECRET=local-dev-state-secret
-```
+The worker requires no secrets for local development.
 
 For full integration testing, run the Paxaver backend worker locally and point
 `API_BASE_URL` (in `wrangler.jsonc` top-level `vars`) at it. Without the

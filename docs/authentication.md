@@ -147,8 +147,4 @@ cannot be determined from a static token.
 > Legacy static tokens are deprecated. New integrations should use the OAuth
 > flow via the auth worker. See [`docs/migration.md`](./migration.md).
 
-## ChatGPT marketplace verification
 
-`GET /.well-known/openai-apps-challenge` returns the `CHATGPT_VERIFY_TOKEN`
-secret as plain text, satisfying ChatGPT's domain-ownership verification for
-the marketplace connector. Returns `404` if the token is not configured.

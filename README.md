@@ -76,13 +76,10 @@ npm install @paxaver/mcp
 # 1. Install dependencies (Node >= 22)
 npm install
 
-# 2. Configure local secrets
-cp .dev.vars.example .dev.vars   # then fill in OAUTH_STATE_SECRET, ...
-
-# 3. Run the worker locally (Miniflare)
+# 2. Run the worker locally (Miniflare)
 npm run dev
 
-# 4. Typecheck, lint, and test
+# 3. Typecheck, lint, and test
 npm run typecheck
 npm run lint
 npm test
@@ -118,9 +115,8 @@ npm run deploy:staging   # wrangler deploy --env staging
 npm run deploy:prod      # wrangler deploy --env production
 ```
 
-Secrets must be set with `wrangler secret put --env production`:
-`OAUTH_STATE_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
-`CHATGPT_VERIFY_TOKEN`. See [`docs/deployment.md`](./docs/deployment.md).
+The worker requires no secrets. See
+[`docs/deployment.md`](./docs/deployment.md).
 
 ---
 

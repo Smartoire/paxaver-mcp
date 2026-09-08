@@ -48,8 +48,7 @@
     "tsconfig.json",
     "eslint.config.mjs",
     ".prettierrc.json",
-    ".editorconfig",
-    ".dev.vars.example"
+    ".editorconfig"
   ],
   "publishConfig": {
     "access": "public"
