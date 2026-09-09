@@ -187,11 +187,22 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     } else if (url.pathname === '/oauth/authorize') {
+      // Per AGENTS.md: external systems (MCP) use paxaver.com/auth as the
+      // single trusted auth server. No region detection for OAuth.
       const authServer = authUrl(env);
       response = new Response(null, {
         status: 302,
         headers: { Location: `${authServer}/authorize${url.search}` },
       });
+    } else if (url.pathname === '/register' || url.pathname === '/oauth/register') {
+      if (request.method !== 'POST') {
+        response = new Response('Method not allowed', { status: 405 });
+      } else {
+        const authServer = authUrl(env);
+        const proxied = new Request(`${authServer}/register`, request);
+        proxied.headers.delete('Host');
+        response = await fetch(proxied);
+      }
     } else if (
       url.pathname.startsWith('/.well-known') ||
       url.pathname.startsWith('/mcp/.well-known') ||
