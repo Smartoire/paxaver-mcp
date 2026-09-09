@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.27/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.27",
+  "version": "2.2.2",
+  "id": "800c5555-f984-42d7-808c-6c93aeb9b605",
+  "developer": {
+    "name": "Smartoire Solutions",
+    "websiteUrl": "https://paxaver.com",
+    "privacyUrl": "https://paxaver.com/privacy",
+    "termsOfUseUrl": "https://paxaver.com/privacy/terms"
+  },
+  "name": {
+    "short": "Paxaver MCP",
+    "full": "Paxaver MCP"
+  },
+  "description": {
+    "short": "MCP connector for Paxaver school lunch, wallet, events, and student management.",
+    "full": "Paxaver MCP connects AI assistants to your Paxaver school community account. Use it to check lunch menus, order meals, view wallet balance and activity, see upcoming school events, and manage restaurants and daily menus when you have an admin or PAC role.\n\nAccount requirement and limitations:\n- To use this MCP connector, you need an active Paxaver account. Please contact our support team for more details.\n- Paxaver MCP does not store or process personal data directly; it validates tokens and delegates all data operations to the Paxaver platform.\n- Capabilities and available tools depend on your Paxaver role and school.\n\nUseful links:\n- Sign up: https://paxaver.com/auth/signup\n- Get started: https://paxaver.com/help\n- Contact us: https://paxaver.com/contact\n- Help: https://paxaver.com/help/parent\n- Terms of Service: https://paxaver.com/privacy/terms\n- Privacy Policy: https://paxaver.com/privacy"
+  },
+  "agentConnectors": [
+    {
+      "id": "paxaver-mcp",
+      "displayName": "Paxaver MCP",
+      "description": "Paxaver MCP connector for school lunch, wallet, events, and student management.",
+      "toolSource": {
+        "remoteMcpServer": {
+          "mcpServerUrl": "https://mcp.paxaver.com/mcp",
+          "mcpToolDescription": {
+            "file": "mcptools.json"
+          },
+          "authorization": {
+            "type": "DynamicClientRegistration",
+            "referenceId": "paxaver-mcp-dcr"
+          }
+        }
+      }
+    }
+  ],
+  "icons": {
+    "outline": "icons/outline.png",
+    "color": "icons/color.png"
+  },
+  "accentColor": "#3B82F6"
+}
