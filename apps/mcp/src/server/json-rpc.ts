@@ -77,7 +77,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
       : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.";
     const registrationNotice = needsRegistration
       ? subStatus === 'expired'
-        ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to continue using Paxaver MCP tools.'
+        ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to continue using Paxaver tools.'
         : ' IMPORTANT: You first need to register to the service. An active Paxaver AI subscription is required to use MCP tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.'
       : '';
     return Response.json({
@@ -93,7 +93,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         serverInfo: {
           name: 'paxaver-mcp',
           version: '2.2.2',
-          title: 'Paxaver MCP',
+          title: 'Paxaver',
           description:
             'School community operations: ordering, wallet, menus, events, fundraising, and school management.',
         },
@@ -172,8 +172,8 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
     if (!isPlatformAdmin && subStatus !== 'active') {
       const message =
         subStatus === 'expired'
-          ? 'Your Paxaver AI subscription has expired. Please renew your subscription at https://paxaver.com/settings/mcp to continue using Paxaver MCP tools.'
-          : 'You first need to register to the service. An active Paxaver AI subscription is required to use Paxaver MCP tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.';
+          ? 'Your Paxaver AI subscription has expired. Please renew your subscription at https://paxaver.com/settings/mcp to continue using Paxaver tools.'
+          : 'You first need to register to the service. An active Paxaver AI subscription is required to use Paxaver tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.';
       return Response.json(mcpError(id, -32603, message));
     }
 

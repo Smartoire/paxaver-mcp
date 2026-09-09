@@ -131,7 +131,7 @@ function oauthCallbackHandler(request: Request): Response {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Paxaver MCP — OAuth Callback</title>
+<title>Paxaver — OAuth Callback</title>
 <style>
   body{font-family:system-ui,sans-serif;max-width:480px;margin:80px auto;padding:0 24px;color:#1a1a1a}
   h1{font-size:20px;margin:0 0 16px}
@@ -148,16 +148,18 @@ function oauthCallbackHandler(request: Request): Response {
 (function(){
   var data = { type: 'oauth_callback', code: ${JSON.stringify(code)}, state: ${JSON.stringify(state)}, error: ${JSON.stringify(error)}, error_description: ${JSON.stringify(errorDescription)} };
 
-  // Relay to opener (MCP Inspector popup flow). The opener is typically
-  // cross-origin, so we can't read its origin directly — instead we post to
-  // each allowed origin; the browser only delivers to the one matching the
-  // opener's actual origin. Never use '*' as targetOrigin: the payload
-  // contains the authorization code. Unknown openers fall through to the
-  // manual copy UI below.
+  // Relay to opener (MCP Inspector / VS Code popup flow). The opener is
+  // typically cross-origin, so we can't read its origin directly — instead we
+  // post to each allowed origin; the browser only delivers to the one matching
+  // the opener's actual origin. Never use '*' as targetOrigin: the payload
+  // contains the authorization code. Unknown openers fall through to the manual
+  // copy UI below.
   var ALLOWED_OPENER_ORIGINS = [
     'https://inspector.modelcontextprotocol.io',
     'https://chatgpt.com',
     'https://chat.openai.com',
+    'https://vscode.dev',
+    'https://insiders.vscode.dev',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
@@ -167,6 +169,9 @@ function oauthCallbackHandler(request: Request): Response {
     for (var i = 0; i < ALLOWED_OPENER_ORIGINS.length; i++) {
       try { window.opener.postMessage(data, ALLOWED_OPENER_ORIGINS[i]); } catch(e) {}
     }
+    // If this page was opened in a popup by a known client, close it after a
+    // short delay so the user isn't left on a "nothing is happening" page.
+    setTimeout(function() { try { window.close(); } catch(e) {} }, 3000);
   }
 
   var el = document.getElementById('content');
@@ -179,7 +184,7 @@ function oauthCallbackHandler(request: Request): Response {
       '<p>Copy this code and paste it into the MCP Inspector Auth Debugger:</p>' +
       '<div class="code-box" id="code">' + escapeHtml(data.code) + '</div>' +
       '<button onclick="copyCode()">Copy code</button>' +
-      '<p class="hint">If the MCP Inspector opened this page in a popup, the code was sent automatically. You can close this window.</p>';
+      '<p class="hint">If MCP Inspector or VS Code opened this page in a popup, the code was sent automatically. You can close this window.</p>';
   } else {
     el.innerHTML = '<h1>OAuth Callback</h1><p>No authorization code or error received.</p>';
   }
