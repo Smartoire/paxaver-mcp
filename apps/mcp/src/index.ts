@@ -74,11 +74,11 @@ function corsHeaders(origin: string, allowed: string): Record<string, string> {
 }
 
 function mergeHeaders(response: Response, extra: Record<string, string>): Response {
-  const headers = new Headers(response.headers);
-  for (const [key, value] of Object.entries(extra)) {
-    headers.set(key, value);
-  }
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: new Headers([...response.headers, ...Object.entries(extra)]),
+  });
 }
 
 async function mcpAuth(request: Request, ctx: RequestContext): Promise<Response | null> {
