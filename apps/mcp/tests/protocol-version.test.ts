@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { PROTOCOL_VERSION } from '../src/lib/protocol-version.js';
+import { PROTOCOL_VERSION } from '../src/server/json-rpc.js';
 
 describe('PROTOCOL_VERSION', () => {
   it('is a valid date-based version string', () => {

@@ -6,7 +6,6 @@
  * business logic runs in the backend via the service-binding API client.
  */
 
-import { PROTOCOL_VERSION } from '../lib/protocol-version.js';
 import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from '../lib/policies.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
@@ -18,6 +17,7 @@ export interface RpcRequest {
   id: string | number | null;
 }
 
+export const PROTOCOL_VERSION = '2025-06-18';
 const SUPPORTED_VERSIONS = ['2026-07-28', PROTOCOL_VERSION];
 
 // ponytail: Hono's Context generic is complex and varies by route path.
