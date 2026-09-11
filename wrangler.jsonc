@@ -29,7 +29,7 @@
         "API_BASE_URL_US": "https://paxaver.dev",
         "API_BASE_URL_MX": "https://paxaver.dev",
       },
-      "services": [{ "binding": "PAXAVER_API_CA", "service": "paxaver-api-ca" }],
+      "services": [{ "binding": "PAXAVER_API_CA", "service": "paxaver-api-dev" }],
       "routes": [{ "pattern": "mcp.paxaver.dev", "zone_name": "paxaver.dev", "custom_domain": true }],
     },
 
