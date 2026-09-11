@@ -8,6 +8,7 @@
 import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { authUrl, authServers } from '../auth/validate.js';
+import { SERVER_VERSION } from '../lib/version.js';
 
 function withCache(response: Response): Response {
   const headers = new Headers(response.headers);
@@ -91,7 +92,7 @@ function serverCardHandler(request: Request): Response {
   return Response.json({
     serverInfo: {
       name: 'paxaver-mcp',
-      version: '2.2.2',
+      version: SERVER_VERSION,
     },
     authentication: {
       required: true,

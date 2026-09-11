@@ -12,6 +12,7 @@ import type { Env, AppVariables } from './env.js';
 import { authenticateRequest, authUrl } from './auth/validate.js';
 import { transportApp, originFrom } from './transport/streamable-http.js';
 import { wellKnownApp } from './discovery/well-known.js';
+import { SERVER_VERSION } from './lib/version.js';
 
 const SECURITY_TXT = `# Paxaver security.txt (RFC 9116)
 # https://securitytxt.org/
@@ -182,7 +183,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       url.pathname === '/health' ||
       (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     ) {
-      const healthBody = request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', version: '2.2.2' });
+      const healthBody = request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', version: SERVER_VERSION });
       response = new Response(healthBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });

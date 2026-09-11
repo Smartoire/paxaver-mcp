@@ -10,6 +10,7 @@ import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';
+import { SERVER_VERSION } from '../lib/version.js';
 
 export interface RpcRequest {
   method: string;
@@ -45,7 +46,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         _meta: {
           'io.modelcontextprotocol/serverInfo': {
             name: 'paxaver-mcp',
-            version: '2.2.2',
+            version: SERVER_VERSION,
           },
         },
         instructions:
@@ -92,7 +93,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
         },
         serverInfo: {
           name: 'paxaver-mcp',
-          version: '2.2.2',
+          version: SERVER_VERSION,
           title: 'Paxaver',
           description:
             'School community operations: ordering, wallet, menus, events, fundraising, and school management.',

@@ -5,6 +5,12 @@ All notable changes to the Paxaver MCP server are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] — 2026-09-11
+
+### Changed
+
+- Aligned package version with Paxaver platform release 2.4.1. Server version is now read from `package.json` at bundle time (`src/lib/version.ts`) so the health endpoint, discovery server card, and JSON-RPC `serverInfo` cannot drift.
+
 ## [2.1.3] — 2026-08-23
 
 ### Fixed
