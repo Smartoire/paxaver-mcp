@@ -194,6 +194,7 @@ export async function authenticateRequest(
       const ctx = (data as { data?: AuthContext })?.data ?? (data as AuthContext);
       if (!ctx.userId) continue;
       if (!ctx.country) ctx.country = country;
+      ctx.userToken = token;
       return { ok: true, status: 200, context: ctx };
     }
   }

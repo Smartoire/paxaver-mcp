@@ -78,8 +78,8 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
       : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.";
     const registrationNotice = needsRegistration
       ? subStatus === 'expired'
-        ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to continue using Paxaver tools.'
-        : ' IMPORTANT: You first need to register to the service. An active Paxaver AI subscription is required to use MCP tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.'
+        ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to restore add, edit, and update tools.'
+        : ' IMPORTANT: Read-only tools are free. Add, edit, and update tools require an active Paxaver AI subscription. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.'
       : '';
     return Response.json({
       jsonrpc: '2.0',
@@ -165,22 +165,32 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
       return Response.json(mcpError(id, -32601, `Unknown tool: ${toolName}`));
     }
 
-    // Subscription gate: block tool calls for users without an active
-    // subscription. tools/list is allowed so the user can see available
-    // tools. Platform admins bypass this check.
-    const subStatus = c.var.subscription?.status ?? 'none';
-    const isPlatformAdmin = c.var.isPlatformAdmin ?? false;
-    if (!isPlatformAdmin && subStatus !== 'active') {
-      const message =
-        subStatus === 'expired'
-          ? 'Your Paxaver AI subscription has expired. Please renew your subscription at https://paxaver.com/settings/mcp to continue using Paxaver tools.'
-          : 'You first need to register to the service. An active Paxaver AI subscription is required to use Paxaver tools. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.';
-      return Response.json(mcpError(id, -32603, message));
-    }
-
     const authResult = checkToolAuthorization(toolName, c.var);
     if (authResult === 'forbidden') {
       return Response.json(mcpError(id, -32603, 'You do not have permission to use this tool.'));
+    }
+
+    // Subscription gate: read-only tools are free for all authenticated
+    // users. Tools marked requiresEntitlement (add/edit/update and admin
+    // writes) need an active subscription. Role-gated admin tools are the
+    // PAC AI product and require the 'full' tool level. Platform admins
+    // bypass this check.
+    const policy = TOOL_POLICIES[toolName];
+    const subStatus = c.var.subscription?.status ?? 'none';
+    const toolLevel = c.var.subscription?.toolLevel ?? null;
+    const isPlatformAdmin = c.var.isPlatformAdmin ?? false;
+    if (!isPlatformAdmin && policy.requiresEntitlement) {
+      const needsFull = policy.requiredRoles.length > 0;
+      const blocked = subStatus !== 'active' || (needsFull && toolLevel !== 'full');
+      if (blocked) {
+        const message =
+          subStatus === 'expired'
+            ? 'Your Paxaver AI subscription has expired. Please renew your subscription at https://paxaver.com/settings/mcp to continue using Paxaver tools.'
+            : needsFull && subStatus === 'active'
+              ? 'This tool requires a Paxaver PAC AI subscription. Upgrade at https://paxaver.com/settings/mcp.'
+              : 'This action requires an active Paxaver AI subscription. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.';
+        return Response.json(mcpError(id, -32603, message));
+      }
     }
 
     return dispatchTool(c, toolName, toolArgs, id);

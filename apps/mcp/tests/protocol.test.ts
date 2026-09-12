@@ -10,6 +10,9 @@ import app from '../src/index.js';
 // /api/mcp/whoami to return user context. RS256 JWKS validation fails
 // (no auth worker in test env), falling through to the legacy path.
 const TEST_TOKEN = 'test-static-mcp-token-for-vitest';
+const ACTIVE_TOKEN = 'test-static-mcp-token-active-sub';
+const FULL_TOKEN = 'test-static-mcp-token-full-sub';
+const EXPIRED_TOKEN = 'test-static-mcp-token-expired-sub';
 
 const USER_CONTEXT = {
   userId: 'user-1',
@@ -19,6 +22,22 @@ const USER_CONTEXT = {
   isPlatformAdmin: false,
   studentIds: ['student-1'],
   country: 'ca' as const,
+};
+
+const TOKEN_CONTEXTS: Record<string, typeof USER_CONTEXT & { subscription?: unknown }> = {
+  [TEST_TOKEN]: USER_CONTEXT,
+  [ACTIVE_TOKEN]: {
+    ...USER_CONTEXT,
+    subscription: { status: 'active', toolLevel: 'parent', expiry: '2099-07-31T00:00:00Z' },
+  },
+  [FULL_TOKEN]: {
+    ...USER_CONTEXT,
+    subscription: { status: 'active', toolLevel: 'full', expiry: '2099-07-31T00:00:00Z' },
+  },
+  [EXPIRED_TOKEN]: {
+    ...USER_CONTEXT,
+    subscription: { status: 'expired', toolLevel: 'parent', expiry: '2020-07-31T00:00:00Z' },
+  },
 };
 
 const TEST_ENV = {
@@ -32,22 +51,22 @@ const TEST_ENV = {
     async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
       const req = typeof request === 'string' ? new Request(request, init) : request;
       const url = new URL(req.url);
+      const authHeader = req.headers.get('Authorization') || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
       if (url.pathname === '/api/mcp/whoami') {
-        const authHeader = req.headers.get('Authorization') || '';
-        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-        if (token !== TEST_TOKEN) {
+        if (!TOKEN_CONTEXTS[token]) {
           return new Response(JSON.stringify({ error: 'Invalid token' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        return new Response(JSON.stringify({ data: USER_CONTEXT }), {
+        return new Response(JSON.stringify({ data: TOKEN_CONTEXTS[token] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
       if (url.pathname === '/api/users/me/context') {
-        return new Response(JSON.stringify({ data: USER_CONTEXT }), {
+        return new Response(JSON.stringify({ data: TOKEN_CONTEXTS[token] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
@@ -62,22 +81,22 @@ const TEST_ENV = {
     async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
       const req = typeof request === 'string' ? new Request(request, init) : request;
       const url = new URL(req.url);
+      const authHeader = req.headers.get('Authorization') || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
       if (url.pathname === '/api/mcp/whoami') {
-        const authHeader = req.headers.get('Authorization') || '';
-        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-        if (token !== TEST_TOKEN) {
+        if (!TOKEN_CONTEXTS[token]) {
           return new Response(JSON.stringify({ error: 'Invalid token' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        return new Response(JSON.stringify({ data: USER_CONTEXT }), {
+        return new Response(JSON.stringify({ data: TOKEN_CONTEXTS[token] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
       if (url.pathname === '/api/users/me/context') {
-        return new Response(JSON.stringify({ data: USER_CONTEXT }), {
+        return new Response(JSON.stringify({ data: TOKEN_CONTEXTS[token] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
@@ -169,6 +188,83 @@ describe('MCP protocol', () => {
     const res = await mcpPost({ jsonrpc: '2.0', id: 6, method: 'nonexistent/method' }, token);
     const json = (await res.json()) as unknown as { error: { code: number } };
     expect(json.error.code).toBe(-32601);
+  });
+
+  it('unsubscribed read tool executes (reads are free)', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'get_wallet_balance', arguments: {} } },
+      TEST_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
+    expect(json.error?.message ?? '').not.toContain('subscription');
+    expect(json.result).toBeTruthy();
+  });
+
+  it('unsubscribed write tool is blocked', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      TEST_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number; message: string } };
+    expect(json.error.code).toBe(-32603);
+    expect(json.error.message).toContain('subscription');
+  });
+
+  it('unsubscribed event registration is blocked', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'register_event', arguments: {} } },
+      TEST_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number; message: string } };
+    expect(json.error.code).toBe(-32603);
+    expect(json.error.message).toContain('subscription');
+  });
+
+  it('expired subscription write is blocked with renewal message', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      EXPIRED_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number; message: string } };
+    expect(json.error.code).toBe(-32603);
+    expect(json.error.message).toContain('expired');
+  });
+
+  it('expired subscription read still executes', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'get_daily_menu', arguments: {} } },
+      EXPIRED_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
+    expect(json.error?.message ?? '').not.toContain('subscription');
+  });
+
+  it('active parent subscription write executes', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
+    expect(json.error?.message ?? '').not.toContain('subscription');
+  });
+
+  it('parent-level subscription is blocked from admin write tools', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'set_daily_menu', arguments: {} } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number; message: string } };
+    expect(json.error.code).toBe(-32603);
+    expect(json.error.message).toContain('PAC AI');
+  });
+
+  it('full-level subscription can use admin write tools', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'set_daily_menu', arguments: {} } },
+      FULL_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
+    expect(json.error?.message ?? '').not.toContain('subscription');
   });
 
   it('parse error on invalid JSON', async () => {

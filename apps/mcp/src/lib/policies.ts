@@ -189,7 +189,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   register_event: {
     capability: 'ai_write',
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE'],
     requiredRoles: [],
     mutates: true,
@@ -199,7 +199,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   sign_up_to_volunteer: {
     capability: 'ai_write',
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE'],
     requiredRoles: [],
     mutates: true,
@@ -221,7 +221,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   create_restaurant: {
     capability: null,
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator'],
     mutates: true,
@@ -243,7 +243,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   create_menu_item: {
     capability: null,
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
@@ -253,7 +253,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   update_menu_item: {
     capability: null,
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
@@ -263,7 +263,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   set_menu_item_price: {
     capability: null,
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE', 'ADMIN', 'FINANCIAL'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
@@ -273,7 +273,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   delete_menu_item: {
     capability: null,
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['DESTRUCTIVE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
@@ -283,7 +283,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
   },
   set_daily_menu: {
     capability: null,
-    requiresEntitlement: false,
+    requiresEntitlement: true,
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
