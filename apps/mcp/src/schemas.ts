@@ -50,13 +50,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'get_user_info',
     description:
-      'Returns the authenticated Paxaver user context: their name, active school, students they are a guardian for, and available roles. ALWAYS call this first before any other tool to establish context. This is a read-only operation.',
+      'Returns the authenticated Paxaver user context: their first name, active school, students they are a guardian for, and available roles. ALWAYS call this first before any other tool to establish context. This is a read-only operation.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
       properties: {
         firstName: { type: ['string', 'null'] },
-        lastName: { type: ['string', 'null'] },
         schoolSlug: { type: ['string', 'null'] },
         schoolName: { type: ['string', 'null'] },
         students: { type: 'array', items: { type: 'object' } },

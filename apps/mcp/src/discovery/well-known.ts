@@ -8,6 +8,7 @@
 import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { authUrl, authServers } from '../auth/validate.js';
+import { SERVER_VERSION } from '../lib/version.js';
 
 function withCache(response: Response): Response {
   const headers = new Headers(response.headers);
@@ -91,7 +92,7 @@ function serverCardHandler(request: Request): Response {
   return Response.json({
     serverInfo: {
       name: 'paxaver-mcp',
-      version: '2.2.2',
+      version: SERVER_VERSION,
     },
     authentication: {
       required: true,
@@ -237,6 +238,16 @@ async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
   }
   if (pathname === '/.well-known/mcp/server-card.json') {
     return withCache(serverCardHandler(request));
+  }
+  if (pathname === '/.well-known/openai-apps-challenge') {
+    // ChatGPT app submission domain verification. The token is provided by
+    // OpenAI during submission; until then the endpoint does not exist.
+    const token = env.OPENAI_APPS_CHALLENGE;
+    return withCache(
+      token
+        ? new Response(token, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+        : new Response('Not found', { status: 404 }),
+    );
   }
   if (pathname === '/oauth/callback') {
     return withCache(oauthCallbackHandler(request));

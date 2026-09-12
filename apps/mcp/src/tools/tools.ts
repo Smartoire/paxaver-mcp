@@ -34,14 +34,12 @@ export async function handleTool({
         // from the outputSchema definition automatically.
         const filtered: Record<string, unknown> = {
           firstName: u.firstName,
-          lastName: u.lastName,
           schoolSlug: u.schoolSlug,
           schoolName: u.schoolName,
           students: Array.isArray(u.students)
             ? (u.students as Record<string, unknown>[]).map((s) => ({
                 id: s.id,
                 firstName: s.firstName,
-                lastName: s.lastName,
                 schoolSlug: s.schoolSlug,
               }))
             : u.students,
