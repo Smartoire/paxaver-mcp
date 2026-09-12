@@ -138,13 +138,6 @@ pointing to `auth.paxaver.com` as the authorization server:
 
 ## Legacy static token support
 
-For backwards compatibility, a request whose bearer token is **not** a valid
-RS256 JWT is delegated to the backend's `GET /api/mcp/whoami` endpoint.
-The backend validates legacy static MCP client tokens and returns the same
-`AuthContext` shape. The MCP server tries CA first, then US, since the region
-cannot be determined from a static token.
-
-> Legacy static tokens are deprecated. New integrations should use the OAuth
-> flow via the auth worker. See [`docs/migration.md`](./migration.md).
-
-
+**Removed.** Legacy static MCP client tokens are no longer accepted. All
+requests must present a valid RS256 JWT issued through the OAuth 2.1 flow.
+See [`docs/migration.md`](./migration.md).

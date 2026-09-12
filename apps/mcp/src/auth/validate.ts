@@ -6,8 +6,6 @@
  * paxaver.mx/auth) with its own JWKS endpoint. The issuer is extracted
  * from the JWT `iss` claim to select the correct JWKS.
  *
- * Also supports legacy static MCP client tokens via the backend /whoami.
- *
  * User context (permissions, schoolSlug, studentIds, country) is loaded
  * from the backend via the service-binding API client. The user's region
  * is determined from the JWT tenant_id claim and used to route to the
@@ -93,7 +91,7 @@ export async function authenticateRequest(
     const unverified = decodeJwt(token);
     issuer = typeof unverified.iss === 'string' ? unverified.iss : undefined;
   } catch {
-    // Malformed JWT — fall through to legacy token check.
+    // Malformed JWT — fall through to the 401 below.
   }
 
   if (issuer && AUTH_ISSUERS[issuer]) {
@@ -145,57 +143,7 @@ export async function authenticateRequest(
         return { ok: true, status: 200, context: ctx };
       }
     } catch {
-      // Fall through to legacy static token check.
-    }
-  }
-
-  // --- Legacy static MCP client token ---
-  // Deprecated: static tokens are replaced by OAuth JWT authentication.
-  // REMOVAL DATE: 2026-11-30. After this date, delete this entire legacy
-  // block and reject any non-JWT bearer token. Track usage via the
-  // `legacy_static_token` log field below; when it stops appearing in
-  // production logs for 30 consecutive days, remove early.
-  console.warn(
-    JSON.stringify({
-      level: 'warn',
-      msg: 'legacy static MCP token used',
-      legacy_static_token: 1,
-      action: 'migrate to OAuth JWT authentication',
-    }),
-  );
-  // Without a JWT we do not know the user's region, so try each region.
-  for (const country of ['ca', 'us', 'mx'] as const) {
-    const baseUrl =
-      country === 'us' ? env.API_BASE_URL_US : country === 'mx' ? env.API_BASE_URL_MX : env.API_BASE_URL_CA;
-    const fetcher = country === 'us' ? env.PAXAVER_API_US : country === 'mx' ? env.PAXAVER_API_MX : env.PAXAVER_API_CA;
-    if (!baseUrl) continue;
-    const whoamiUrl = new URL('/api/mcp/whoami', baseUrl);
-    let whoamiResp: Response;
-    if (fetcher) {
-      whoamiResp = await fetcher.fetch(whoamiUrl.toString(), {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-MCP-Region': country,
-        },
-      });
-    } else {
-      whoamiResp = await fetch(whoamiUrl.toString(), {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-MCP-Region': country,
-        },
-      });
-    }
-
-    if (whoamiResp.ok) {
-      const data = await whoamiResp.json().catch(() => null);
-      const ctx = (data as { data?: AuthContext })?.data ?? (data as AuthContext);
-      if (!ctx.userId) continue;
-      if (!ctx.country) ctx.country = country;
-      ctx.userToken = token;
-      return { ok: true, status: 200, context: ctx };
+      // Fall through to the 401 below.
     }
   }
 

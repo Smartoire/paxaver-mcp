@@ -27,8 +27,7 @@ Validation flow:
    full `AuthContext` (permissions, schoolSlug, studentIds, country).
 6. Attach `AuthContext` to the request for downstream authorization.
 
-Legacy static MCP tokens are supported as a fallback via the backend's
-`/api/mcp/whoami` endpoint. New integrations must use OAuth 2.1.
+Legacy static MCP tokens have been removed. All requests must use OAuth 2.1.
 
 ## Authorization
 

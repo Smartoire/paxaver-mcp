@@ -45,21 +45,18 @@ endpoints have been removed.
 authorization server: Authorization Code + PKCE (S256), with RFC 9728 / RFC 8414
 discovery and CIMD support for ChatGPT/Claude/Perplexity.
 
-### Backend endpoints added
+### Backend endpoint contract
 
-To support the service-binding architecture, the following endpoints were added
-to the Paxaver backend (private repo). They are the contract this MCP server
-depends on:
+To support the service-binding architecture, the following endpoint is the
+contract this MCP server depends on:
 
-| Endpoint                              | Purpose                                                                                                                                   |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/users/me/context`           | Returns the `AuthContext` (permissions, schoolSlug, studentIds, isPlatformAdmin) for the authenticated user. Called on every MCP request. |
-| `GET /api/mcp/whoami`                 | Validates a legacy static MCP token and returns `AuthContext`. Backwards-compat for v1 tokens.                                            |
-| `POST /api/auth/mcp-login`            | Authenticates email/password for the OAuth login form. Returns `userId`.                                                                  |
-| `POST /api/mcp/oauth-codes`           | Issues an authorization code (stores code + PKCE challenge + redirect URI).                                                               |
-| `POST /api/mcp/oauth-token-exchange`  | Exchanges a code for user ID + scope (validates code, PKCE, redirect URI, client).                                                        |
-| `POST /api/mcp/oauth-clients`         | Registers an OAuth client (RFC 7591).                                                                                                     |
-| `GET /api/mcp/oauth-clients/validate` | Validates a registered client ID and returns redirect URIs.                                                                               |
+| Endpoint                    | Purpose                                                                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/users/me/context` | Returns the `AuthContext` (permissions, schoolSlug, studentIds, isPlatformAdmin) for the authenticated user. Called on every MCP request. |
+
+The earlier `/api/mcp/whoami` and `/api/mcp/oauth-*` backend endpoints have
+been removed — OAuth (login, consent, DCR, token exchange) is handled by the
+auth worker at `/auth/*`, and static tokens are no longer accepted.
 
 ### Vendored contracts
 
@@ -85,10 +82,9 @@ D1 access — it is intentionally gone.
 
 ### Static bearer tokens
 
-**Deprecated, not removed.** v1 static tokens still work via the backend's
-`/api/mcp/whoami` endpoint (`src/auth/validate.ts` legacy path). New
-integrations should use OAuth. Existing tokens continue to function until
-explicitly revoked, but no new static tokens should be issued.
+**Removed.** v1 static tokens are no longer accepted — the backend's
+`/api/mcp/whoami` endpoint and the `src/auth/validate.ts` legacy path have
+been deleted. All integrations must use OAuth 2.1 Authorization Code + PKCE.
 
 ### SSE-only transport
 
@@ -102,8 +98,7 @@ must use `POST /mcp` (Streamable HTTP).
       `wrangler.jsonc` (production environment).
 - [ ] Configure custom domains (`mcp.paxaver.dev`, `.com`) in Cloudflare.
 - [ ] Deploy staging first and run `npm run smoke:staging`.
-- [ ] Notify existing static-token users to migrate to OAuth; revoke old tokens
-      when ready.
+- [x] Static tokens removed — all integrations use OAuth 2.1.
 
 ## Compatibility
 
