@@ -239,6 +239,16 @@ async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
   if (pathname === '/.well-known/mcp/server-card.json') {
     return withCache(serverCardHandler(request));
   }
+  if (pathname === '/.well-known/openai-apps-challenge') {
+    // ChatGPT app submission domain verification. The token is provided by
+    // OpenAI during submission; until then the endpoint does not exist.
+    const token = env.OPENAI_APPS_CHALLENGE;
+    return withCache(
+      token
+        ? new Response(token, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+        : new Response('Not found', { status: 404 }),
+    );
+  }
   if (pathname === '/oauth/callback') {
     return withCache(oauthCallbackHandler(request));
   }

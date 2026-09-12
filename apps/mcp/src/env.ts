@@ -24,6 +24,9 @@ export interface Env {
   API_BASE_URL_CA: string;
   API_BASE_URL_US: string;
   API_BASE_URL_MX: string;
+
+  /** Set during ChatGPT app submission to prove domain ownership. */
+  OPENAI_APPS_CHALLENGE?: string;
 }
 
 export type McpCountry = 'ca' | 'us' | 'mx';
