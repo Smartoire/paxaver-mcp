@@ -8,7 +8,7 @@
   "main": "apps/mcp/src/index.ts",
   "packageManager": "pnpm@10.25.0",
   "engines": {
-    "node": ">=24.21.0",
+    "node": ">=26.8.2",
     "pnpm": ">=10.0.0"
   },
   "author": {
@@ -83,7 +83,7 @@
     "@cloudflare/vitest-pool-workers": "catalog:",
     "@cloudflare/workers-types": "^5.20260915.1",
     "@eslint/js": "catalog:",
-    "@types/node": "^24.13.4",
+    "@types/node": "^26.6.0",
     "eslint": "^10.10.0",
     "globals": "catalog:",
     "prettier": "catalog:",
