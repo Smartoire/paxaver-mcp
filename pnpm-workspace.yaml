@@ -1,5 +1,4 @@
 catalog:
-  '@cloudflare/vitest-pool-workers': ^0.22.0
   '@cloudflare/workers-types': ^5.20260915.1
   '@eslint/js': ^10.0.1
   '@types/node': ^26.6.0
