@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "paxaver": {
+      "type": "http",
+      "url": "https://mcp.paxaver.com/mcp"
+    }
+  }
+}
