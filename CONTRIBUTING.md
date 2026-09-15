@@ -6,7 +6,7 @@ so external contributions are limited to review and educational purposes.
 
 ## Development setup
 
-**Requirements:** Node.js >= 20 (see [`.nvmrc`](./.nvmrc)) and npm.
+**Requirements:** Node.js >= 26.8.2 (see [`.nvmrc`](./.nvmrc)) and npm.
 
 ```bash
 git clone <repo-url> paxaver-mcp

@@ -75,7 +75,7 @@ npm install @paxaver/mcp
 ### Develop locally
 
 ```bash
-# 1. Install dependencies (Node >= 22)
+# 1. Install dependencies (Node >= 26.8.2)
 npm install
 
 # 2. Run the worker locally (Miniflare)
@@ -170,7 +170,7 @@ read responses. The MCP server does not log user data.
 
 ## Tech stack
 
-- **Runtime:** Cloudflare Workers (`compatibility_date: 2026-08-01`, `nodejs_compat`)
+- **Runtime:** Cloudflare Workers (`compatibility_date: 2026-09-15`)
 - **Framework:** [Hono](https://hono.dev) v4
 - **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
 - **Protocol:** MCP `2025-06-18`, Streamable HTTP
