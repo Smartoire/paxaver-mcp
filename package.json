@@ -77,25 +77,29 @@
     "prepublishOnly": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {
-    "jose": "^6.2.11"
+    "jose": "^6.2.12"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",
-    "@cloudflare/workers-types": "^5.20260905.1",
+    "@cloudflare/workers-types": "^5.20260915.1",
     "@eslint/js": "catalog:",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.1",
     "eslint": "^10.10.0",
     "globals": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "^8.69.0",
+    "typescript-eslint": "^8.70.0",
     "vitest": "catalog:",
-    "wrangler": "^4.129.0"
+    "wrangler": "^4.131.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "workerd"
-    ]
+      "workerd",
+      "sharp"
+    ],
+    "overrides": {
+      "sharp": "^0.35.4"
+    }
   }
 }
