@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/@paxaver/mcp.svg)](https://www.npmjs.com/package/@paxaver/mcp)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
 [![MCP Badge](https://lobehub.com/badge/mcp/paxaver)](https://lobehub.com/mcp/paxaver)
-[![Paxaver MCP connector – tool definition quality and endpoint health on Glama](https://glama.ai/mcp/connectors/com.paxaver.mcp/paxaver/badges/score.svg)](https://glama.ai/mcp/connectors/com.paxaver.mcp/paxaver)
+[![Paxaver MCP Server MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/Smartoire/paxaver-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Smartoire/paxaver-mcp)
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/smartoire/paxaver-mcp)
 
 ---
