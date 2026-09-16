@@ -80,44 +80,17 @@ export const ALL_TOOLS: ToolDefinition[] = [
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Wallet Balance' },
   },
-  {
-    name: 'get_wallet_status',
-    description:
-      'Returns the wallet balance plus recent transactions and pending deposits. Read-only. Use this for a wallet overview.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        balanceCents: { type: ['number', 'null'] },
-        balance: { type: ['string', 'null'] },
-        transactions: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              type: { type: 'string' },
-              amountCents: { type: 'integer' },
-              description: { type: ['string', 'null'] },
-              createdAt: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Wallet Status' },
-  },
   // --- Orders ---
   {
     name: 'order_lunch',
     description:
-      "Places a lunch order for a student the authenticated user is a guardian of. Requires menu_item_id (from get_daily_menu) and menu_date (YYYY-MM-DD). Optionally specify student_id (defaults to the user's first student if only one). Payment is deducted from the wallet. This is a FINANCIAL + WRITE operation - always confirm the order details (student, item, date, quantity) with the user before calling. Idempotent: duplicate calls with the same idempotency context will not create duplicate orders.",
+      "Places a lunch order for a student the authenticated user is a guardian of. Requires menu_item_id (from get_menu) and menu_date (YYYY-MM-DD). Optionally specify student_id (defaults to the user's first student if only one). Payment is deducted from the wallet. This is a FINANCIAL + WRITE operation - always confirm the order details (student, item, date, quantity) with the user before calling. Idempotent: duplicate calls with the same idempotency context will not create duplicate orders.",
     inputSchema: {
       type: 'object',
       properties: {
         student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info)' },
-        menu_item_id: { type: 'string', description: 'Menu item ID from get_daily_menu' },
-        menu_date: { type: 'string', description: 'YYYY-MM-DD' },
+        menu_item_id: { type: 'string', description: 'Menu item ID from get_menu' },
+        menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
         quantity: { type: 'integer', description: 'Number of servings (default 1)', minimum: 1, default: 1 },
       },
       required: ['menu_item_id', 'menu_date'],
@@ -135,16 +108,27 @@ export const ALL_TOOLS: ToolDefinition[] = [
         items: { type: 'array', items: { type: 'object' } },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Order Lunch' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Order Lunch',
+    },
   },
   {
     name: 'get_orders',
     description:
-      "Returns recent lunch orders for the authenticated user's students, including each order's items, menu date, status, and total. Optionally filter by student_id. Read-only.",
+      "Returns lunch orders for the authenticated user's students — each order's items, menu date, status, and total. Filter by student_id, a single menu_date, or a month (YYYY-MM). With no filters, returns recent orders. Admins (pac_cordinator, lunch_cordinator) receive school-wide orders for the requested period; parents only see their own students. Read-only.",
     inputSchema: {
       type: 'object',
       properties: {
-        student_id: { type: 'string', description: 'Filter to a specific student (must be your own)' },
+        student_id: {
+          type: 'string',
+          description: 'Filter to a specific student (must be your own; from get_user_info)',
+        },
+        menu_date: { type: 'string', description: 'Single day to query, YYYY-MM-DD' },
+        month: { type: 'string', description: 'Calendar month to query, YYYY-MM' },
       },
       additionalProperties: false,
     },
@@ -171,14 +155,14 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Orders' },
   },
   {
-    name: 'get_daily_menu',
+    name: 'get_menu',
     description:
-      'Returns the daily lunch menu for the user\'s active school. Accepts either "date" (YYYY-MM-DD) or "month" (YYYY-MM). If neither is given, returns today\'s menu. Read-only. Use this to find menu_item_id values for order_lunch.',
+      'Returns the lunch menu for the user\'s active school. Accepts either "date" (YYYY-MM-DD) for a single day or "month" (YYYY-MM) for the full month. If neither is given, returns today\'s menu. Read-only. Use this to find menu_item_id values for order_lunch.',
     inputSchema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'YYYY-MM-DD' },
-        month: { type: 'string', description: 'YYYY-MM' },
+        date: { type: 'string', description: 'Single day to show, YYYY-MM-DD' },
+        month: { type: 'string', description: 'Calendar month to show, YYYY-MM' },
       },
       additionalProperties: false,
     },
@@ -203,75 +187,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Daily Menu' },
-  },
-  {
-    name: 'get_daily_orders',
-    description:
-      'ADMIN: Returns all orders for the active school on a given date. Requires pac_cordinator or lunch_cordinator role. Read-only.',
-    inputSchema: {
-      type: 'object',
-      properties: { menu_date: { type: 'string', description: 'YYYY-MM-DD' } },
-      required: ['menu_date'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        orders: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              studentId: { type: 'string' },
-              menuDate: { type: 'string' },
-              status: { type: 'string' },
-              itemTotalCents: { type: 'integer' },
-              items: { type: 'array', items: { type: 'object' } },
-            },
-          },
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
-      title: 'Get Daily Orders (Admin)',
-    },
-  },
-  {
-    name: 'get_monthly_orders',
-    description:
-      "Returns one row per lunch order placed in a calendar month — student, menu date, status, and item total — for the authenticated user's students. Optionally filter by month (YYYY-MM) and student. Read-only.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        month: { type: 'string', description: 'YYYY-MM' },
-        student_id: { type: 'string', description: 'Filter to a specific student (must be your own)' },
-      },
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        orders: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              studentId: { type: 'string' },
-              menuDate: { type: 'string' },
-              status: { type: 'string' },
-              itemTotalCents: { type: 'integer' },
-            },
-          },
-        },
-      },
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Monthly Orders' },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Menu' },
   },
   {
     name: 'create_draft_order',
@@ -312,7 +228,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         items: { type: 'array', items: { type: 'object' } },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Create Draft Order' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Create Draft Order',
+    },
   },
   {
     name: 'finalize_order',
@@ -338,7 +260,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         balanceCents: { type: ['number', 'null'] },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Finalize Order' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Finalize Order',
+    },
   },
   {
     name: 'cancel_order',
@@ -361,7 +289,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         balanceCents: { type: ['number', 'null'] },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, title: 'Cancel Order' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Cancel Order',
+    },
   },
 
   // --- Events ---
@@ -428,7 +362,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: { type: 'string' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Create Event (Admin)' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Create Event (Admin)',
+    },
   },
   {
     name: 'update_event',
@@ -464,15 +404,21 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: { type: 'string' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Update Event (Admin)' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Update Event (Admin)',
+    },
   },
   {
     name: 'cancel_event',
     description:
-      'ADMIN: Cancels a school event. Requires pac_cordinator or event_cordinator role. This is a DESTRUCTIVE operation - always confirm with the user before cancelling. Cancelled events cannot be reactivated.',
+      'ADMIN: Cancels a school event. Requires pac_cordinator or event_cordinator role. This is a DESTRUCTIVE operation - always confirm with the user before cancelling. Cancelled events cannot be reactivated. Get event_id from get_upcoming_events.',
     inputSchema: {
       type: 'object',
-      properties: { event_id: { type: 'string' } },
+      properties: { event_id: { type: 'string', description: 'Event ID — from get_upcoming_events' } },
       required: ['event_id'],
       additionalProperties: false,
     },
@@ -483,7 +429,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: { type: 'string' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, title: 'Cancel Event (Admin)' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Cancel Event (Admin)',
+    },
   },
   {
     name: 'register_event',
@@ -507,7 +459,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: { type: 'string' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Register for Event' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Register for Event',
+    },
   },
   {
     name: 'sign_up_to_volunteer',
@@ -529,7 +487,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: { type: 'string' },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Sign Up to Volunteer' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Sign Up to Volunteer',
+    },
   },
 
   // --- Admin: restaurants ---
@@ -593,6 +557,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
+      idempotentHint: true,
       openWorldHint: false,
       title: 'Create Restaurant (Admin)',
     },
@@ -665,6 +630,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
+      idempotentHint: true,
       openWorldHint: false,
       title: 'Create Menu Item (Admin)',
     },
@@ -672,7 +638,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'update_menu_item',
     description:
-      'ADMIN: Partially updates an existing menu item — only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price/cost changes, nutrition updates, or toggling availability (is_available for out-of-stock, is_active to retire an item). Prefer set_menu_item_price for a price-only change and delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation — confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
+      'ADMIN: Partially updates an existing menu item — only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents — FINANCIAL, confirm the new price), nutrition updates, or toggling availability (is_available for out-of-stock, is_active to retire an item). Use delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation — confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -709,46 +675,21 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
+      idempotentHint: true,
       openWorldHint: false,
       title: 'Update Menu Item (Admin)',
     },
   },
   {
-    name: 'set_menu_item_price',
-    description:
-      'ADMIN: Sets the price of a menu item. Requires pac_cordinator or lunch_cordinator role. FINANCIAL + WRITE operation - confirm the new price with the user.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        restaurant_id: { type: 'string' },
-        menu_item_id: { type: 'string' },
-        price_cents: { type: 'integer', description: 'New price in cents' },
-      },
-      required: ['restaurant_id', 'menu_item_id', 'price_cents'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        priceCents: { type: 'integer' },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      openWorldHint: false,
-      title: 'Set Menu Item Price (Admin)',
-    },
-  },
-  {
     name: 'delete_menu_item',
     description:
-      'ADMIN: Soft-deletes a menu item. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user.',
+      'ADMIN: Soft-deletes a menu item so it can no longer be ordered. To only hide it temporarily, prefer update_menu_item with is_available=false. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
     inputSchema: {
       type: 'object',
-      properties: { restaurant_id: { type: 'string' }, menu_item_id: { type: 'string' } },
+      properties: {
+        restaurant_id: { type: 'string', description: 'Restaurant ID — from list_school_restaurants' },
+        menu_item_id: { type: 'string', description: 'Menu item ID — from list_menu_items' },
+      },
       required: ['restaurant_id', 'menu_item_id'],
       additionalProperties: false,
     },
@@ -762,6 +703,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
+      idempotentHint: true,
       openWorldHint: false,
       title: 'Delete Menu Item (Admin)',
     },
@@ -790,7 +732,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         availableQty: { type: ['integer', 'null'] },
       },
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, title: 'Set Daily Menu (Admin)' },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Set Daily Menu (Admin)',
+    },
   },
 ];
 

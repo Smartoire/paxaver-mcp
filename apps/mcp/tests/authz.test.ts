@@ -10,12 +10,9 @@ describe('Authorization policy', () => {
     const toolNames = [
       'get_user_info',
       'get_wallet_balance',
-      'get_wallet_status',
       'order_lunch',
       'get_orders',
-      'get_daily_menu',
-      'get_daily_orders',
-      'get_monthly_orders',
+      'get_menu',
       'get_upcoming_events',
       'create_event',
       'update_event',
@@ -27,7 +24,6 @@ describe('Authorization policy', () => {
       'list_menu_items',
       'create_menu_item',
       'update_menu_item',
-      'set_menu_item_price',
       'delete_menu_item',
       'set_daily_menu',
     ];
@@ -53,7 +49,7 @@ describe('Authorization policy', () => {
     const ctx = { isPlatformAdmin: false, permissions: [] };
     expect(canSeeTool('get_user_info', ctx)).toBe(true);
     expect(canSeeTool('get_wallet_balance', ctx)).toBe(true);
-    expect(canSeeTool('get_daily_menu', ctx)).toBe(true);
+    expect(canSeeTool('get_menu', ctx)).toBe(true);
   });
 
   it('platform admin sees all tools', () => {
@@ -85,7 +81,7 @@ describe('Authorization policy', () => {
   it('read tools are not mutating', () => {
     expect(getToolPolicy('get_user_info')?.mutates).toBe(false);
     expect(getToolPolicy('get_wallet_balance')?.mutates).toBe(false);
-    expect(getToolPolicy('get_daily_menu')?.mutates).toBe(false);
+    expect(getToolPolicy('get_menu')?.mutates).toBe(false);
   });
 
   it('unknown tool returns "unknown_tool"', () => {

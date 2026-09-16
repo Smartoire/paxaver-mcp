@@ -17,8 +17,7 @@ Call `get_user_info` first. This returns the user's active school, roles, and pe
 - "List menu items" → Call `list_menu_items`.
 - "Create a menu item" → Call `create_menu_item`.
 - "Set the daily menu" → Call `set_daily_menu`.
-- "View orders for today" → Call `get_daily_orders` with today's date.
-- "View monthly orders" → Call `get_monthly_orders` with the month.
+- "View orders" → Call `get_orders` with `menu_date` for a day or `month` for a month.
 - "Create an event" → Call `create_event`.
 - "Update an event" → Call `update_event` with the event ID.
 - "Cancel an event" → Call `cancel_event` with the event ID.

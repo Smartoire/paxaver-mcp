@@ -50,7 +50,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
           },
         },
         instructions:
-          "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.",
+          "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.",
         ttlMs: 3600000,
         cacheScope: 'public',
       },
@@ -74,8 +74,8 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
     const subStatus = ctx.subscription?.status ?? 'none';
     const needsRegistration = !ctx.isPlatformAdmin && subStatus !== 'active';
     const baseInstructions = admin
-      ? "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Admin tools: list_school_restaurants, create_restaurant, list_menu_items, create_menu_item, update_menu_item, delete_menu_item, set_daily_menu, get_daily_orders. Do not invent tool names - use only the tools returned by tools/list."
-      : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_daily_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_daily_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.";
+      ? "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_menu and menu_date). Admin tools: list_school_restaurants, create_restaurant, list_menu_items, create_menu_item, update_menu_item, delete_menu_item, set_daily_menu. Do not invent tool names - use only the tools returned by tools/list."
+      : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.";
     const registrationNotice = needsRegistration
       ? subStatus === 'expired'
         ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to restore add, edit, and update tools.'

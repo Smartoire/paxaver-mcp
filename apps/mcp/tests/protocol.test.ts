@@ -130,7 +130,7 @@ describe('MCP protocol', () => {
 
   it('expired subscription read still executes', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'get_daily_menu', arguments: {} } },
+      { jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'get_menu', arguments: {} } },
       EXPIRED_TOKEN,
     );
     const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };

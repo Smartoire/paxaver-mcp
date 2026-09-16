@@ -90,33 +90,12 @@ school. Use this to check funds before ordering lunch.
 
 ---
 
-### `get_wallet_status`
-
-Returns the wallet balance plus recent transactions and pending deposits.
-
-|                     |                         |
-| ------------------- | ----------------------- |
-| **Capability**      | `view_balance`          |
-| **Required roles**  | _(any member)_          |
-| **Classifications** | READ, PRIVACY_SENSITIVE |
-| **Confirmation**    | no                      |
-
-**Input schema**
-
-```json
-{ "type": "object", "properties": {} }
-```
-
-**Backend:** `GET /api/wallet/transactions`
-
----
-
 ## Orders & menu
 
 ### `order_lunch`
 
 Places a lunch order for a student the authenticated user is a guardian of.
-Requires `menu_item_id` (from `get_daily_menu`) and `menu_date`. Payment is
+Requires `menu_item_id` (from `get_menu`) and `menu_date`. Payment is
 deducted from the wallet. **FINANCIAL + WRITE** — confirm order details
 (student, item, date, quantity) with the user before calling. Idempotent.
 
@@ -132,7 +111,7 @@ deducted from the wallet. **FINANCIAL + WRITE** — confirm order details
 
 | Property       | Type    | Required | Description                                  |
 | -------------- | ------- | -------- | -------------------------------------------- |
-| `menu_item_id` | string  | yes      | From `get_daily_menu`                        |
+| `menu_item_id` | string  | yes      | From `get_menu`                              |
 | `menu_date`    | string  | yes      | YYYY-MM-DD                                   |
 | `student_id`   | string  | no       | Defaults to user's first student if only one |
 | `quantity`     | integer | no       | Servings (default 1, min 1)                  |
@@ -143,8 +122,10 @@ deducted from the wallet. **FINANCIAL + WRITE** — confirm order details
 
 ### `get_orders`
 
-Returns recent lunch orders for the authenticated user's students. Optionally
-filter by `student_id`.
+Returns lunch orders for the authenticated user's students. Filter by
+`student_id`, a single `menu_date`, or a `month`. With no filters, returns
+recent orders. Admins (pac_cordinator, lunch_cordinator) receive school-wide
+orders for the requested period; parents only see their own students.
 
 |                     |                |
 | ------------------- | -------------- |
@@ -158,14 +139,16 @@ filter by `student_id`.
 | Property     | Type   | Required | Description                                     |
 | ------------ | ------ | -------- | ----------------------------------------------- |
 | `student_id` | string | no       | Filter to a specific student (must be your own) |
+| `menu_date`  | string | no       | Single day to query, YYYY-MM-DD                 |
+| `month`      | string | no       | Calendar month to query, YYYY-MM                |
 
 **Backend:** `GET /api/lunch/orders`
 
 ---
 
-### `get_daily_menu`
+### `get_menu`
 
-Returns the daily lunch menu for the user's active school. Accepts `date`
+Returns the lunch menu for the user's active school. Accepts `date`
 (YYYY-MM-DD) or `month` (YYYY-MM). If neither is given, returns today's menu.
 Use this to find `menu_item_id` values for `order_lunch`.
 
@@ -183,50 +166,7 @@ Use this to find `menu_item_id` values for `order_lunch`.
 | `date`   | string | no       | YYYY-MM-DD  |
 | `month`  | string | no       | YYYY-MM     |
 
-**Backend:** `GET /api/lunch/daily-menu`
-
----
-
-### `get_daily_orders` _(admin)_
-
-Returns all orders for the active school on a given date.
-
-|                     | ---------------------------------- |
-| ------------------- | ---------------------------------- |
-| **Capability**      | _(null — admin only)_              |
-| **Required roles**  | pac_cordinator, lunch_cordinator   |
-| **Classifications** | READ, ADMIN                        |
-| **Confirmation**    | no                                 |
-
-**Input schema**
-
-| Property    | Type   | Required | Description |
-| ----------- | ------ | -------- | ----------- |
-| `menu_date` | string | yes      | YYYY-MM-DD  |
-
-**Backend:** `GET /api/lunch/orders/daily`
-
----
-
-### `get_monthly_orders`
-
-Returns a monthly summary of orders. Optionally filter by month and student.
-
-|                     |                       |
-| ------------------- | --------------------- |
-| **Capability**      | _(null — admin only)_ |
-| **Required roles**  | _(any member)_        |
-| **Classifications** | READ, ADMIN           |
-| **Confirmation**    | no                    |
-
-**Input schema**
-
-| Property     | Type   | Required | Description                                     |
-| ------------ | ------ | -------- | ----------------------------------------------- |
-| `month`      | string | no       | YYYY-MM                                         |
-| `student_id` | string | no       | Filter to a specific student (must be your own) |
-
-**Backend:** `GET /api/lunch/orders/monthly`
+**Backend:** `GET /api/lunch/schools/{school_slug}/menu/daily`
 
 ---
 
@@ -435,7 +375,7 @@ Creates a menu item for a restaurant.
 
 ### `update_menu_item` _(admin)_
 
-Updates a menu item.
+Partially updates a menu item, including its price (`price_cents` — **FINANCIAL**, confirm the new price).
 
 |                     |                                  |
 | ------------------- | -------------------------------- |
@@ -458,30 +398,6 @@ Updates a menu item.
 | `is_active`     | boolean | no       |             |
 | `price_cents`   | integer | no       |             |
 | `is_available`  | boolean | no       |             |
-
-**Backend:** `PATCH /api/lunch/restaurants/{restaurant_id}/menu-items/{menu_item_id}`
-
----
-
-### `set_menu_item_price` _(admin)_
-
-Sets the price of a menu item. **FINANCIAL** — confirm the new price with the
-user.
-
-|                     |                                  |
-| ------------------- | -------------------------------- |
-| **Capability**      | _(null — admin only)_            |
-| **Required roles**  | pac_cordinator, lunch_cordinator |
-| **Classifications** | WRITE, ADMIN, FINANCIAL          |
-| **Confirmation**    | **yes**                          |
-
-**Input schema**
-
-| Property        | Type    | Required | Description        |
-| --------------- | ------- | -------- | ------------------ |
-| `restaurant_id` | string  | yes      |                    |
-| `menu_item_id`  | string  | yes      |                    |
-| `price_cents`   | integer | yes      | New price in cents |
 
 **Backend:** `PATCH /api/lunch/restaurants/{restaurant_id}/menu-items/{menu_item_id}`
 

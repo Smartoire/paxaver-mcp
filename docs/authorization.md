@@ -40,10 +40,9 @@ Fields:
 | ------------------------- | -------------- | ----------- | ----------------------- | -------------------------------------------- | ------- | --------- | ----------- | ------- |
 | `get_user_info`           | `view_account` | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
 | `get_wallet_balance`      | `view_balance` | no          | READ, PRIVACY_SENSITIVE | _(any)_                                      | no      | no        | no          | no      |
-| `get_wallet_status`       | `view_balance` | no          | READ, PRIVACY_SENSITIVE | _(any)_                                      | no      | no        | no          | no      |
 | `order_lunch`             | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | yes       | no          | **yes** |
 | `get_orders`              | `view_orders`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `get_daily_menu`          | `view_menu`    | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
+| `get_menu`                | `view_menu`    | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
 | `get_upcoming_events`     | `view_events`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
 | `create_event`            | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
 | `update_event`            | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
@@ -53,11 +52,8 @@ Fields:
 | `list_menu_items`         | _(null)_       | no          | READ, ADMIN             | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
 | `create_menu_item`        | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
 | `update_menu_item`        | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `set_menu_item_price`     | _(null)_       | no          | WRITE, ADMIN, FINANCIAL | pac_cordinator, lunch_cordinator             | yes     | yes       | no          | **yes** |
 | `delete_menu_item`        | _(null)_       | no          | DESTRUCTIVE, ADMIN      | pac_cordinator, lunch_cordinator             | yes     | no        | yes         | **yes** |
 | `set_daily_menu`          | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `get_daily_orders`        | _(null)_       | no          | READ, ADMIN             | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
-| `get_monthly_orders`      | _(null)_       | no          | READ, ADMIN             | _(any)_                                      | no      | no        | no          | no      |
 
 ## Role gating
 
@@ -143,9 +139,9 @@ surfaces these to the AI client:
 
 ### Financial tools
 
-`order_lunch`, `set_menu_item_price`. These move or commit money
-(either directly debiting the wallet or creating a Stripe checkout). They are
-always `requiresConfirmation: true`.
+`order_lunch`, `create_draft_order`, `finalize_order`, `update_menu_item`
+(when setting `price_cents`). These move or commit money. They are always
+`requiresConfirmation: true`.
 
 ### Destructive tools
 

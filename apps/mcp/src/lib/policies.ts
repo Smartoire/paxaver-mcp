@@ -53,16 +53,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     destructive: false,
     requiresConfirmation: false,
   },
-  get_wallet_status: {
-    capability: 'view_balance',
-    requiresEntitlement: false,
-    classifications: ['READ', 'PRIVACY_SENSITIVE'],
-    requiredRoles: [],
-    mutates: false,
-    financial: false,
-    destructive: false,
-    requiresConfirmation: false,
-  },
 
   // --- Orders ---
   order_lunch: {
@@ -85,7 +75,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     destructive: false,
     requiresConfirmation: false,
   },
-  get_daily_menu: {
+  get_menu: {
     capability: 'view_menu',
     requiresEntitlement: false,
     classifications: ['READ'],
@@ -124,26 +114,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     financial: false,
     destructive: true,
     requiresConfirmation: true,
-  },
-  get_daily_orders: {
-    capability: null,
-    requiresEntitlement: false,
-    classifications: ['READ', 'ADMIN'],
-    requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
-    mutates: false,
-    financial: false,
-    destructive: false,
-    requiresConfirmation: false,
-  },
-  get_monthly_orders: {
-    capability: null,
-    requiresEntitlement: false,
-    classifications: ['READ', 'ADMIN'],
-    requiredRoles: [],
-    mutates: false,
-    financial: false,
-    destructive: false,
-    requiresConfirmation: false,
   },
 
   // --- Events ---
@@ -252,16 +222,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     requiresConfirmation: true,
   },
   update_menu_item: {
-    capability: null,
-    requiresEntitlement: true,
-    classifications: ['WRITE', 'ADMIN'],
-    requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
-    mutates: true,
-    financial: false,
-    destructive: false,
-    requiresConfirmation: true,
-  },
-  set_menu_item_price: {
     capability: null,
     requiresEntitlement: true,
     classifications: ['WRITE', 'ADMIN', 'FINANCIAL'],

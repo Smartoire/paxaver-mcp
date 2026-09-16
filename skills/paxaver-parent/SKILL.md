@@ -13,10 +13,10 @@ Call `get_user_info` first. This returns the user's active school, students, and
 
 ## Common workflows
 
-- "What's for lunch today?" → Call `get_daily_menu` with today's date.
+- "What's for lunch today?" → Call `get_menu` with today's date.
 - "Order lunch for Emma" → Call `get_user_info`, ask which student and date if needed, then call `order_lunch`.
 - "Check wallet balance" → Call `get_wallet_balance`.
-- "Show my orders" → Call `get_orders` or `get_monthly_orders`.
+- "Show my orders" → Call `get_orders` (filter by `month` or `menu_date` if needed).
 - "What events are coming up?" → Call `get_upcoming_events`.
 - "Sign up to volunteer" → Call `sign_up_to_volunteer` with the event ID and details.
 

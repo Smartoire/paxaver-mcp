@@ -63,11 +63,6 @@ export async function handleTool({
         method: 'GET',
         path: '/api/wallet/balance',
       });
-    case 'get_wallet_status':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'GET',
-        path: '/api/wallet/transactions',
-      });
 
     // Order
     case 'order_lunch':
@@ -81,34 +76,19 @@ export async function handleTool({
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
         path: '/api/lunch/orders',
-        query: { student_id: args.student_id as string | undefined },
+        query: {
+          student_id: args.student_id as string | undefined,
+          start: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-01` : undefined),
+          end: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-31` : undefined),
+        },
       });
-    case 'get_daily_menu':
+    case 'get_menu':
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
         path: `/api/lunch/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
         query: {
           date: args.date as string | undefined,
           month: args.month as string | undefined,
-        },
-      });
-    case 'get_daily_orders':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'GET',
-        path: '/api/lunch/orders',
-        query: {
-          start: args.menu_date as string | undefined,
-          end: args.menu_date as string | undefined,
-        },
-      });
-    case 'get_monthly_orders':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'GET',
-        path: '/api/lunch/orders',
-        query: {
-          start: args.month ? `${args.month}-01` : undefined,
-          end: args.month ? `${args.month}-31` : undefined,
-          studentId: args.student_id as string | undefined,
         },
       });
     case 'create_draft_order':
@@ -205,7 +185,6 @@ export async function handleTool({
         idempotencyKey,
       });
     case 'update_menu_item':
-    case 'set_menu_item_price':
       return callPaxaverApi(env, ctx, origin, {
         method: 'PATCH',
         path: `/api/lunch/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
