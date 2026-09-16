@@ -70,9 +70,10 @@ tenant country (derived from the JWT `tenant_id` claim).
 Service bindings are configured in `wrangler.jsonc` under each environment's
 `services` array.
 
-When `PAXAVER_API` is absent (local dev), the client falls back to authenticated
-HTTPS against `API_BASE_URL`. This is fine for development but the service
-binding is required for production.
+When the `PAXAVER_API_*` bindings are absent (local dev), the client falls back
+to authenticated HTTPS against `API_BASE_URL_CA`, `API_BASE_URL_US`, and
+`API_BASE_URL_MX`. This is fine for development but the service bindings are
+required for production.
 
 ## Secrets
 

@@ -90,10 +90,11 @@ npm test
 The local dev server starts on `http://localhost:8787`. Discovery endpoints live
 under `/.well-known/`; the MCP endpoint is `POST /mcp`.
 
-> **Note:** Local development without the `PAXAVER_API` service binding falls back
-> to authenticated HTTPS against `API_BASE_URL` (default `http://localhost:8787`).
-> For full integration testing, run the Paxaver backend worker locally and point
-> `API_BASE_URL` at it.
+> **Note:** Local development without the `PAXAVER_API_*` service bindings falls
+> back to authenticated HTTPS against `API_BASE_URL_CA`, `API_BASE_URL_US`, and
+> `API_BASE_URL_MX` (default `http://localhost:8787`). For full integration
+> testing, run the Paxaver backend worker locally; the defaults already point at
+> it.
 
 ---
 
@@ -111,6 +112,17 @@ The production worker serves both CA and US users through a single endpoint
 and the worker routes to the correct regional backend via service bindings
 (`PAXAVER_API_CA`, `PAXAVER_API_US`). Currency is determined by the user's
 school, not by the MCP endpoint.
+
+### Docker
+
+The `Dockerfile` runs the worker locally via `wrangler dev`, proxying the
+production backends over HTTPS:
+
+```bash
+docker build -t paxaver-mcp .
+docker run -p 8787:8787 paxaver-mcp
+# MCP endpoint: http://localhost:8787/mcp
+```
 
 ```bash
 npm run deploy:staging   # wrangler deploy --env staging

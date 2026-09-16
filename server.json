@@ -12,13 +12,5 @@
       "type": "streamable-http",
       "url": "https://mcp.paxaver.com/mcp"
     }
-  ],
-  "packages": [
-    {
-      "registryType": "npm",
-      "identifier": "@paxaver/mcp",
-      "version": "2.4.3",
-      "transport": { "type": "stdio" }
-    }
   ]
 }

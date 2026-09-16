@@ -19,9 +19,10 @@ npm install
 
 The worker requires no secrets for local development.
 
-For full integration testing, run the Paxaver backend worker locally and point
-`API_BASE_URL` (in `wrangler.jsonc` top-level `vars`) at it. Without the
-`PAXAVER_API` service binding, the client falls back to authenticated HTTPS.
+For full integration testing, run the Paxaver backend worker locally; the
+`API_BASE_URL_*` vars (in `wrangler.jsonc` top-level `vars`) already point at
+`http://localhost:8787`. Without the `PAXAVER_API_*` service bindings, the
+client falls back to authenticated HTTPS.
 
 ### Run locally
 
