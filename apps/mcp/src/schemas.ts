@@ -119,7 +119,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'get_orders',
     description:
-      "Returns lunch orders for the authenticated user's students — each order's items, menu date, status, and total. Filter by student_id, a single menu_date, or a month (YYYY-MM). With no filters, returns recent orders. Admins (pac_cordinator, lunch_cordinator) receive school-wide orders for the requested period; parents only see their own students. Read-only.",
+      "Returns lunch orders for the authenticated user's students - each order's items, menu date, status, and total. Filter by student_id, a single menu_date, or a month (YYYY-MM). With no filters, returns recent orders. Admins (pac_cordinator, lunch_cordinator) receive school-wide orders for the requested period; parents only see their own students. Read-only.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -373,11 +373,11 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'update_event',
     description:
-      'ADMIN: Partially updates an existing school event — only the provided fields change; omitted fields keep their current values. Use for reschedules, capacity or price changes, and status transitions (cancelled/completed). Prefer cancel_event to cancel outright. Requires pac_cordinator or event_cordinator role. WRITE operation — confirm changes with the user. Get event_id from get_upcoming_events.',
+      'ADMIN: Partially updates an existing school event - only the provided fields change; omitted fields keep their current values. Use for reschedules, capacity or price changes, and status transitions (cancelled/completed). Prefer cancel_event to cancel outright. Requires pac_cordinator or event_cordinator role. WRITE operation - confirm changes with the user. Get event_id from get_upcoming_events.',
     inputSchema: {
       type: 'object',
       properties: {
-        event_id: { type: 'string', description: 'Event ID — from get_upcoming_events' },
+        event_id: { type: 'string', description: 'Event ID - from get_upcoming_events' },
         name: { type: 'string', description: 'New event name' },
         description: { type: 'string', description: 'New event description shown to parents' },
         event_date: { type: 'string', description: 'Event date, YYYY-MM-DD' },
@@ -389,7 +389,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         status: {
           type: 'string',
           enum: ['active', 'cancelled', 'completed'],
-          description: 'Event status — cancelled stops sales, completed closes the event',
+          description: 'Event status - cancelled stops sales, completed closes the event',
         },
       },
       required: ['event_id'],
@@ -418,7 +418,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       'ADMIN: Cancels a school event. Requires pac_cordinator or event_cordinator role. This is a DESTRUCTIVE operation - always confirm with the user before cancelling. Cancelled events cannot be reactivated. Get event_id from get_upcoming_events.',
     inputSchema: {
       type: 'object',
-      properties: { event_id: { type: 'string', description: 'Event ID — from get_upcoming_events' } },
+      properties: { event_id: { type: 'string', description: 'Event ID - from get_upcoming_events' } },
       required: ['event_id'],
       additionalProperties: false,
     },
@@ -534,11 +534,11 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'create_restaurant',
     description:
-      'ADMIN: Creates a restaurant for the active school; the restaurant can then hold menu items via create_menu_item. Requires pac_cordinator role. WRITE operation — confirm with the user.',
+      'ADMIN: Creates a restaurant for the active school; the restaurant can then hold menu items via create_menu_item. Requires pac_cordinator role. WRITE operation - confirm with the user.',
     inputSchema: {
       type: 'object',
       properties: {
-        school_slug: { type: 'string', description: 'School slug — defaults to the active school' },
+        school_slug: { type: 'string', description: 'School slug - defaults to the active school' },
         name: { type: 'string', description: 'Restaurant display name' },
         description: { type: 'string', description: 'Optional restaurant description' },
         tax_percent: { type: 'number', description: 'Sales tax percentage applied to orders (e.g. 5 for 5%)' },
@@ -571,7 +571,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID — from list_school_restaurants' },
+        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
       },
       required: ['restaurant_id'],
       additionalProperties: false,
@@ -603,11 +603,11 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'create_menu_item',
     description:
-      'ADMIN: Creates a new menu item on a restaurant. Only restaurant_id and name are required — set price_cents before the item can be meaningfully ordered. New items start active and available; use update_menu_item to change them later. Requires pac_cordinator or lunch_cordinator role. WRITE operation — confirm with the user. Get restaurant_id from list_school_restaurants.',
+      'ADMIN: Creates a new menu item on a restaurant. Only restaurant_id and name are required - set price_cents before the item can be meaningfully ordered. New items start active and available; use update_menu_item to change them later. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm with the user. Get restaurant_id from list_school_restaurants.',
     inputSchema: {
       type: 'object',
       properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID — from list_school_restaurants' },
+        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
         name: { type: 'string', description: 'Item display name shown to parents' },
         description: { type: 'string', description: 'Optional item description' },
         cost_cents: { type: 'integer', description: 'Kitchen cost in cents (internal margin tracking)' },
@@ -638,12 +638,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'update_menu_item',
     description:
-      'ADMIN: Partially updates an existing menu item — only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents — FINANCIAL, confirm the new price), nutrition updates, or toggling availability (is_available for out-of-stock, is_active to retire an item). Use delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation — confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
+      'ADMIN: Partially updates an existing menu item - only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents - FINANCIAL, confirm the new price), nutrition updates, or toggling availability (is_available for out-of-stock, is_active to retire an item). Use delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
     inputSchema: {
       type: 'object',
       properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID — from list_school_restaurants' },
-        menu_item_id: { type: 'string', description: 'Menu item ID — from list_menu_items' },
+        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
+        menu_item_id: { type: 'string', description: 'Menu item ID - from list_menu_items' },
         name: { type: 'string', description: 'New display name for the item' },
         description: { type: 'string', description: 'New item description shown to parents' },
         cost_cents: { type: 'integer', description: 'Kitchen cost in cents (internal margin tracking)' },
@@ -651,12 +651,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
         calories: { type: 'integer', description: 'Calorie count' },
         is_active: {
           type: 'boolean',
-          description: 'Whether the item stays on the restaurant menu — set false to retire it',
+          description: 'Whether the item stays on the restaurant menu - set false to retire it',
         },
         price_cents: { type: 'integer', description: 'Sale price in cents (e.g. 550 = $5.50)' },
         is_available: {
           type: 'boolean',
-          description: 'Whether the item can be ordered — set false while out of stock',
+          description: 'Whether the item can be ordered - set false while out of stock',
         },
       },
       required: ['restaurant_id', 'menu_item_id'],
@@ -687,8 +687,8 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID — from list_school_restaurants' },
-        menu_item_id: { type: 'string', description: 'Menu item ID — from list_menu_items' },
+        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
+        menu_item_id: { type: 'string', description: 'Menu item ID - from list_menu_items' },
       },
       required: ['restaurant_id', 'menu_item_id'],
       additionalProperties: false,
@@ -711,12 +711,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
   {
     name: 'set_daily_menu',
     description:
-      'ADMIN: Assigns a restaurant menu item to a date so parents can order it, optionally capping the quantity. Requires pac_cordinator or lunch_cordinator role. WRITE operation — confirm with the user. Get IDs from list_school_restaurants and list_menu_items.',
+      'ADMIN: Assigns a restaurant menu item to a date so parents can order it, optionally capping the quantity. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm with the user. Get IDs from list_school_restaurants and list_menu_items.',
     inputSchema: {
       type: 'object',
       properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID — from list_school_restaurants' },
-        menu_item_id: { type: 'string', description: 'Menu item ID — from list_menu_items' },
+        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
+        menu_item_id: { type: 'string', description: 'Menu item ID - from list_menu_items' },
         menu_date: { type: 'string', description: 'Date the item is orderable, YYYY-MM-DD' },
         available_qty: { type: 'integer', description: 'Maximum portions for the day; omit for unlimited' },
       },
