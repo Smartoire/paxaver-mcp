@@ -65,13 +65,24 @@ export async function handleTool({
       });
 
     // Order
-    case 'order_lunch':
+    case 'order_lunch': {
+      // Backend orderCreateSchema takes camelCase keys. student_id defaults
+      // to the user's only student; with several it must be explicit.
+      const studentId =
+        (args.student_id as string | undefined) ??
+        (ctx.studentIds?.length === 1 ? ctx.studentIds[0] : undefined);
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
         path: '/api/lunch/orders',
-        body: args,
+        body: {
+          studentId,
+          menuItemId: args.menu_item_id,
+          menuDate: args.menu_date,
+          quantity: args.quantity,
+        },
         idempotencyKey,
       });
+    }
     case 'get_orders':
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
@@ -143,10 +154,13 @@ export async function handleTool({
         idempotencyKey,
       });
     case 'register_event':
+      // /register is the MCP-facing endpoint: it charges the wallet for paid
+      // events and fails on insufficient funds. /tickets only creates a
+      // 'reserved' ticket without collecting payment.
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
-        path: `/api/events/${validatePathId(args.event_id, 'event_id')}/tickets`,
-        body: args,
+        path: `/api/events/${validatePathId(args.event_id, 'event_id')}/register`,
+        body: { quantity: args.quantity },
         idempotencyKey,
       });
     case 'sign_up_to_volunteer':

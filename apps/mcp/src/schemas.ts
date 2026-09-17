@@ -119,7 +119,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'order_lunch',
     title: 'Order Lunch',
     description:
-      "Places and pays for a single-item lunch order for one student - the wallet is charged immediately. For a multi-item order or an order the user should review before paying, use create_draft_order then finalize_order instead. Requires menu_item_id from get_menu and menu_date; student_id defaults to the user's first student. FINANCIAL - confirm student, item, date, and quantity before calling.",
+      "Places and pays for a single-item lunch order for one student - the wallet is charged immediately. For a multi-item order or an order the user should review before paying, use create_draft_order then finalize_order instead. Requires menu_item_id from get_menu and menu_date; student_id is required when the user has more than one student and defaults to the user's only student otherwise (IDs from get_user_info). FINANCIAL - confirm student, item, date, and quantity before calling.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -752,7 +752,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'list_school_restaurants',
     title: 'List School Restaurants (Admin)',
     description:
-      'ADMIN: Lists the restaurants attached to a school (defaults to the active school), including inactive ones. The restaurant_id values returned are required by list_menu_items, create_menu_item, update_menu_item, delete_menu_item, and set_daily_menu. Requires pac_cordinator, pac_member, or lunch_cordinator role.',
+      'ADMIN: Lists the active restaurants attached to a school (defaults to the active school). Inactive restaurants are not returned. The restaurant_id values returned are required by list_menu_items, create_menu_item, update_menu_item, delete_menu_item, and set_daily_menu. Requires pac_cordinator, pac_member, or lunch_cordinator role.',
     inputSchema: {
       type: 'object',
       properties: { school_slug: { type: 'string', description: 'School slug (defaults to active school)' } },
