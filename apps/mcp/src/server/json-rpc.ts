@@ -121,6 +121,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
           const policy = getToolPolicy(t.name);
           return {
             name: t.name,
+            title: t.title,
             description: t.description,
             inputSchema: t.inputSchema,
             outputSchema: t.outputSchema,
