@@ -266,4 +266,3 @@ async function request(path: string, init: RequestInit = {}, env: Record<string,
 }
 
 export const wellKnownApp = { fetch: wellKnownFetch, request };
-export default wellKnownApp;
