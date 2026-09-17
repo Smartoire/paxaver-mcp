@@ -788,7 +788,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
               },
             },
           },
-          description: 'Restaurants attached to the school, including inactive ones',
+          description: 'Active restaurants attached to the school (inactive ones are excluded)',
         },
       },
     },
