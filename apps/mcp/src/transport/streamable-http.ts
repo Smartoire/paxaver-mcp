@@ -110,4 +110,3 @@ async function request(path: string, init: RequestInit = {}, ctx: Record<string,
 }
 
 export const transportApp = { fetch: transportFetch, request };
-export default transportApp;

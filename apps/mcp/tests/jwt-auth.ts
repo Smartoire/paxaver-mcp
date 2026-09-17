@@ -10,7 +10,7 @@
 import { generateKeyPair, exportJWK, SignJWT, decodeJwt } from 'jose';
 import { vi } from 'vitest';
 
-export const TEST_ISSUER = 'https://paxaver.dev/auth';
+const TEST_ISSUER = 'https://paxaver.dev/auth';
 
 const { publicKey, privateKey } = await generateKeyPair('RS256');
 const jwk = await exportJWK(publicKey);
@@ -74,8 +74,6 @@ export const TEST_TOKEN = await makeToken('user-1');
 export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
-
-export const USER_CONTEXT = USER_CONTEXTS['user-1'];
 
 const mockBackend = {
   async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
