@@ -1,0 +1,31 @@
+name: CI
+
+# Public repo: workflows never see secrets on PRs, and this job runs in a
+# container on the dedicated `public-repo` runner — nothing touches the
+# host. Never use pull_request_target.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: [self-hosted, linux, office, public-repo]
+    container: node:26-bookworm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm wrangler:check
