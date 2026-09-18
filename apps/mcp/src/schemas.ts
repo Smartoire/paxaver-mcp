@@ -123,7 +123,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info)' },
+        student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info); required when the user has more than one student, defaults to their only student' },
         menu_item_id: { type: 'string', description: 'Menu item ID from get_menu' },
         menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
         quantity: { type: 'integer', description: 'Number of servings (default 1)', minimum: 1, default: 1 },
@@ -185,10 +185,10 @@ export const ALL_TOOLS: ToolDefinition[] = [
       properties: {
         student_id: {
           type: 'string',
-          description: 'Filter to a specific student (must be your own; from get_user_info)',
+          description: 'Filter to a specific student (must be your own student, from get_user_info; admins may filter any student in the school)',
         },
-        menu_date: { type: 'string', description: 'Single day to query, YYYY-MM-DD' },
-        month: { type: 'string', description: 'Calendar month to query, YYYY-MM' },
+        menu_date: { type: 'string', description: 'Single day to query, YYYY-MM-DD; omit when using month' },
+        month: { type: 'string', description: 'Calendar month to query, YYYY-MM; omit when using menu_date' },
       },
       additionalProperties: false,
     },
@@ -247,8 +247,8 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'Single day to show, YYYY-MM-DD' },
-        month: { type: 'string', description: 'Calendar month to show, YYYY-MM' },
+        date: { type: 'string', description: 'Single day to show, YYYY-MM-DD; omit when using month' },
+        month: { type: 'string', description: 'Calendar month to show, YYYY-MM; omit when using date. Today is used when neither is given' },
       },
       additionalProperties: false,
     },
@@ -311,8 +311,8 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info)' },
-        school_slug: { type: 'string', description: 'School slug (from get_user_info)' },
+        student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info); required when the user has more than one student, defaults to their only student' },
+        school_slug: { type: 'string', description: 'School slug (from get_user_info); defaults to the active school' },
         menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
         items: {
           type: 'array',
@@ -384,7 +384,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        order_id: { type: 'string', description: 'Order ID from create_draft_order' },
+        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status; already-finalized orders are rejected' },
         tip_cents: { type: 'integer', description: 'Tip in cents (donated to school PAC)', default: 0 },
       },
       required: ['order_id'],
@@ -435,7 +435,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        order_id: { type: 'string', description: 'Order ID to cancel' },
+        order_id: { type: 'string', description: 'ID of a finalized order - from get_orders; the order must still be finalized and not yet have labels sent' },
       },
       required: ['order_id'],
       additionalProperties: false,
@@ -479,8 +479,8 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        start_date: { type: 'string', description: 'YYYY-MM-DD' },
-        end_date: { type: 'string', description: 'YYYY-MM-DD' },
+        start_date: { type: 'string', description: 'First day of the range, YYYY-MM-DD (inclusive); omit for all upcoming events' },
+        end_date: { type: 'string', description: 'Last day of the range, YYYY-MM-DD (inclusive); omit for all upcoming events' },
       },
       additionalProperties: false,
     },
@@ -640,7 +640,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       'ADMIN: Cancels a school event outright; cancelled events cannot be reactivated. For schedule, capacity, or price changes use update_event instead. Requires pac_cordinator or event_cordinator role. DESTRUCTIVE - confirm with the user. Get event_id from get_upcoming_events.',
     inputSchema: {
       type: 'object',
-      properties: { event_id: { type: 'string', description: 'Event ID - from get_upcoming_events' } },
+      properties: { event_id: { type: 'string', description: 'Event ID - from get_upcoming_events; cancelling is permanent and cannot be undone' } },
       required: ['event_id'],
       additionalProperties: false,
     },
@@ -673,7 +673,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        event_id: { type: 'string', description: 'Event ID' },
+        event_id: { type: 'string', description: 'Event ID from get_upcoming_events - registration must still be open (check the closed flag)' },
         quantity: { type: 'integer', description: 'Number of tickets', minimum: 1, default: 1 },
       },
       required: ['event_id'],
@@ -716,7 +716,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        shift_id: { type: 'string', description: 'Volunteer shift ID' },
+        shift_id: { type: 'string', description: "Volunteer shift ID - from the event's volunteer shifts (get_upcoming_events)" },
       },
       required: ['shift_id'],
       additionalProperties: false,
