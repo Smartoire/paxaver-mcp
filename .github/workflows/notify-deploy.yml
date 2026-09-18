@@ -1,9 +1,9 @@
 name: Notify Deploy
 
-# Thin trigger only — all deploy logic lives in Smartoire/paxaver-audit.
+# Thin trigger only — all deploy logic lives in Smartoire/paxi.
 # Push to main -> mcp.paxaver.dev; v* tag -> mcp.paxaver.com.
 # This job holds no deploy secrets; AUDIT_DISPATCH_TOKEN can only call
-# repository_dispatch on the audit repo.
+# repository_dispatch on the deploy hub (paxi).
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch deploy to paxaver-audit
+      - name: Dispatch deploy to paxi
         env:
           GH_TOKEN: ${{ secrets.AUDIT_DISPATCH_TOKEN }}
         run: |
@@ -24,7 +24,7 @@ jobs:
           case "$GITHUB_REF" in
             refs/tags/v*) type="mcp-production" ;;
           esac
-          gh api repos/Smartoire/paxaver-audit/dispatches -X POST \
+          gh api repos/Smartoire/paxi/dispatches -X POST \
             -f event_type="$type" \
             -f "client_payload[repo]=$GITHUB_REPOSITORY" \
             -f "client_payload[ref]=$GITHUB_REF" \
