@@ -170,6 +170,28 @@ export async function handleTool({
         body: args,
         idempotencyKey,
       });
+    case 'get_my_event_registrations':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'GET',
+        path: '/api/events/tickets/mine',
+      });
+    case 'cancel_event_registration':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'POST',
+        path: `/api/events/tickets/${validatePathId(args.ticket_id, 'ticket_id')}/cancel`,
+        idempotencyKey,
+      });
+    case 'get_my_volunteer_signups':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'GET',
+        path: '/api/volunteers/my-signups',
+      });
+    case 'cancel_volunteer_signup':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'POST',
+        path: `/api/volunteers/signups/${validatePathId(args.signup_id, 'signup_id')}/cancel`,
+        idempotencyKey,
+      });
 
     // Restaurant
     case 'list_school_restaurants':

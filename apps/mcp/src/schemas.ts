@@ -475,7 +475,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_upcoming_events',
     title: 'Get Upcoming Events',
     description:
-      "Returns upcoming events for the user's active school: date, times, location, and whether registration is closed. The event IDs returned feed register_event, update_event, and cancel_event. Optionally filter by date range.",
+      "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed register_event; shift IDs feed sign_up_to_volunteer. To review or undo your own registrations and signups, use get_my_event_registrations / cancel_event_registration and get_my_volunteer_signups / cancel_volunteer_signup. Admins with coordinator roles additionally get create_event, update_event, and cancel_event for managing the events themselves. Optionally filter by date range.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -706,6 +706,128 @@ export const ALL_TOOLS: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
       title: 'Register for Event',
+    },
+  },
+  {
+    name: 'get_my_event_registrations',
+    title: 'Get My Event Registrations',
+    description:
+      "Read-only, no side effects. Returns the authenticated user's own event tickets at their active school - ticket id, event name/date/location, quantity, total paid, and status (paid or checked_in). Cancelled tickets are excluded. The id values returned are required by cancel_event_registration. Pair with get_upcoming_events for events the user has not registered for.",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        tickets: {
+          type: 'array',
+          description: "Caller's event tickets at the active school",
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Get My Event Registrations',
+    },
+  },
+  {
+    name: 'cancel_event_registration',
+    title: 'Cancel Event Registration',
+    description:
+      "Cancels one of the authenticated user's own event tickets (ticket_id from get_my_event_registrations). Releases the reserved seats; for paid tickets the full amount is refunded to the user's wallet at that school. Only the ticket owner or a coordinator can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ticket_id: { type: 'string', description: 'Ticket ID from get_my_event_registrations - must belong to the caller and still be cancellable' },
+      },
+      required: ['ticket_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Cancelled ticket ID',
+        },
+        status: {
+          type: 'string',
+          description: 'Ticket status (cancelled)',
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Cancel Event Registration',
+    },
+  },
+  {
+    name: 'get_my_volunteer_signups',
+    title: 'Get My Volunteer Signups',
+    description:
+      "Read-only, no side effects. Returns the authenticated user's active volunteer signups at their school - signup id, shift title/date/times, and the parent event. Cancelled signups are excluded. The id values returned are required by cancel_volunteer_signup.",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        signups: {
+          type: 'array',
+          description: "Caller's active volunteer signups",
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Get My Volunteer Signups',
+    },
+  },
+  {
+    name: 'cancel_volunteer_signup',
+    title: 'Cancel Volunteer Signup',
+    description:
+      "Cancels one of the authenticated user's own volunteer signups (signup_id from get_my_volunteer_signups) and frees the shift slot for others. No payment is involved. Only the volunteer themselves or an admin can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        signup_id: { type: 'string', description: 'Signup ID from get_my_volunteer_signups - must belong to the caller and still be active' },
+      },
+      required: ['signup_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Cancelled signup ID',
+        },
+        status: {
+          type: 'string',
+          description: 'Signup status (cancelled)',
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Cancel Volunteer Signup',
     },
   },
   {
