@@ -79,7 +79,8 @@ export const EXPIRED_TOKEN = await makeToken('user-expired');
 // assert which backend route a tool maps to.
 export const backendCalls: string[] = [];
 
-const mockBackend = {
+// Exported so tests can wrap it to observe the requests tools send.
+export const mockBackend = {
   async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
     const req = typeof request === 'string' ? new Request(request, init) : request;
     const url = new URL(req.url);
