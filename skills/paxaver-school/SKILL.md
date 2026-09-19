@@ -15,17 +15,15 @@ Call `get_user_info` first. This returns the user's active school, roles, and pe
 
 - "Add a restaurant" → Call `create_restaurant`.
 - "List menu items" → Call `list_menu_items`.
-- "Create a menu item" → Call `create_menu_item`.
+- "Create / update / delete a menu item" → Call `manage_menu_item` with `action: "create"`, `"update"`, or `"delete"`.
 - "Set the daily menu" → Call `set_daily_menu`.
 - "View orders" → Call `get_orders` with `menu_date` for a day or `month` for a month.
-- "Create an event" → Call `create_event`.
-- "Update an event" → Call `update_event` with the event ID.
-- "Cancel an event" → Call `cancel_event` with the event ID.
+- "Create / update / cancel an event" → Call `manage_event` with `action: "create"`, `"update"`, or `"cancel"`.
 
 ## Rules
 
 - Ask for missing required inputs: school slug, restaurant, menu item, date, or event details.
-- Confirm `create_event`, `update_event`, `cancel_event`, `create_menu_item`, `update_menu_item`, `set_daily_menu`, and `delete_menu_item` actions before calling.
+- Confirm `manage_event`, `manage_menu_item`, and `set_daily_menu` actions before calling.
 - Do not ask for passwords or payment information.
 - Use ISO date format `YYYY-MM-DD`.
 - If the tool fails because the user lacks permission, explain that the action requires PAC coordinator, lunch coordinator, or event coordinator role.

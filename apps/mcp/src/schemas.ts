@@ -93,7 +93,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_wallet_balance',
     title: 'Get Wallet Balance',
     description:
-      'Read-only lookup - never moves funds or has side effects. Requires authentication: returns only the caller\'s spendable wallet balance at their active school (wallets are scoped per school, so a balance at one school does not apply elsewhere), in cents and formatted. Live value reflecting orders and refunds up to the current moment - recheck before assuming funds are still available. Call before order_lunch, finalize_order, or register_event to confirm the user can cover the charge; not needed for read-only lookups.',
+      "Read-only lookup - never moves funds or has side effects. Requires authentication: returns only the caller's spendable wallet balance at their active school (wallets are scoped per school, so a balance at one school does not apply elsewhere), in cents and formatted. Live value reflecting orders and refunds up to the current moment - recheck before assuming funds are still available. Call before order (place), draft_order (finalize), or event_registration to confirm the user can cover the charge; not needed for read-only lookups.",
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
@@ -116,63 +116,50 @@ export const ALL_TOOLS: ToolDefinition[] = [
   },
   // --- Orders ---
   {
-    name: 'order_lunch',
-    title: 'Order Lunch',
+    name: 'order',
+    title: 'Order',
     description:
-      "Places and pays for a single-item lunch order for one student - the wallet is charged immediately. For a multi-item order or an order the user should review before paying, use create_draft_order then finalize_order instead. Requires menu_item_id from get_menu and menu_date; student_id is required when the user has more than one student and defaults to the user's only student otherwise (IDs from get_user_info). FINANCIAL - confirm student, item, date, and quantity before calling.",
+      "Lunch order lifecycle - action 'place' places and pays for a single-item lunch order for one student: the wallet is charged immediately. Requires menu_item_id from get_menu and menu_date; student_id defaults to the user's only student and must be explicit when they have several. For a multi-item order or one the user should review before paying, use draft_order instead. action 'cancel' cancels a finalized order (order_id from get_orders). FINANCIAL - confirm student, item, date, and quantity before placing.",
     inputSchema: {
       type: 'object',
       properties: {
-        student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info); required when the user has more than one student, defaults to their only student' },
-        menu_item_id: { type: 'string', description: 'Menu item ID from get_menu' },
-        menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
-        quantity: { type: 'integer', description: 'Number of servings (default 1)', minimum: 1, default: 1 },
+        action: {
+          type: 'string',
+          enum: ['place', 'cancel'],
+          description: "'place' creates and pays for an order; 'cancel' cancels a finalized order",
+        },
+        student_id: {
+          type: 'string',
+          description: "Student ID for 'place' (must be your own student; from get_user_info)",
+        },
+        menu_item_id: { type: 'string', description: "Menu item ID for 'place' (from get_menu)" },
+        menu_date: { type: 'string', description: "Date the lunch is served, YYYY-MM-DD (required for 'place')" },
+        quantity: { type: 'integer', description: "Number of servings for 'place' (default 1)", minimum: 1 },
+        order_id: { type: 'string', description: "Order ID for 'cancel' (from get_orders)" },
       },
-      required: ['menu_item_id', 'menu_date'],
+      required: ['action'],
       additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: 'Order ID',
-        },
-        studentId: {
-          type: 'string',
-          description: 'Student the order is for',
-        },
-        schoolSlug: {
-          type: 'string',
-          description: 'School the order was placed at',
-        },
-        menuDate: {
-          type: 'string',
-          description: 'Date the lunch is served, YYYY-MM-DD',
-        },
-        status: {
-          type: 'string',
-          description: 'Order status (e.g. finalized)',
-        },
-        itemTotalCents: {
-          type: 'integer',
-          description: 'Item total in cents',
-        },
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-          },
-          description: 'Ordered line items',
-        },
+        id: { type: 'string', description: 'Order ID' },
+        studentId: { type: 'string', description: 'Student the order is for' },
+        schoolSlug: { type: 'string', description: 'School the order was placed at' },
+        menuDate: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
+        status: { type: 'string', description: 'Order status (e.g. finalized, cancelled)' },
+        itemTotalCents: { type: 'integer', description: 'Item total in cents' },
+        items: { type: 'array', items: { type: 'object' }, description: 'Ordered line items' },
+        refundCents: { type: 'integer', description: 'Amount refunded to the wallet on cancel, in cents' },
+        balanceCents: { type: ['number', 'null'], description: 'Wallet balance after the charge/refund, in cents' },
       },
     },
     annotations: {
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
-      title: 'Order Lunch',
+      title: 'Order',
     },
   },
   {
@@ -185,7 +172,8 @@ export const ALL_TOOLS: ToolDefinition[] = [
       properties: {
         student_id: {
           type: 'string',
-          description: 'Filter to a specific student (must be your own student, from get_user_info; admins may filter any student in the school)',
+          description:
+            'Filter to a specific student (must be your own student, from get_user_info; admins may filter any student in the school)',
         },
         menu_date: { type: 'string', description: 'Single day to query, YYYY-MM-DD; omit when using month' },
         month: { type: 'string', description: 'Calendar month to query, YYYY-MM; omit when using menu_date' },
@@ -243,12 +231,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_menu',
     title: 'Get Menu',
     description:
-      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity. Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by order_lunch and create_draft_order. For orders already placed, use get_orders.",
+      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity. Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by order and draft_order. For orders already placed, use get_orders.",
     inputSchema: {
       type: 'object',
       properties: {
         date: { type: 'string', description: 'Single day to show, YYYY-MM-DD; omit when using month' },
-        month: { type: 'string', description: 'Calendar month to show, YYYY-MM; omit when using date. Today is used when neither is given' },
+        month: {
+          type: 'string',
+          description: 'Calendar month to show, YYYY-MM; omit when using date. Today is used when neither is given',
+        },
       },
       additionalProperties: false,
     },
@@ -304,19 +295,36 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Menu' },
   },
   {
-    name: 'create_draft_order',
-    title: 'Create Draft Order',
+    name: 'draft_order',
+    title: 'Draft Order',
     description:
-      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. Each items entry pairs a menu_item_id from get_menu with a quantity; the draft total is the sum of item prices times quantities plus nothing else until finalize_order. To change or abandon the draft, use update_draft_order or discard_draft_order. FINANCIAL - confirm student, items, and date before calling.',
+      "Unpaid draft lunch order lifecycle - nothing is charged until 'finalize' commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, use order (place) instead. Actions: 'create' builds a draft (requires menu_date and items; student_id defaults to the user's only student, school_slug to the active school); 'update' replaces items and/or menu_date wholesale (requires order_id); 'discard' abandons the draft (requires order_id); 'finalize' pays from the wallet (requires order_id; tip_cents optionally adds a PAC donation). Each items entry pairs a menu_item_id from get_menu with menu_item_name, price_cents, and quantity - the total is recomputed from price times quantity. FINANCIAL - confirm student, items, and date before finalizing.",
     inputSchema: {
       type: 'object',
       properties: {
-        student_id: { type: 'string', description: 'Student ID (must be your own student; from get_user_info); required when the user has more than one student, defaults to their only student' },
-        school_slug: { type: 'string', description: 'School slug (from get_user_info); defaults to the active school' },
-        menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
+        action: {
+          type: 'string',
+          enum: ['create', 'update', 'discard', 'finalize'],
+          description: "'create' a new draft; 'update' its items/date; 'discard' it; 'finalize' to pay",
+        },
+        order_id: { type: 'string', description: "Draft order ID (required for 'update', 'discard', 'finalize')" },
+        student_id: {
+          type: 'string',
+          description:
+            "Student ID for 'create' (must be your own student; from get_user_info); defaults to the user's only student",
+        },
+        school_slug: {
+          type: 'string',
+          description: "School slug for 'create' (from get_user_info); defaults to the active school",
+        },
+        menu_date: {
+          type: 'string',
+          description: "Date the lunch is served, YYYY-MM-DD (required for 'create'; optional new date for 'update')",
+        },
         items: {
           type: 'array',
-          description: 'Line items to order; get IDs and prices from get_menu',
+          description:
+            "Line items - required for 'create'; for 'update' replaces all existing items. Get IDs and prices from get_menu",
           items: {
             type: 'object',
             properties: {
@@ -328,153 +336,25 @@ export const ALL_TOOLS: ToolDefinition[] = [
             required: ['menu_item_id', 'menu_item_name', 'price_cents', 'quantity'],
           },
         },
+        tip_cents: { type: 'integer', description: "PAC donation in cents added at 'finalize'", minimum: 0 },
       },
-      required: ['student_id', 'school_slug', 'menu_date', 'items'],
+      required: ['action'],
       additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: 'Draft order ID - pass to finalize_order',
-        },
-        studentId: {
-          type: 'string',
-          description: 'Student the order is for',
-        },
-        schoolSlug: {
-          type: 'string',
-          description: 'School the order was placed at',
-        },
-        menuDate: {
-          type: 'string',
-          description: 'Date the lunch is served, YYYY-MM-DD',
-        },
-        status: {
-          type: 'string',
-          description: 'Order status (draft)',
-        },
-        itemTotalCents: {
-          type: 'integer',
-          description: 'Item total in cents - charged on finalize',
-        },
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-          },
-          description: 'Draft line items',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Create Draft Order',
-    },
-  },
-  {
-    name: 'finalize_order',
-    title: 'Finalize Order',
-    description:
-      "Commits a draft order from create_draft_order and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Not for new orders - use order_lunch or create_draft_order first. FINANCIAL - confirm the total before calling.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status; already-finalized orders are rejected' },
-        tip_cents: { type: 'integer', description: 'Tip in cents (donated to school PAC)', default: 0 },
-      },
-      required: ['order_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Order ID',
-        },
-        status: {
-          type: 'string',
-          description: 'Order status (finalized)',
-        },
-        itemTotalCents: {
-          type: 'integer',
-          description: 'Item total in cents',
-        },
-        tipCents: {
-          type: 'integer',
-          description: 'PAC donation added, in cents',
-        },
-        totalCents: {
-          type: 'integer',
-          description: 'Total charged to the wallet, in cents',
-        },
-        balanceCents: {
-          type: ['number', 'null'],
-          description: 'Wallet balance after the charge, in cents',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Finalize Order',
-    },
-  },
-  {
-    name: 'update_draft_order',
-    title: 'Update Draft Order',
-    description:
-      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_draft_order). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from price times quantity. Only draft orders can be updated; once finalized, use cancel_order. WRITE - confirm the new contents with the user.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
-        items: { type: 'array', description: 'Replacement line items (menu_item_id from get_menu + quantity); replaces all existing items when provided' },
-        menu_date: { type: 'string', description: 'New date the lunch is served, YYYY-MM-DD' },
-      },
-      required: ['order_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        orderId: { type: 'string', description: 'Updated draft order ID' },
-        status: { type: 'string', description: 'Order status (draft)' },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Update Draft Order',
-    },
-  },
-  {
-    name: 'discard_draft_order',
-    title: 'Discard Draft Order',
-    description:
-      "Permanently discards an unpaid draft order - the caller must own it and it must still be in draft status (order_id from create_draft_order). Nothing was ever charged, so there is no refund; the draft is simply deleted. For a finalized order use cancel_order instead. DESTRUCTIVE - confirm with the user before discarding.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
-      },
-      required: ['order_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
+        id: { type: 'string', description: 'Draft order ID' },
         orderId: { type: 'string', description: 'Discarded draft order ID' },
-        status: { type: 'string', description: 'Order status (discarded)' },
+        studentId: { type: 'string', description: 'Student the draft is for' },
+        schoolSlug: { type: 'string', description: 'School the draft was placed at' },
+        menuDate: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
+        status: { type: 'string', description: 'Order status (draft, finalized, discarded)' },
+        itemTotalCents: { type: 'integer', description: 'Item total in cents' },
+        items: { type: 'array', items: { type: 'object' }, description: 'Draft line items' },
+        tipCents: { type: 'integer', description: 'PAC donation added at finalize, in cents' },
+        totalCents: { type: 'integer', description: 'Total charged to the wallet at finalize, in cents' },
+        balanceCents: { type: ['number', 'null'], description: 'Wallet balance after finalize, in cents' },
       },
     },
     annotations: {
@@ -482,49 +362,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
-      title: 'Discard Draft Order',
-    },
-  },
-  {
-    name: 'cancel_order',
-    title: 'Cancel Order',
-    description:
-      'Cancels a finalized order and refunds the charge to the wallet. Only works before order labels have been sent; after that the request is rejected and the order stands. DESTRUCTIVE - confirm with the user before cancelling.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        order_id: { type: 'string', description: 'ID of a finalized order - from get_orders; the order must still be finalized and not yet have labels sent' },
-      },
-      required: ['order_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Order ID',
-        },
-        status: {
-          type: 'string',
-          description: 'Order status (cancelled)',
-        },
-        refundCents: {
-          type: 'integer',
-          description: 'Amount refunded to the wallet, in cents',
-        },
-        balanceCents: {
-          type: ['number', 'null'],
-          description: 'Wallet balance after the refund, in cents',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Cancel Order',
+      title: 'Draft Order',
     },
   },
 
@@ -533,12 +371,18 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_upcoming_events',
     title: 'Get Upcoming Events',
     description:
-      "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed register_event; shift IDs feed sign_up_to_volunteer. To review or undo your own registrations and signups, use get_my_event_registrations / cancel_event_registration and get_my_volunteer_signups / cancel_volunteer_signup. Optionally filter by date range.",
+      "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed event_registration (register); shift IDs feed volunteer_signup. To review or undo your own registrations and signups, use get_my_event_registrations / event_registration (cancel) and get_my_volunteer_signups / volunteer_signup (cancel). Optionally filter by date range.",
     inputSchema: {
       type: 'object',
       properties: {
-        start_date: { type: 'string', description: 'First day of the range, YYYY-MM-DD (inclusive); omit for all upcoming events' },
-        end_date: { type: 'string', description: 'Last day of the range, YYYY-MM-DD (inclusive); omit for all upcoming events' },
+        start_date: {
+          type: 'string',
+          description: 'First day of the range, YYYY-MM-DD (inclusive); omit for all upcoming events',
+        },
+        end_date: {
+          type: 'string',
+          description: 'Last day of the range, YYYY-MM-DD (inclusive); omit for all upcoming events',
+        },
       },
       additionalProperties: false,
     },
@@ -552,7 +396,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
             properties: {
               id: {
                 type: 'string',
-                description: 'Event ID - input to register_event, update_event, cancel_event',
+                description: 'Event ID - input to event_registration, manage_event',
               },
               name: {
                 type: 'string',
@@ -587,132 +431,50 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Upcoming Events' },
   },
   {
-    name: 'create_event',
-    title: 'Create Event (Admin)',
+    name: 'manage_event',
+    title: 'Manage Event',
     description:
-      'ADMIN: Creates a school event, optionally ticketed, at the active school. To change an existing event use update_event; to register a parent for an event use register_event. Requires pac_cordinator or event_cordinator role. WRITE - only create on explicit user request.',
+      "School event lifecycle (admin: pac_cordinator or event_cordinator). Actions: 'create' schedules an event (requires name and event_date; school_slug defaults to the active school; starts_at/ends_at take HH:MM 24h; omit ticket_price_cents or pass 0 for a free event); 'update' edits an existing event (requires event_id; pass only fields to change - status accepts 'active' or 'cancelled'); 'cancel' cancels an event and refunds paid registrations (requires event_id). Find event_id via get_upcoming_events. WRITE - confirm details before calling.",
     inputSchema: {
       type: 'object',
       properties: {
-        school_slug: { type: 'string', description: 'School slug (defaults to active school)' },
-        name: { type: 'string', description: 'Event name shown to parents' },
-        description: { type: 'string', description: 'Optional event description' },
-        event_date: { type: 'string', description: 'Event date, YYYY-MM-DD' },
-        starts_at: { type: 'string', description: 'Start time (e.g. 18:30)' },
-        ends_at: { type: 'string', description: 'End time (e.g. 20:00)' },
-        location: { type: 'string', description: 'Event location (e.g. Gymnasium)' },
-        max_capacity: { type: 'integer', description: 'Maximum attendees/tickets; omit for unlimited' },
-        ticket_price_cents: { type: 'integer', description: 'Ticket price in cents (0 = free)' },
+        action: {
+          type: 'string',
+          enum: ['create', 'update', 'cancel'],
+          description: "'create' a new event; 'update' its fields; 'cancel' it and refund tickets",
+        },
+        event_id: {
+          type: 'string',
+          description: "Event ID (required for 'update' and 'cancel'; from get_upcoming_events)",
+        },
+        school_slug: {
+          type: 'string',
+          description: "School slug for 'create' (from get_user_info); defaults to the active school",
+        },
+        name: { type: 'string', description: "Event name (required for 'create')" },
+        description: { type: 'string', description: 'Event description' },
+        event_date: { type: 'string', description: "Event date, YYYY-MM-DD (required for 'create')" },
+        starts_at: { type: 'string', description: 'Start time, HH:MM 24h' },
+        ends_at: { type: 'string', description: 'End time, HH:MM 24h' },
+        location: { type: 'string', description: 'Event location' },
+        max_capacity: { type: 'integer', description: 'Maximum attendees', minimum: 1 },
+        ticket_price_cents: {
+          type: 'integer',
+          description: 'Ticket price in cents; 0 or omitted for a free event',
+          minimum: 0,
+        },
+        status: { type: 'string', description: "Event status for 'update' ('active' or 'cancelled')" },
       },
-      required: ['name', 'event_date'],
+      required: ['action'],
       additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: 'Event ID',
-        },
-        name: {
-          type: 'string',
-          description: 'Event name',
-        },
-        eventDate: {
-          type: 'string',
-          description: 'Event date, YYYY-MM-DD',
-        },
-        status: {
-          type: 'string',
-          description: 'Event status (e.g. active)',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Create Event (Admin)',
-    },
-  },
-  {
-    name: 'update_event',
-    title: 'Update Event (Admin)',
-    description:
-      'ADMIN: Partially updates an existing school event - only the provided fields change; omitted fields keep their current values. Use for reschedules, capacity or price changes, and status transitions (cancelled/completed). Prefer cancel_event to cancel outright. Requires pac_cordinator or event_cordinator role. WRITE operation - confirm changes with the user. Get event_id from get_upcoming_events.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        event_id: { type: 'string', description: 'Event ID - from get_upcoming_events' },
-        name: { type: 'string', description: 'New event name' },
-        description: { type: 'string', description: 'New event description shown to parents' },
-        event_date: { type: 'string', description: 'Event date, YYYY-MM-DD' },
-        starts_at: { type: 'string', description: 'Start time (e.g. 18:30)' },
-        ends_at: { type: 'string', description: 'End time (e.g. 20:00)' },
-        location: { type: 'string', description: 'Event location (e.g. Gymnasium)' },
-        max_capacity: { type: 'integer', description: 'Maximum number of attendees/tickets' },
-        ticket_price_cents: { type: 'integer', description: 'Ticket price in cents; 0 for free events' },
-        status: {
-          type: 'string',
-          enum: ['active', 'cancelled', 'completed'],
-          description: 'Event status - cancelled stops sales, completed closes the event',
-        },
-      },
-      required: ['event_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Event ID',
-        },
-        name: {
-          type: 'string',
-          description: 'Event name',
-        },
-        eventDate: {
-          type: 'string',
-          description: 'Event date, YYYY-MM-DD',
-        },
-        status: {
-          type: 'string',
-          description: 'Event status after the update',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Update Event (Admin)',
-    },
-  },
-  {
-    name: 'cancel_event',
-    title: 'Cancel Event (Admin)',
-    description:
-      'ADMIN: Cancels a school event outright; cancelled events cannot be reactivated. For schedule, capacity, or price changes use update_event instead. Requires pac_cordinator or event_cordinator role. DESTRUCTIVE - confirm with the user. Get event_id from get_upcoming_events.',
-    inputSchema: {
-      type: 'object',
-      properties: { event_id: { type: 'string', description: 'Event ID - from get_upcoming_events; cancelling is permanent and cannot be undone' } },
-      required: ['event_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Event ID',
-        },
-        status: {
-          type: 'string',
-          description: 'Event status (cancelled)',
-        },
+        id: { type: 'string', description: 'Event ID' },
+        name: { type: 'string', description: 'Event name' },
+        eventDate: { type: 'string', description: 'Event date, YYYY-MM-DD' },
+        status: { type: 'string', description: 'Event status (e.g. active, cancelled)' },
       },
     },
     annotations: {
@@ -720,57 +482,52 @@ export const ALL_TOOLS: ToolDefinition[] = [
       destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
-      title: 'Cancel Event (Admin)',
+      title: 'Manage Event (Admin)',
     },
   },
+
   {
-    name: 'register_event',
-    title: 'Register for Event',
+    name: 'event_registration',
+    title: 'Event Registration',
     description:
-      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, minimum 1 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance or when the event is sold out or registration is closed. To volunteer at an event rather than attend, use sign_up_to_volunteer. FINANCIAL for paid events - confirm before registering.",
+      "Event ticket lifecycle. action 'register' registers the authenticated user for an event (requires event_id from get_upcoming_events; quantity defaults to 1) - paid events charge the wallet immediately and fail on insufficient funds; check get_wallet_balance first. To help run an event rather than attend it, use volunteer_signup instead. action 'cancel' cancels an existing registration (requires ticket_id from get_my_event_registrations) and refunds the ticket price when applicable. FINANCIAL - confirm the event and quantity before registering.",
     inputSchema: {
       type: 'object',
       properties: {
-        event_id: { type: 'string', description: 'Event ID from get_upcoming_events - registration must still be open (check the closed flag)' },
-        quantity: { type: 'integer', description: 'Number of tickets', minimum: 1, default: 1 },
+        action: {
+          type: 'string',
+          enum: ['register', 'cancel'],
+          description: "'register' for an event; 'cancel' an existing registration",
+        },
+        event_id: { type: 'string', description: "Event ID for 'register' (from get_upcoming_events)" },
+        quantity: { type: 'integer', description: "Number of tickets for 'register' (default 1)", minimum: 1 },
+        ticket_id: { type: 'string', description: "Ticket ID for 'cancel' (from get_my_event_registrations)" },
       },
-      required: ['event_id'],
+      required: ['action'],
       additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: 'Registration ID',
-        },
-        eventId: {
-          type: 'string',
-          description: 'Event the user registered for',
-        },
-        quantity: {
-          type: 'integer',
-          description: 'Tickets issued',
-        },
-        status: {
-          type: 'string',
-          description: 'Registration status',
-        },
+        id: { type: 'string', description: 'Registration or cancelled ticket ID' },
+        eventId: { type: 'string', description: 'Event the user registered for' },
+        quantity: { type: 'integer', description: 'Tickets issued' },
+        status: { type: 'string', description: 'Registration or ticket status' },
       },
     },
     annotations: {
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
-      title: 'Register for Event',
+      title: 'Event Registration',
     },
   },
   {
     name: 'get_my_event_registrations',
     title: 'Get My Event Registrations',
     description:
-      "Read-only, no side effects. Returns the authenticated user's own event tickets at their active school - ticket id, event name/date/location, quantity, total paid, and status (paid or checked_in). Cancelled tickets are excluded. The id values returned are required by cancel_event_registration. Pair with get_upcoming_events for events the user has not registered for.",
+      "Read-only, no side effects. Returns the authenticated user's own event tickets at their active school - ticket id, event name/date/location, quantity, total paid, and status (paid or checked_in). Cancelled tickets are excluded. The id values returned are required by event_registration (cancel). Pair with get_upcoming_events for events the user has not registered for.",
     inputSchema: {
       type: 'object',
       properties: {},
@@ -793,45 +550,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
       title: 'Get My Event Registrations',
     },
   },
-  {
-    name: 'cancel_event_registration',
-    title: 'Cancel Event Registration',
-    description:
-      "Cancels one of the authenticated user's own event tickets (ticket_id from get_my_event_registrations). Releases the reserved seats; for paid tickets the full amount is refunded to the user's wallet at that school. Only the ticket owner or a coordinator can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        ticket_id: { type: 'string', description: 'Ticket ID from get_my_event_registrations - must belong to the caller and still be cancellable' },
-      },
-      required: ['ticket_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Cancelled ticket ID',
-        },
-        status: {
-          type: 'string',
-          description: 'Ticket status (cancelled)',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Cancel Event Registration',
-    },
-  },
+
   {
     name: 'get_my_volunteer_signups',
     title: 'Get My Volunteer Signups',
     description:
-      "Read-only, no side effects. Returns the authenticated user's active volunteer signups at their school - signup id, shift title/date/times, and the parent event. Cancelled signups are excluded. The id values returned are required by cancel_volunteer_signup.",
+      "Read-only, no side effects. Returns the authenticated user's active volunteer signups at their school - signup id, shift title/date/times, and the parent event. Cancelled signups are excluded. The id values returned are required by volunteer_signup (cancel).",
     inputSchema: {
       type: 'object',
       properties: {},
@@ -854,30 +578,35 @@ export const ALL_TOOLS: ToolDefinition[] = [
       title: 'Get My Volunteer Signups',
     },
   },
+
   {
-    name: 'cancel_volunteer_signup',
-    title: 'Cancel Volunteer Signup',
+    name: 'volunteer_signup',
+    title: 'Volunteer Signup',
     description:
-      "Cancels one of the authenticated user's own volunteer signups (signup_id from get_my_volunteer_signups) and frees the shift slot for others. No payment is involved. Only the volunteer themselves or an admin can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+      "Volunteer shift lifecycle - no payment involved. action 'signup' signs the authenticated user up for one volunteer shift (requires shift_id - it identifies a shift within an event, not the event itself; get it from the event's volunteer shifts in get_upcoming_events); fails when the shift is full or cancelled. action 'cancel' cancels an existing signup (requires signup_id from get_my_volunteer_signups). To attend an event as a guest instead, use event_registration. WRITE - confirm with the user before signing up or cancelling.",
     inputSchema: {
       type: 'object',
       properties: {
-        signup_id: { type: 'string', description: 'Signup ID from get_my_volunteer_signups - must belong to the caller and still be active' },
+        action: {
+          type: 'string',
+          enum: ['signup', 'cancel'],
+          description: "'signup' for a volunteer shift; 'cancel' an existing signup",
+        },
+        shift_id: {
+          type: 'string',
+          description: "Volunteer shift ID for 'signup' - from the event's volunteer shifts (get_upcoming_events)",
+        },
+        signup_id: { type: 'string', description: "Signup ID for 'cancel' (from get_my_volunteer_signups)" },
       },
-      required: ['signup_id'],
+      required: ['action'],
       additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: 'Cancelled signup ID',
-        },
-        status: {
-          type: 'string',
-          description: 'Signup status (cancelled)',
-        },
+        id: { type: 'string', description: 'Signup ID' },
+        shiftId: { type: 'string', description: 'Volunteer shift signed up for' },
+        status: { type: 'string', description: 'Signup status (e.g. active, cancelled)' },
       },
     },
     annotations: {
@@ -885,45 +614,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
       destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
-      title: 'Cancel Volunteer Signup',
-    },
-  },
-  {
-    name: 'sign_up_to_volunteer',
-    title: 'Sign Up to Volunteer',
-    description:
-      "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in get_upcoming_events. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_event. WRITE - confirm with the user before signing up.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        shift_id: { type: 'string', description: "Volunteer shift ID - from the event's volunteer shifts (get_upcoming_events)" },
-      },
-      required: ['shift_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Signup ID',
-        },
-        shiftId: {
-          type: 'string',
-          description: 'Volunteer shift signed up for',
-        },
-        status: {
-          type: 'string',
-          description: 'Signup status',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Sign Up to Volunteer',
+      title: 'Volunteer Signup',
     },
   },
 
@@ -932,7 +623,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'list_school_restaurants',
     title: 'List School Restaurants (Admin)',
     description:
-      'ADMIN: Lists the active restaurants attached to a school (defaults to the active school). Inactive restaurants are not returned. The restaurant_id values returned are required by list_menu_items, create_menu_item, update_menu_item, delete_menu_item, and set_daily_menu. Requires pac_cordinator, pac_member, or lunch_cordinator role.',
+      'ADMIN: Lists the active restaurants attached to a school (defaults to the active school). Inactive restaurants are not returned. The restaurant_id values returned are required by list_menu_items, manage_menu_item, and set_daily_menu. Requires pac_cordinator, pac_member, or lunch_cordinator role.',
     inputSchema: {
       type: 'object',
       properties: { school_slug: { type: 'string', description: 'School slug (defaults to active school)' } },
@@ -983,7 +674,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'create_restaurant',
     title: 'Create Restaurant (Admin)',
     description:
-      'ADMIN: Adds a restaurant to the active school so it can offer menu items via create_menu_item. To change an existing restaurant there is no update tool - recreate or manage it in the Paxaver admin. Requires pac_cordinator role. WRITE - confirm with the user.',
+      'ADMIN: Adds a restaurant to the active school so it can offer menu items via manage_menu_item. To change an existing restaurant there is no update tool - recreate or manage it in the Paxaver admin. Requires pac_cordinator role. WRITE - confirm with the user.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1026,7 +717,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'list_menu_items',
     title: 'List Menu Items (Admin)',
     description:
-      'ADMIN: Lists the full menu-item catalog for a restaurant, including inactive and unavailable items - this is the catalog, not what parents can order on a date (use get_menu for that). Provides menu_item_id values for update_menu_item, delete_menu_item, and set_daily_menu. Requires pac_cordinator or lunch_cordinator role. Get restaurant_id from list_school_restaurants.',
+      'ADMIN: Lists the full menu-item catalog for a restaurant, including inactive and unavailable items - this is the catalog, not what parents can order on a date (use get_menu for that). Provides menu_item_id values for manage_menu_item and set_daily_menu. Requires pac_cordinator or lunch_cordinator role. Get restaurant_id from list_school_restaurants.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1088,139 +779,42 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'List Menu Items (Admin)' },
   },
   {
-    name: 'create_menu_item',
-    title: 'Create Menu Item (Admin)',
+    name: 'manage_menu_item',
+    title: 'Manage Menu Item',
     description:
-      'ADMIN: Creates a new menu item on a restaurant. Only restaurant_id and name are required - set price_cents before the item can be meaningfully ordered. New items start active and available; use update_menu_item to change them later. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm with the user. Get restaurant_id from list_school_restaurants.',
+      "Restaurant menu item lifecycle (admin: pac_cordinator or lunch_cordinator). Actions: 'create' adds an item to a restaurant's reusable menu (requires restaurant_id and name; price_cents is the sale price, cost_cents the ingredient cost for PAC margin tracking); 'update' edits fields on an existing item (requires restaurant_id and menu_item_id; pass only fields to change - set is_active false to take it off the menu); 'delete' soft-deletes an item (requires restaurant_id and menu_item_id; the item disappears from ordering but stays on past orders). Items do not become orderable until placed on a daily menu with set_daily_menu. Find restaurant_id via list_school_restaurants, menu_item_id via list_menu_items. WRITE - confirm before creating, updating, or deleting.",
     inputSchema: {
       type: 'object',
       properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
-        name: { type: 'string', description: 'Item display name shown to parents' },
-        description: { type: 'string', description: 'Optional item description' },
-        cost_cents: { type: 'integer', description: 'Kitchen cost in cents (internal margin tracking)' },
-        price_cents: { type: 'integer', description: 'Sale price in cents (e.g. 550 = $5.50)' },
-        ingredients: { type: 'string', description: 'Ingredient list text' },
-        calories: { type: 'integer', description: 'Calorie count' },
+        action: {
+          type: 'string',
+          enum: ['create', 'update', 'delete'],
+          description: "'create' a menu item; 'update' its fields; 'delete' (soft-delete) it",
+        },
+        restaurant_id: { type: 'string', description: 'Restaurant ID (from list_school_restaurants)' },
+        menu_item_id: {
+          type: 'string',
+          description: "Menu item ID (required for 'update' and 'delete'; from list_menu_items)",
+        },
+        name: { type: 'string', description: "Item name (required for 'create')" },
+        description: { type: 'string', description: 'Item description' },
+        cost_cents: { type: 'integer', description: 'Ingredient cost in cents (PAC margin tracking)', minimum: 0 },
+        price_cents: { type: 'integer', description: 'Sale price in cents', minimum: 0 },
+        ingredients: { type: 'array', items: { type: 'string' }, description: 'Ingredient list' },
+        calories: { type: 'integer', description: 'Calories per serving', minimum: 0 },
+        is_active: { type: 'boolean', description: "Whether the item is on the restaurant menu ('update' only)" },
       },
-      required: ['restaurant_id', 'name'],
+      required: ['action'],
       additionalProperties: false,
     },
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: 'Menu item ID',
-        },
-        name: {
-          type: 'string',
-          description: 'Item name',
-        },
-        priceCents: {
-          type: 'integer',
-          description: 'Sale price in cents',
-        },
-        isActive: {
-          type: 'boolean',
-          description: 'Whether the item is on the restaurant menu',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Create Menu Item (Admin)',
-    },
-  },
-  {
-    name: 'update_menu_item',
-    title: 'Update Menu Item (Admin)',
-    description:
-      'ADMIN: Partially updates an existing menu item - only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents - FINANCIAL, confirm the new price), nutrition updates, or toggling availability (is_available for out-of-stock, is_active to retire an item). Use delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
-        menu_item_id: { type: 'string', description: 'Menu item ID - from list_menu_items' },
-        name: { type: 'string', description: 'New display name for the item' },
-        description: { type: 'string', description: 'New item description shown to parents' },
-        cost_cents: { type: 'integer', description: 'Kitchen cost in cents (internal margin tracking)' },
-        ingredients: { type: 'string', description: 'Ingredient list text' },
-        calories: { type: 'integer', description: 'Calorie count' },
-        is_active: {
-          type: 'boolean',
-          description: 'Whether the item stays on the restaurant menu - set false to retire it',
-        },
-        price_cents: { type: 'integer', description: 'Sale price in cents (e.g. 550 = $5.50)' },
-        is_available: {
-          type: 'boolean',
-          description: 'Whether the item can be ordered - set false while out of stock',
-        },
-      },
-      required: ['restaurant_id', 'menu_item_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Menu item ID',
-        },
-        name: {
-          type: 'string',
-          description: 'Item name',
-        },
-        priceCents: {
-          type: 'integer',
-          description: 'Sale price in cents',
-        },
-        isActive: {
-          type: 'boolean',
-          description: 'Whether the item is on the restaurant menu',
-        },
-        isAvailable: {
-          type: 'boolean',
-          description: 'Whether the item can currently be ordered',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-      title: 'Update Menu Item (Admin)',
-    },
-  },
-  {
-    name: 'delete_menu_item',
-    title: 'Delete Menu Item (Admin)',
-    description:
-      'ADMIN: Soft-deletes a menu item so it can no longer be ordered. To only hide it temporarily, prefer update_menu_item with is_available=false. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
-        menu_item_id: { type: 'string', description: 'Menu item ID - from list_menu_items' },
-      },
-      required: ['restaurant_id', 'menu_item_id'],
-      additionalProperties: false,
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'Menu item ID',
-        },
-        deleted: {
-          type: 'boolean',
-          description: 'Whether the item was soft-deleted',
-        },
+        id: { type: 'string', description: 'Menu item ID' },
+        name: { type: 'string', description: 'Item name' },
+        priceCents: { type: 'integer', description: 'Sale price in cents' },
+        isActive: { type: 'boolean', description: 'Whether the item is on the restaurant menu' },
+        deleted: { type: 'boolean', description: 'Whether the item was soft-deleted' },
       },
     },
     annotations: {
@@ -1228,14 +822,15 @@ export const ALL_TOOLS: ToolDefinition[] = [
       destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
-      title: 'Delete Menu Item (Admin)',
+      title: 'Manage Menu Item (Admin)',
     },
   },
+
   {
     name: 'set_daily_menu',
     title: 'Set Daily Menu (Admin)',
     description:
-      'ADMIN: Puts a restaurant menu item on the orderable menu for a given date, optionally capping portions. This only schedules the item - to retire it entirely use update_menu_item (is_active) or delete_menu_item. Requires pac_cordinator or lunch_cordinator role. WRITE - confirm with the user. Get IDs from list_school_restaurants and list_menu_items.',
+      'ADMIN: Puts a restaurant menu item on the orderable menu for a given date, optionally capping portions. This only schedules the item - to retire it entirely use manage_menu_item (update is_active or delete). Requires pac_cordinator or lunch_cordinator role. WRITE - confirm with the user. Get IDs from list_school_restaurants and list_menu_items.',
     inputSchema: {
       type: 'object',
       properties: {

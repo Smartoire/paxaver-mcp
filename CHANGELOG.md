@@ -5,6 +5,15 @@ All notable changes to the Paxaver MCP server are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] — 2026-09-19
+
+### Changed
+
+- **BREAKING:** Consolidated the tool surface from 27 tools to 17. Sixteen lifecycle tools are merged into six action-parameterized tools: `order` (place, cancel), `draft_order` (create, update, discard, finalize), `manage_event` (create, update, cancel), `event_registration` (register, cancel), `volunteer_signup` (signup, cancel), and `manage_menu_item` (create, update, delete). The retired names (`order_lunch`, `cancel_order`, `create_draft_order`, `finalize_order`, `update_draft_order`, `discard_draft_order`, `create_event`, `update_event`, `cancel_event`, `register_event`, `cancel_event_registration`, `sign_up_to_volunteer`, `cancel_volunteer_signup`, `create_menu_item`, `update_menu_item`, `delete_menu_item`) are removed with no aliases — MCP clients discover the new surface via `tools/list`.
+- Per-action validation: each merged tool validates required fields for the requested `action`; missing parameters and unknown actions return JSON-RPC `-32602` (invalid params) instead of a generic error.
+- Backend contract fixes: mutating calls map snake_case tool arguments to the backend's camelCase fields explicitly (draft-order items, `tipCents`, `shiftId`, `studentId`, event creation, menu-item fields, daily-menu assignment). `create_menu_item`'s `ingredients` is now an array, and the unmapped `is_available` field is removed (item orderability lives on the daily-menu assignment).
+- `get_upcoming_events` now applies `start_date`/`end_date` filtering — the backend list route ignores those parameters.
+
 ## [2.4.1] — 2026-09-11
 
 ### Changed

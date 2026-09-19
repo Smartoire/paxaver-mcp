@@ -3,12 +3,39 @@
  *
  * Maps each MCP tool name to a Paxaver backend API request.
  * The MCP server contains NO business logic.
+ *
+ * Lifecycle tools are consolidated behind an `action` discriminator
+ * (#921): draft_order, order, manage_event, event_registration,
+ * volunteer_signup, manage_menu_item. Backend contracts are camelCase;
+ * every mutating call maps args explicitly — never `body: args` (snake
+ * keys are silently stripped or rejected by backend validators), except
+ * PATCH /api/events/:id which is explicitly snake_case.
  */
 
 import { callPaxaverApi } from '../api/client.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { ToolHandlerArgs } from './shared.js';
-import { validatePathId } from './shared.js';
+import { InvalidParamsError, requireArgs, validatePathId } from './shared.js';
+
+// Backend draft-order routes store items verbatim and recompute the total
+// from priceCents * quantity — every item must carry camelCase keys or the
+// total silently becomes NaN.
+function mapDraftItem(i: Record<string, unknown>) {
+  return {
+    menuItemId: i.menu_item_id ?? i.menuItemId,
+    menuItemName: i.menu_item_name ?? i.menuItemName,
+    priceCents: i.price_cents ?? i.priceCents,
+    quantity: i.quantity,
+  };
+}
+
+function mapDraftItems(items: unknown): unknown {
+  return Array.isArray(items) ? (items as Record<string, unknown>[]).map(mapDraftItem) : items;
+}
+
+function badAction(tool: string, actions: string[]): never {
+  throw new InvalidParamsError(`${tool}: action must be one of ${actions.join(' | ')}`);
+}
 
 export async function handleTool({
   env,
@@ -65,30 +92,45 @@ export async function handleTool({
       });
 
     // Order
-    case 'order_lunch': {
-      // Backend orderCreateSchema takes camelCase keys. student_id defaults
-      // to the user's only student; with several it must be explicit.
-      const studentId =
-        (args.student_id as string | undefined) ??
-        (ctx.studentIds?.length === 1 ? ctx.studentIds[0] : undefined);
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: '/api/lunch/orders',
-        body: {
-          studentId,
-          menuItemId: args.menu_item_id,
-          menuDate: args.menu_date,
-          quantity: args.quantity,
-        },
-        idempotencyKey,
-      });
+    case 'order': {
+      switch (args.action) {
+        case 'place': {
+          requireArgs(args, 'menu_item_id', 'menu_date');
+          // Backend orderCreateSchema takes camelCase keys. student_id
+          // defaults to the user's only student; with several it must be
+          // explicit.
+          const studentId =
+            (args.student_id as string | undefined) ?? (ctx.studentIds?.length === 1 ? ctx.studentIds[0] : undefined);
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: '/api/lunch/orders',
+            body: {
+              studentId,
+              menuItemId: args.menu_item_id,
+              menuDate: args.menu_date,
+              quantity: args.quantity,
+            },
+            idempotencyKey,
+          });
+        }
+        case 'cancel':
+          requireArgs(args, 'order_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}/cancel`,
+            idempotencyKey,
+          });
+        default:
+          badAction('order', ['place', 'cancel']);
+      }
+      break;
     }
     case 'get_orders':
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
         path: '/api/lunch/orders',
         query: {
-          student_id: args.student_id as string | undefined,
+          studentId: args.student_id as string | undefined,
           start: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-01` : undefined),
           end: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-31` : undefined),
         },
@@ -111,108 +153,182 @@ export async function handleTool({
         query: { date: args.date as string | undefined },
       });
     }
-    case 'create_draft_order':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: '/api/lunch/orders/draft',
-        body: args,
-        idempotencyKey,
-      });
-    case 'finalize_order':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}/finalize`,
-        body: { tip_cents: args.tip_cents },
-        idempotencyKey,
-      });
-    case 'update_draft_order':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'PATCH',
-        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
-        body: { items: args.items, menuDate: args.menu_date },
-        idempotencyKey,
-      });
-    case 'discard_draft_order':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'DELETE',
-        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
-        idempotencyKey,
-      });
-    case 'cancel_order':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}/cancel`,
-        idempotencyKey,
-      });
+    case 'draft_order': {
+      switch (args.action) {
+        case 'create': {
+          requireArgs(args, 'menu_date', 'items');
+          const studentId =
+            (args.student_id as string | undefined) ?? (ctx.studentIds?.length === 1 ? ctx.studentIds[0] : undefined);
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: '/api/lunch/orders/draft',
+            body: {
+              studentId,
+              schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+              menuDate: args.menu_date,
+              items: mapDraftItems(args.items),
+            },
+            idempotencyKey,
+          });
+        }
+        case 'update':
+          requireArgs(args, 'order_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'PATCH',
+            path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
+            body: {
+              items: args.items === undefined ? undefined : mapDraftItems(args.items),
+              menuDate: args.menu_date,
+            },
+            idempotencyKey,
+          });
+        case 'discard':
+          requireArgs(args, 'order_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'DELETE',
+            path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
+            idempotencyKey,
+          });
+        case 'finalize':
+          requireArgs(args, 'order_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}/finalize`,
+            body: { tipCents: args.tip_cents },
+            idempotencyKey,
+          });
+        default:
+          badAction('draft_order', ['create', 'update', 'discard', 'finalize']);
+      }
+      break;
+    }
 
     // Event
-    case 'get_upcoming_events':
-      return callPaxaverApi(env, ctx, origin, {
+    case 'get_upcoming_events': {
+      // GET /api/events ignores date params — the range filter promised by
+      // the tool schema is applied here on the returned eventDate values.
+      const start = args.start_date as string | undefined;
+      const end = args.end_date as string | undefined;
+      const result = await callPaxaverApi(env, ctx, origin, {
         method: 'GET',
         path: '/api/events',
-        query: {
-          start_date: args.start_date as string | undefined,
-          end_date: args.end_date as string | undefined,
-        },
       });
-    case 'create_event':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: '/api/events',
-        body: args,
-        idempotencyKey,
-      });
-    case 'update_event':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'PATCH',
-        path: `/api/events/${validatePathId(args.event_id, 'event_id')}`,
-        body: args,
-        idempotencyKey,
-      });
-    case 'cancel_event':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/events/${validatePathId(args.event_id, 'event_id')}/cancel`,
-        idempotencyKey,
-      });
-    case 'register_event':
-      // /register is the MCP-facing endpoint: it charges the wallet for paid
-      // events and fails on insufficient funds. /tickets only creates a
-      // 'reserved' ticket without collecting payment.
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/events/${validatePathId(args.event_id, 'event_id')}/register`,
-        body: { quantity: args.quantity },
-        idempotencyKey,
-      });
-    case 'sign_up_to_volunteer':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: '/api/volunteers/signups',
-        body: args,
-        idempotencyKey,
-      });
+      if (result.ok && (start || end)) {
+        const data = result.data as Record<string, unknown> | unknown[] | undefined;
+        const list = Array.isArray(data) ? data : ((data as Record<string, unknown>)?.data as unknown[]);
+        if (Array.isArray(list)) {
+          const filtered = list.filter((e) => {
+            const d = (e as Record<string, unknown>).eventDate as string | undefined;
+            return d !== undefined && (!start || d >= start) && (!end || d <= end);
+          });
+          if (Array.isArray(data)) result.data = filtered;
+          else if (data && typeof data === 'object') (data as Record<string, unknown>).data = filtered;
+        }
+      }
+      return result;
+    }
+    case 'manage_event': {
+      switch (args.action) {
+        case 'create':
+          // eventCreateSchema is camelCase; schoolSlug defaults to the
+          // active school and must match the authenticated school context.
+          requireArgs(args, 'name', 'event_date');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: '/api/events',
+            body: {
+              schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+              name: args.name,
+              description: args.description,
+              eventDate: args.event_date,
+              startsAt: args.starts_at,
+              endsAt: args.ends_at,
+              location: args.location,
+              maxCapacity: args.max_capacity,
+              ticketPriceCents: args.ticket_price_cents,
+            },
+            idempotencyKey,
+          });
+        case 'update': {
+          // Unlike the create route, PATCH /api/events/:id reads snake_case
+          // keys via an explicit allowedFields map — pass fields through.
+          requireArgs(args, 'event_id');
+          const { action: _a, event_id: _e, ...fields } = args;
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'PATCH',
+            path: `/api/events/${validatePathId(args.event_id, 'event_id')}`,
+            body: fields,
+            idempotencyKey,
+          });
+        }
+        case 'cancel':
+          requireArgs(args, 'event_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/events/${validatePathId(args.event_id, 'event_id')}/cancel`,
+            idempotencyKey,
+          });
+        default:
+          badAction('manage_event', ['create', 'update', 'cancel']);
+      }
+      break;
+    }
+    case 'event_registration': {
+      switch (args.action) {
+        case 'register':
+          // /register is the MCP-facing endpoint: it charges the wallet for
+          // paid events and fails on insufficient funds. /tickets only
+          // creates a 'reserved' ticket without collecting payment.
+          requireArgs(args, 'event_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/events/${validatePathId(args.event_id, 'event_id')}/register`,
+            body: { quantity: args.quantity },
+            idempotencyKey,
+          });
+        case 'cancel':
+          requireArgs(args, 'ticket_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/events/tickets/${validatePathId(args.ticket_id, 'ticket_id')}/cancel`,
+            idempotencyKey,
+          });
+        default:
+          badAction('event_registration', ['register', 'cancel']);
+      }
+      break;
+    }
     case 'get_my_event_registrations':
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
         path: '/api/events/tickets/mine',
       });
-    case 'cancel_event_registration':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/events/tickets/${validatePathId(args.ticket_id, 'ticket_id')}/cancel`,
-        idempotencyKey,
-      });
+    case 'volunteer_signup': {
+      switch (args.action) {
+        case 'signup':
+          requireArgs(args, 'shift_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: '/api/volunteers/signups',
+            body: { shiftId: args.shift_id, notes: args.notes },
+            idempotencyKey,
+          });
+        case 'cancel':
+          requireArgs(args, 'signup_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/volunteers/signups/${validatePathId(args.signup_id, 'signup_id')}/cancel`,
+            idempotencyKey,
+          });
+        default:
+          badAction('volunteer_signup', ['signup', 'cancel']);
+      }
+      break;
+    }
     case 'get_my_volunteer_signups':
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
         path: '/api/volunteers/my-signups',
-      });
-    case 'cancel_volunteer_signup':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/volunteers/signups/${validatePathId(args.signup_id, 'signup_id')}/cancel`,
-        idempotencyKey,
       });
 
     // Restaurant
@@ -222,10 +338,16 @@ export async function handleTool({
         path: `/api/schools/${validatePathId(args.school_slug || ctx.schoolSlug, 'school_slug')}/restaurants`,
       });
     case 'create_restaurant':
+      // restaurantCreateSchema is camelCase and requires schoolSlug.
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
         path: `/api/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/restaurants`,
-        body: args,
+        body: {
+          schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+          name: args.name,
+          description: args.description,
+          taxPercent: args.tax_percent,
+        },
         idempotencyKey,
       });
 
@@ -235,31 +357,67 @@ export async function handleTool({
         method: 'GET',
         path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
       });
-    case 'create_menu_item':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'POST',
-        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
-        body: args,
-        idempotencyKey,
-      });
-    case 'update_menu_item':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'PATCH',
-        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
-        body: args,
-        idempotencyKey,
-      });
-    case 'delete_menu_item':
-      return callPaxaverApi(env, ctx, origin, {
-        method: 'DELETE',
-        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
-        idempotencyKey,
-      });
+    case 'manage_menu_item': {
+      switch (args.action) {
+        case 'create':
+          // menuItemCreateSchema is camelCase; ingredients is string[].
+          requireArgs(args, 'restaurant_id', 'name');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'POST',
+            path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
+            body: {
+              name: args.name,
+              description: args.description,
+              costCents: args.cost_cents,
+              priceCents: args.price_cents,
+              ingredients: args.ingredients,
+              calories: args.calories,
+            },
+            idempotencyKey,
+          });
+        case 'update':
+          // menuItemUpdateSchema is camelCase. There is no per-item
+          // "orderable" flag — availability lives on the daily-menu
+          // assignment — so is_available is intentionally not forwarded.
+          requireArgs(args, 'restaurant_id', 'menu_item_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'PATCH',
+            path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
+            body: {
+              name: args.name,
+              description: args.description,
+              costCents: args.cost_cents,
+              priceCents: args.price_cents,
+              ingredients: args.ingredients,
+              calories: args.calories,
+              isActive: args.is_active,
+            },
+            idempotencyKey,
+          });
+        case 'delete':
+          requireArgs(args, 'restaurant_id', 'menu_item_id');
+          return callPaxaverApi(env, ctx, origin, {
+            method: 'DELETE',
+            path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
+            idempotencyKey,
+          });
+        default:
+          badAction('manage_menu_item', ['create', 'update', 'delete']);
+      }
+      break;
+    }
     case 'set_daily_menu':
+      // dailyMenuAssignSchema is camelCase.
+      requireArgs(args, 'restaurant_id', 'menu_item_id', 'menu_date');
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
         path: `/api/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
-        body: args,
+        body: {
+          restaurantId: args.restaurant_id,
+          menuItemId: args.menu_item_id,
+          menuDate: args.menu_date,
+          availableQty: args.available_qty,
+        },
         idempotencyKey,
       });
 

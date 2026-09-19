@@ -137,17 +137,19 @@ The worker requires no secrets. See
 
 ## Tools
 
-The server exposes 21 tools grouped into six categories. Visibility in
-`tools/list` is filtered by the caller's roles; every call is re-authorized
-before dispatch, and the backend re-checks data-level access (defense-in-depth).
+The server exposes 17 tools grouped into six categories. Lifecycle operations
+are consolidated behind an `action` discriminator (e.g. `draft_order` covers
+create, update, discard, and finalize). Visibility in `tools/list` is filtered
+by the caller's roles; every call is re-authorized before dispatch, and the
+backend re-checks data-level access (defense-in-depth).
 
-| Category           | Tools                                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| User / account     | `get_user_info`                                                                                                                                 |
-| Wallet             | `get_wallet_balance`                                                                                                                            |
-| Orders & menu      | `order_lunch`, `get_orders`, `get_menu`, `create_draft_order`, `finalize_order`, `cancel_order`                                                 |
-| Events             | `get_upcoming_events`, `create_event`, `update_event`, `cancel_event`, `register_event`, `sign_up_to_volunteer`                                 |
-| Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `create_menu_item`, `update_menu_item`, `delete_menu_item`, `set_daily_menu` |
+| Category           | Tools                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| User / account     | `get_user_info`                                                                                                                           |
+| Wallet             | `get_wallet_balance`                                                                                                                      |
+| Orders & menu      | `order`, `draft_order`, `get_orders`, `get_menu`                                                                                          |
+| Events             | `get_upcoming_events`, `manage_event`, `event_registration`, `get_my_event_registrations`, `volunteer_signup`, `get_my_volunteer_signups` |
+| Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `manage_menu_item`, `set_daily_menu`                                   |
 
 Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:

@@ -36,24 +36,25 @@ Fields:
 
 ### Full table
 
-| Tool                      | Capability     | Entitlement | Classifications         | Required roles                               | Mutates | Financial | Destructive | Confirm |
-| ------------------------- | -------------- | ----------- | ----------------------- | -------------------------------------------- | ------- | --------- | ----------- | ------- |
-| `get_user_info`           | `view_account` | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `get_wallet_balance`      | `view_balance` | no          | READ, PRIVACY_SENSITIVE | _(any)_                                      | no      | no        | no          | no      |
-| `order_lunch`             | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | yes       | no          | **yes** |
-| `get_orders`              | `view_orders`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `get_menu`                | `view_menu`    | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `get_upcoming_events`     | `view_events`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `create_event`            | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
-| `update_event`            | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
-| `cancel_event`            | `ai_write`     | yes         | DESTRUCTIVE, ADMIN      | pac_cordinator, event_cordinator             | yes     | no        | yes         | **yes** |
-| `list_school_restaurants` | _(null)_       | no          | READ, ADMIN             | pac_cordinator, pac_member, lunch_cordinator | no      | no        | no          | no      |
-| `create_restaurant`       | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator                               | yes     | no        | no          | **yes** |
-| `list_menu_items`         | _(null)_       | no          | READ, ADMIN             | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
-| `create_menu_item`        | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `update_menu_item`        | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `delete_menu_item`        | _(null)_       | no          | DESTRUCTIVE, ADMIN      | pac_cordinator, lunch_cordinator             | yes     | no        | yes         | **yes** |
-| `set_daily_menu`          | _(null)_       | no          | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
+| Tool                         | Capability     | Entitlement | Classifications                      | Required roles                               | Mutates | Financial | Destructive | Confirm |
+| ---------------------------- | -------------- | ----------- | ------------------------------------ | -------------------------------------------- | ------- | --------- | ----------- | ------- |
+| `get_user_info`              | `view_account` | no          | READ                                 | _(any)_                                      | no      | no        | no          | no      |
+| `get_wallet_balance`         | `view_balance` | no          | READ, PRIVACY_SENSITIVE              | _(any)_                                      | no      | no        | no          | no      |
+| `order`                      | `ai_write`     | yes         | FINANCIAL, WRITE, DESTRUCTIVE        | _(any)_                                      | yes     | yes       | yes         | **yes** |
+| `draft_order`                | `ai_write`     | yes         | FINANCIAL, WRITE, DESTRUCTIVE        | _(any)_                                      | yes     | yes       | yes         | **yes** |
+| `get_orders`                 | `view_orders`  | no          | READ                                 | _(any)_                                      | no      | no        | no          | no      |
+| `get_menu`                   | `view_menu`    | no          | READ                                 | _(any)_                                      | no      | no        | no          | no      |
+| `get_upcoming_events`        | `view_events`  | no          | READ                                 | _(any)_                                      | no      | no        | no          | no      |
+| `manage_event`               | `ai_write`     | yes         | WRITE, ADMIN, DESTRUCTIVE            | pac_cordinator, event_cordinator             | yes     | no        | yes         | **yes** |
+| `event_registration`         | `ai_write`     | yes         | WRITE, FINANCIAL, DESTRUCTIVE        | _(any)_                                      | yes     | yes       | yes         | **yes** |
+| `get_my_event_registrations` | `view_events`  | no          | READ                                 | _(any)_                                      | no      | no        | no          | no      |
+| `volunteer_signup`           | `ai_write`     | yes         | WRITE, DESTRUCTIVE                   | _(any)_                                      | yes     | no        | yes         | **yes** |
+| `get_my_volunteer_signups`   | `view_events`  | no          | READ                                 | _(any)_                                      | no      | no        | no          | no      |
+| `list_school_restaurants`    | _(null)_       | no          | READ, ADMIN                          | pac_cordinator, pac_member, lunch_cordinator | no      | no        | no          | no      |
+| `create_restaurant`          | _(null)_       | no          | WRITE, ADMIN                         | pac_cordinator                               | yes     | no        | no          | **yes** |
+| `list_menu_items`            | _(null)_       | no          | READ, ADMIN                          | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
+| `manage_menu_item`           | _(null)_       | no          | WRITE, ADMIN, FINANCIAL, DESTRUCTIVE | pac_cordinator, lunch_cordinator             | yes     | yes       | yes         | **yes** |
+| `set_daily_menu`             | _(null)_       | no          | WRITE, ADMIN                         | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
 
 ## Role gating
 
@@ -139,14 +140,16 @@ surfaces these to the AI client:
 
 ### Financial tools
 
-`order_lunch`, `create_draft_order`, `finalize_order`, `update_menu_item`
-(when setting `price_cents`). These move or commit money. They are always
-`requiresConfirmation: true`.
+`order` (place), `draft_order` (finalize), `event_registration` (register),
+`manage_menu_item` (update `price_cents`). These move or commit money. They are
+always `requiresConfirmation: true`.
 
 ### Destructive tools
 
-`cancel_event`, `delete_menu_item`. These are irreversible (soft-delete or
-status flip that cannot be undone). Always `requiresConfirmation: true`.
+`order` (cancel), `draft_order` (discard), `manage_event` (cancel),
+`event_registration` (cancel), `volunteer_signup` (cancel), `manage_menu_item`
+(delete). These are irreversible (soft-delete or status flip that cannot be
+undone). Always `requiresConfirmation: true`.
 
 ## Confirmation requirements
 

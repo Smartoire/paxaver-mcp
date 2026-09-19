@@ -45,13 +45,27 @@ describe('MCP protocol', () => {
     expect(json.result).toEqual({});
   });
 
-  it('tools/list returns all tools', async () => {
+  it('tools/list returns the consolidated catalog', async () => {
     const token = TEST_TOKEN;
     const res = await mcpPost({ jsonrpc: '2.0', id: 3, method: 'tools/list' }, token);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
-    expect(json.result.tools.length).toBeGreaterThan(10);
-    expect(json.result.tools.some((t: { name: string }) => t.name === 'get_user_info')).toBe(true);
+    const names = json.result.tools.map((t) => t.name);
+    expect(names.length).toBe(17);
+    expect(names).toContain('get_user_info');
+    for (const merged of [
+      'order',
+      'draft_order',
+      'manage_event',
+      'event_registration',
+      'volunteer_signup',
+      'manage_menu_item',
+    ]) {
+      expect(names).toContain(merged);
+    }
+    for (const retired of ['order_lunch', 'cancel_order', 'create_draft_order', 'register_event', 'delete_menu_item']) {
+      expect(names).not.toContain(retired);
+    }
   });
 
   it('unauthenticated tools/list probe returns full catalog', async () => {
@@ -100,7 +114,7 @@ describe('MCP protocol', () => {
 
   it('unsubscribed write tool is blocked', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      { jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'order', arguments: {} } },
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -110,7 +124,7 @@ describe('MCP protocol', () => {
 
   it('unsubscribed event registration is blocked', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'register_event', arguments: {} } },
+      { jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'event_registration', arguments: {} } },
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -120,7 +134,7 @@ describe('MCP protocol', () => {
 
   it('expired subscription write is blocked with renewal message', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      { jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'order', arguments: {} } },
       EXPIRED_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -139,11 +153,26 @@ describe('MCP protocol', () => {
 
   it('active parent subscription write executes', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      {
+        jsonrpc: '2.0',
+        id: 14,
+        method: 'tools/call',
+        params: { name: 'order', arguments: { action: 'place', menu_item_id: 'item-1', menu_date: '2099-01-15' } },
+      },
       ACTIVE_TOKEN,
     );
     const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
     expect(json.error?.message ?? '').not.toContain('subscription');
+  });
+
+  it('retired tool name returns an error, not silent dispatch', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 17, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { code: number }; result?: unknown };
+    expect(json.error, 'retired name must not silently execute').toBeDefined();
+    expect(json.result).toBeUndefined();
   });
 
   it('parent-level subscription is blocked from admin write tools', async () => {
