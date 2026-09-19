@@ -101,13 +101,13 @@ export async function handleTool({
         const [year, month] = String(args.month).split('-');
         return callPaxaverApi(env, ctx, origin, {
           method: 'GET',
-          path: `/api/lunch/schools/${slug}/menu/daily/calendar`,
+          path: `/api/schools/${slug}/menu/daily/calendar`,
           query: { year, month },
         });
       }
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
-        path: `/api/lunch/schools/${slug}/menu/daily`,
+        path: `/api/schools/${slug}/menu/daily`,
         query: { date: args.date as string | undefined },
       });
     }
@@ -233,32 +233,32 @@ export async function handleTool({
     case 'list_menu_items':
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
-        path: `/api/lunch/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
+        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
       });
     case 'create_menu_item':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
-        path: `/api/lunch/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
+        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items`,
         body: args,
         idempotencyKey,
       });
     case 'update_menu_item':
       return callPaxaverApi(env, ctx, origin, {
         method: 'PATCH',
-        path: `/api/lunch/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
+        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
         body: args,
         idempotencyKey,
       });
     case 'delete_menu_item':
       return callPaxaverApi(env, ctx, origin, {
         method: 'DELETE',
-        path: `/api/lunch/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
+        path: `/api/restaurants/${validatePathId(args.restaurant_id, 'restaurant_id')}/items/${validatePathId(args.menu_item_id, 'menu_item_id')}`,
         idempotencyKey,
       });
     case 'set_daily_menu':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
-        path: `/api/lunch/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
+        path: `/api/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
         body: args,
         idempotencyKey,
       });
