@@ -108,19 +108,20 @@ async function mcpAuth(request: Request, ctx: RequestContext): Promise<Response 
   if (request.method === 'GET' && url.pathname === '/mcp') {
     return null;
   }
-  if (!mcpMethod && !request.headers.get('Authorization') && request.method === 'POST' && url.pathname === '/mcp') {
+  let publicBody = false;
+  if (!mcpMethod && request.method === 'POST' && url.pathname === '/mcp') {
     try {
       const raw = (await request.clone().json()) as unknown;
       const batch = Array.isArray(raw) ? raw : [raw];
-      if (
+      publicBody =
         batch.length > 0 &&
         batch.every(
           (item) =>
             typeof item === 'object' &&
             item !== null &&
             PUBLIC_MCP_METHODS.has(((item as { method?: string }).method ?? '').toLowerCase()),
-        )
-      ) {
+        );
+      if (publicBody && !request.headers.get('Authorization')) {
         return null;
       }
     } catch {
@@ -132,6 +133,12 @@ async function mcpAuth(request: Request, ctx: RequestContext): Promise<Response 
   const result = await authenticateRequest(ctx.env, request.headers.get('Authorization') || undefined, origin);
 
   if (!result.ok) {
+    // An expired/invalid token must not downgrade a public metadata probe
+    // below anonymous access — connectors like Glama keep polling with a
+    // stale bearer and would otherwise see 401s on methods that are public.
+    if (publicBody) {
+      return null;
+    }
     const headers: Record<string, string> = {};
     if (result.wwwAuthenticate) headers['WWW-Authenticate'] = result.wwwAuthenticate;
     return Response.json(result.error, { status: result.status, headers });
