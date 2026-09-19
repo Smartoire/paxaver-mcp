@@ -166,7 +166,7 @@ Use this to find `menu_item_id` values for `order_lunch`.
 | `date`   | string | no       | YYYY-MM-DD  |
 | `month`  | string | no       | YYYY-MM     |
 
-**Backend:** `GET /api/lunch/schools/{school_slug}/menu/daily`
+**Backend:** `GET /api/schools/{school_slug}/menu/daily`
 
 ---
 
@@ -297,7 +297,7 @@ Lists restaurants for the active school.
 | ------------- | ------ | -------- | ------------------------- |
 | `school_slug` | string | no       | Defaults to active school |
 
-**Backend:** `GET /api/schools/restaurants`
+**Backend:** `GET /api/schools/{school_slug}/restaurants`
 
 ---
 
@@ -321,7 +321,7 @@ Creates a restaurant for the active school.
 | `description` | string | no       |             |
 | `tax_percent` | number | no       |             |
 
-**Backend:** `POST /api/schools/restaurants`
+**Backend:** `POST /api/schools/{school_slug}/restaurants`
 
 ---
 
@@ -342,7 +342,7 @@ Lists menu items for a restaurant.
 | --------------- | ------ | -------- | ----------- |
 | `restaurant_id` | string | yes      |             |
 
-**Backend:** `GET /api/lunch/restaurants/{restaurant_id}/menu-items`
+**Backend:** `GET /api/restaurants/{restaurant_id}/items`
 
 ---
 
@@ -369,7 +369,7 @@ Creates a menu item for a restaurant.
 | `ingredients`   | string  | no       |             |
 | `calories`      | integer | no       |             |
 
-**Backend:** `POST /api/lunch/restaurants/{restaurant_id}/menu-items`
+**Backend:** `POST /api/restaurants/{restaurant_id}/items`
 
 ---
 
@@ -399,7 +399,7 @@ Partially updates a menu item, including its price (`price_cents` — **FINANCIA
 | `price_cents`   | integer | no       |             |
 | `is_available`  | boolean | no       |             |
 
-**Backend:** `PATCH /api/lunch/restaurants/{restaurant_id}/menu-items/{menu_item_id}`
+**Backend:** `PATCH /api/restaurants/{restaurant_id}/items/{menu_item_id}`
 
 ---
 
@@ -421,7 +421,7 @@ Soft-deletes a menu item. **DESTRUCTIVE**.
 | `restaurant_id` | string | yes      |             |
 | `menu_item_id`  | string | yes      |             |
 
-**Backend:** `DELETE /api/lunch/restaurants/{restaurant_id}/menu-items/{menu_item_id}`
+**Backend:** `DELETE /api/restaurants/{restaurant_id}/items/{menu_item_id}`
 
 ---
 
@@ -445,4 +445,4 @@ Sets the daily menu (assigns a menu item to a date with available quantity).
 | `menu_date`     | string  | yes      | YYYY-MM-DD  |
 | `available_qty` | integer | no       |             |
 
-**Backend:** `POST /api/lunch/daily-menu`
+**Backend:** `POST /api/schools/{school_slug}/menu/daily`
