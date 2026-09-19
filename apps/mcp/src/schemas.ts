@@ -53,7 +53,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_user_info',
     title: 'Get User Info',
     description:
-      "Returns the authenticated user's context: first name, active school, the students they are a guardian for, and their roles. Call this when you need a student_id, school_slug, or to check whether the user holds an admin role - most other tools take those IDs as input.",
+      "Read-only lookup with no side effects and no rate-limit concerns - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, active school, the students they are a guardian for, and their role codes at that school. This is the context-discovery call - most other tools need a student_id or school_slug from here, and admin-role checks come from roles. Returns live account state, so call again if the user may have switched schools or had roles changed.",
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
@@ -93,7 +93,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_wallet_balance',
     title: 'Get Wallet Balance',
     description:
-      'Returns the spendable wallet balance for the authenticated user at their active school, in cents and formatted. Call before order_lunch, finalize_order, or register_event to confirm the user can cover the charge; not needed for read-only lookups.',
+      'Read-only lookup - never moves funds or has side effects. Requires authentication: returns only the caller\'s spendable wallet balance at their active school (wallets are scoped per school, so a balance at one school does not apply elsewhere), in cents and formatted. Live value reflecting orders and refunds up to the current moment - recheck before assuming funds are still available. Call before order_lunch, finalize_order, or register_event to confirm the user can cover the charge; not needed for read-only lookups.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
