@@ -9,6 +9,7 @@
 [![MCP Badge](https://lobehub.com/badge/mcp/paxaver)](https://lobehub.com/mcp/paxaver)
 [![Paxaver MCP Server MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/Smartoire/paxaver-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Smartoire/paxaver-mcp)
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/smartoire/paxaver-mcp)
+[![Wellknown](https://wellknown.network/agents/paxaver-mcp/badge.svg)](https://wellknown.network/agents/paxaver-mcp)
 
 ---
 
