@@ -6,7 +6,7 @@
  * business logic runs in the backend via the service-binding API client.
  */
 
-import { canSeeTool, checkToolAuthorization, getToolPolicy, TOOL_POLICIES } from '../lib/policies.js';
+import { canSeeTool, checkToolAuthorization, getToolPolicy, resolveToolName, TOOL_POLICIES } from '../lib/policies.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';
@@ -50,7 +50,7 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
           },
         },
         instructions:
-          "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.",
+          "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Do not invent tool names - use only the tools returned by tools/list.",
         ttlMs: 3600000,
         cacheScope: 'public',
       },
@@ -74,8 +74,8 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
     const subStatus = ctx.subscription?.status ?? 'none';
     const needsRegistration = !ctx.isPlatformAdmin && subStatus !== 'active';
     const baseInstructions = admin
-      ? "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_menu and menu_date). Admin tools: list_school_restaurants, create_restaurant, list_menu_items, create_menu_item, update_menu_item, delete_menu_item, set_daily_menu. Do not invent tool names - use only the tools returned by tools/list."
-      : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_user_info first to establish context. For lunch menu questions use get_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use order_lunch (needs menu_item_id from get_menu and menu_date). Do not invent tool names - use only the tools returned by tools/list.";
+      ? "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Admin tools: list_school_restaurants, create_school_restaurant, list_restaurant_menu_items, create_restaurant_menu_item, update_restaurant_menu_item, archive_restaurant_menu_item, schedule_lunch_menu_item, create_school_event, update_school_event, cancel_school_event. Do not invent tool names - use only the tools returned by tools/list."
+      : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Do not invent tool names - use only the tools returned by tools/list.";
     const registrationNotice = needsRegistration
       ? subStatus === 'expired'
         ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to restore add, edit, and update tools.'
@@ -159,11 +159,14 @@ export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> 
   }
 
   if (method === 'tools/call') {
-    const toolName = params?.name as string;
+    // Legacy names resolve to canonical tools (TOOL_ALIASES) — they stay
+    // callable but are never advertised in tools/list. Authorization,
+    // entitlement, and dispatch all key on the resolved name.
+    const toolName = resolveToolName(params?.name as string);
     const toolArgs = (params?.arguments as Record<string, unknown>) || {};
 
     if (!TOOL_POLICIES[toolName]) {
-      return Response.json(mcpError(id, -32601, `Unknown tool: ${toolName}`));
+      return Response.json(mcpError(id, -32601, `Unknown tool: ${params?.name as string}`));
     }
 
     const authResult = checkToolAuthorization(toolName, c.var);
