@@ -75,7 +75,8 @@ export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
 
-const mockBackend = {
+// Exported so tests can wrap it to observe the requests tools send.
+export const mockBackend = {
   async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
     const req = typeof request === 'string' ? new Request(request, init) : request;
     const url = new URL(req.url);
