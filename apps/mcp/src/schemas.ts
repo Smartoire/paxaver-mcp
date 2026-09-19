@@ -53,7 +53,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_user_info',
     title: 'Get User Info',
     description:
-      "Returns the authenticated user's context: first name, active school, the students they are a guardian for, and their roles. Call this when you need a student_id, school_slug, or to check whether the user holds an admin role - most other tools take those IDs as input.",
+      "Read-only lookup with no side effects and no rate-limit concerns - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, active school, the students they are a guardian for, and their role codes at that school. This is the context-discovery call - most other tools need a student_id or school_slug from here, and admin-role checks come from roles. Returns live account state, so call again if the user may have switched schools or had roles changed.",
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
@@ -93,7 +93,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_wallet_balance',
     title: 'Get Wallet Balance',
     description:
-      'Returns the spendable wallet balance for the authenticated user at their active school, in cents and formatted. Call before order_lunch, finalize_order, or register_event to confirm the user can cover the charge; not needed for read-only lookups.',
+      'Read-only lookup - never moves funds or has side effects. Requires authentication: returns only the caller\'s spendable wallet balance at their active school (wallets are scoped per school, so a balance at one school does not apply elsewhere), in cents and formatted. Live value reflecting orders and refunds up to the current moment - recheck before assuming funds are still available. Call before order_lunch, finalize_order, or register_event to confirm the user can cover the charge; not needed for read-only lookups.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
@@ -179,7 +179,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_orders',
     title: 'Get Orders',
     description:
-      "Returns lunch orders already placed - items, menu date, status, and total - for the authenticated user's students. Filter by student_id, a single menu_date, or a month; with no filters returns recent orders. Admins (pac_cordinator, lunch_cordinator) see school-wide orders; parents only their own students. For what can be ordered (menu and prices), use get_menu.",
+      "Returns lunch orders already placed - items, menu date, status, and total - for the authenticated user's students, newest first (up to ~100 most recent). Filters combine with AND: student_id narrows to one student; menu_date and month narrow the date range, and if both are given menu_date wins. With no filters returns recent orders across all of the user's students. Admins (pac_cordinator, lunch_cordinator) see school-wide orders; parents only their own students. For what can be ordered (menu and prices), use get_menu.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -243,7 +243,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_menu',
     title: 'Get Menu',
     description:
-      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity - for one date or a full month (today if neither is given). The menu_item_id values returned are required by order_lunch and create_draft_order. For orders already placed, use get_orders.",
+      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity. Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by order_lunch and create_draft_order. For orders already placed, use get_orders.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -307,7 +307,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'create_draft_order',
     title: 'Create Draft Order',
     description:
-      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. FINANCIAL - confirm student, items, and date before calling.',
+      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. Each items entry pairs a menu_item_id from get_menu with a quantity; the draft total is the sum of item prices times quantities plus nothing else until finalize_order. To change or abandon the draft, use update_draft_order or discard_draft_order. FINANCIAL - confirm student, items, and date before calling.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -428,6 +428,64 @@ export const ALL_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'update_draft_order',
+    title: 'Update Draft Order',
+    description:
+      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_draft_order). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from price times quantity. Only draft orders can be updated; once finalized, use cancel_order. WRITE - confirm the new contents with the user.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
+        items: { type: 'array', description: 'Replacement line items (menu_item_id from get_menu + quantity); replaces all existing items when provided' },
+        menu_date: { type: 'string', description: 'New date the lunch is served, YYYY-MM-DD' },
+      },
+      required: ['order_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orderId: { type: 'string', description: 'Updated draft order ID' },
+        status: { type: 'string', description: 'Order status (draft)' },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Update Draft Order',
+    },
+  },
+  {
+    name: 'discard_draft_order',
+    title: 'Discard Draft Order',
+    description:
+      "Permanently discards an unpaid draft order - the caller must own it and it must still be in draft status (order_id from create_draft_order). Nothing was ever charged, so there is no refund; the draft is simply deleted. For a finalized order use cancel_order instead. DESTRUCTIVE - confirm with the user before discarding.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
+      },
+      required: ['order_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orderId: { type: 'string', description: 'Discarded draft order ID' },
+        status: { type: 'string', description: 'Order status (discarded)' },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Discard Draft Order',
+    },
+  },
+  {
     name: 'cancel_order',
     title: 'Cancel Order',
     description:
@@ -475,7 +533,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_upcoming_events',
     title: 'Get Upcoming Events',
     description:
-      "Returns upcoming events for the user's active school: date, times, location, and whether registration is closed. The event IDs returned feed register_event, update_event, and cancel_event. Optionally filter by date range.",
+      "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed register_event; shift IDs feed sign_up_to_volunteer. To review or undo your own registrations and signups, use get_my_event_registrations / cancel_event_registration and get_my_volunteer_signups / cancel_volunteer_signup. Optionally filter by date range.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -669,7 +727,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'register_event',
     title: 'Register for Event',
     description:
-      "Registers the authenticated user for a school event and issues tickets. For paid events the total is charged to the user's wallet - the call fails on insufficient balance. quantity defaults to 1. To volunteer at an event rather than attend, use sign_up_to_volunteer. FINANCIAL for paid events - confirm before registering.",
+      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, minimum 1 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance or when the event is sold out or registration is closed. To volunteer at an event rather than attend, use sign_up_to_volunteer. FINANCIAL for paid events - confirm before registering.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -709,10 +767,132 @@ export const ALL_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'get_my_event_registrations',
+    title: 'Get My Event Registrations',
+    description:
+      "Read-only, no side effects. Returns the authenticated user's own event tickets at their active school - ticket id, event name/date/location, quantity, total paid, and status (paid or checked_in). Cancelled tickets are excluded. The id values returned are required by cancel_event_registration. Pair with get_upcoming_events for events the user has not registered for.",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        tickets: {
+          type: 'array',
+          description: "Caller's event tickets at the active school",
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Get My Event Registrations',
+    },
+  },
+  {
+    name: 'cancel_event_registration',
+    title: 'Cancel Event Registration',
+    description:
+      "Cancels one of the authenticated user's own event tickets (ticket_id from get_my_event_registrations). Releases the reserved seats; for paid tickets the full amount is refunded to the user's wallet at that school. Only the ticket owner or a coordinator can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ticket_id: { type: 'string', description: 'Ticket ID from get_my_event_registrations - must belong to the caller and still be cancellable' },
+      },
+      required: ['ticket_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Cancelled ticket ID',
+        },
+        status: {
+          type: 'string',
+          description: 'Ticket status (cancelled)',
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Cancel Event Registration',
+    },
+  },
+  {
+    name: 'get_my_volunteer_signups',
+    title: 'Get My Volunteer Signups',
+    description:
+      "Read-only, no side effects. Returns the authenticated user's active volunteer signups at their school - signup id, shift title/date/times, and the parent event. Cancelled signups are excluded. The id values returned are required by cancel_volunteer_signup.",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        signups: {
+          type: 'array',
+          description: "Caller's active volunteer signups",
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Get My Volunteer Signups',
+    },
+  },
+  {
+    name: 'cancel_volunteer_signup',
+    title: 'Cancel Volunteer Signup',
+    description:
+      "Cancels one of the authenticated user's own volunteer signups (signup_id from get_my_volunteer_signups) and frees the shift slot for others. No payment is involved. Only the volunteer themselves or an admin can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        signup_id: { type: 'string', description: 'Signup ID from get_my_volunteer_signups - must belong to the caller and still be active' },
+      },
+      required: ['signup_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Cancelled signup ID',
+        },
+        status: {
+          type: 'string',
+          description: 'Signup status (cancelled)',
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Cancel Volunteer Signup',
+    },
+  },
+  {
     name: 'sign_up_to_volunteer',
     title: 'Sign Up to Volunteer',
     description:
-      "Signs the authenticated user up for a specific volunteer shift - no payment involved. To attend an event as a guest instead, use register_event. Requires shift_id (from the event's volunteer shifts). WRITE - confirm with the user before signing up.",
+      "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in get_upcoming_events. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_event. WRITE - confirm with the user before signing up.",
     inputSchema: {
       type: 'object',
       properties: {

@@ -93,15 +93,24 @@ export async function handleTool({
           end: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-31` : undefined),
         },
       });
-    case 'get_menu':
+    case 'get_menu': {
+      const slug = validatePathId(ctx.schoolSlug, 'schoolSlug');
+      // /menu/daily only reads `date` — a month query must hit the calendar
+      // endpoint (year + month params) or it silently returns one day.
+      if (args.month && !args.date) {
+        const [year, month] = String(args.month).split('-');
+        return callPaxaverApi(env, ctx, origin, {
+          method: 'GET',
+          path: `/api/lunch/schools/${slug}/menu/daily/calendar`,
+          query: { year, month },
+        });
+      }
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
-        path: `/api/lunch/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
-        query: {
-          date: args.date as string | undefined,
-          month: args.month as string | undefined,
-        },
+        path: `/api/lunch/schools/${slug}/menu/daily`,
+        query: { date: args.date as string | undefined },
       });
+    }
     case 'create_draft_order':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
@@ -114,6 +123,19 @@ export async function handleTool({
         method: 'POST',
         path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}/finalize`,
         body: { tip_cents: args.tip_cents },
+        idempotencyKey,
+      });
+    case 'update_draft_order':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'PATCH',
+        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
+        body: { items: args.items, menuDate: args.menu_date },
+        idempotencyKey,
+      });
+    case 'discard_draft_order':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'DELETE',
+        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
         idempotencyKey,
       });
     case 'cancel_order':
@@ -168,6 +190,28 @@ export async function handleTool({
         method: 'POST',
         path: '/api/volunteers/signups',
         body: args,
+        idempotencyKey,
+      });
+    case 'get_my_event_registrations':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'GET',
+        path: '/api/events/tickets/mine',
+      });
+    case 'cancel_event_registration':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'POST',
+        path: `/api/events/tickets/${validatePathId(args.ticket_id, 'ticket_id')}/cancel`,
+        idempotencyKey,
+      });
+    case 'get_my_volunteer_signups':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'GET',
+        path: '/api/volunteers/my-signups',
+      });
+    case 'cancel_volunteer_signup':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'POST',
+        path: `/api/volunteers/signups/${validatePathId(args.signup_id, 'signup_id')}/cancel`,
         idempotencyKey,
       });
 
