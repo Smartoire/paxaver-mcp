@@ -190,7 +190,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       url.pathname === '/health' ||
       (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     ) {
-      const healthBody = request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', version: SERVER_VERSION });
+      const healthBody = request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', version: SERVER_VERSION, commit: env.COMMIT_SHA ?? 'unknown' });
       response = new Response(healthBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });

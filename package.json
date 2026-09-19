@@ -1,6 +1,6 @@
 {
   "name": "@paxaver/mcp",
-  "version": "2.4.3",
+  "version": "2.4.5",
   "mcpName": "io.github.Smartoire/paxaver-mcp",
   "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school community operating system. Streamable HTTP, OAuth 2.1, capability-first authorization.",
   "license": "Apache-2.0",
@@ -69,8 +69,8 @@
     "build": "wrangler deploy --dry-run",
     "package:microsoft": "node scripts/generate-microsoft-package.mjs",
     "build:staging": "wrangler deploy --dry-run --env staging",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:prod": "wrangler deploy --env production",
+    "deploy:staging": "wrangler deploy --env staging --var COMMIT_SHA:$(git rev-parse HEAD)",
+    "deploy:prod": "wrangler deploy --env production --var COMMIT_SHA:$(git rev-parse HEAD)",
     "smoke:staging": "vitest run --config vitest.smoke.config.ts apps/mcp/tests/smoke/staging.smoke.ts",
     "smoke:prod": "vitest run --config vitest.smoke.config.ts apps/mcp/tests/smoke/prod.smoke.ts",
     "wrangler:check": "wrangler deploy --dry-run --env staging && wrangler deploy --dry-run --env production",

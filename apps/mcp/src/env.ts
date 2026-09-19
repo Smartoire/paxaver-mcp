@@ -25,6 +25,9 @@ export interface Env {
   API_BASE_URL_US: string;
   API_BASE_URL_MX: string;
 
+  /** Git SHA injected by the deploy command (--var); exposed on /health. */
+  COMMIT_SHA?: string;
+
   /** Set during ChatGPT app submission to prove domain ownership. */
   OPENAI_APPS_CHALLENGE?: string;
 }
