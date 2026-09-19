@@ -93,15 +93,24 @@ export async function handleTool({
           end: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-31` : undefined),
         },
       });
-    case 'get_menu':
+    case 'get_menu': {
+      const slug = validatePathId(ctx.schoolSlug, 'schoolSlug');
+      // /menu/daily only reads `date` — a month query must hit the calendar
+      // endpoint (year + month params) or it silently returns one day.
+      if (args.month && !args.date) {
+        const [year, month] = String(args.month).split('-');
+        return callPaxaverApi(env, ctx, origin, {
+          method: 'GET',
+          path: `/api/lunch/schools/${slug}/menu/daily/calendar`,
+          query: { year, month },
+        });
+      }
       return callPaxaverApi(env, ctx, origin, {
         method: 'GET',
-        path: `/api/lunch/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
-        query: {
-          date: args.date as string | undefined,
-          month: args.month as string | undefined,
-        },
+        path: `/api/lunch/schools/${slug}/menu/daily`,
+        query: { date: args.date as string | undefined },
       });
+    }
     case 'create_draft_order':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',

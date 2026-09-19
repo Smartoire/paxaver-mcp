@@ -179,7 +179,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_orders',
     title: 'Get Orders',
     description:
-      "Returns lunch orders already placed - items, menu date, status, and total - for the authenticated user's students. Filter by student_id, a single menu_date, or a month; with no filters returns recent orders. Admins (pac_cordinator, lunch_cordinator) see school-wide orders; parents only their own students. For what can be ordered (menu and prices), use get_menu.",
+      "Returns lunch orders already placed - items, menu date, status, and total - for the authenticated user's students, newest first (up to ~100 most recent). Filters combine with AND: student_id narrows to one student; menu_date and month narrow the date range, and if both are given menu_date wins. With no filters returns recent orders across all of the user's students. Admins (pac_cordinator, lunch_cordinator) see school-wide orders; parents only their own students. For what can be ordered (menu and prices), use get_menu.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -243,7 +243,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_menu',
     title: 'Get Menu',
     description:
-      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity - for one date or a full month (today if neither is given). The menu_item_id values returned are required by order_lunch and create_draft_order. For orders already placed, use get_orders.",
+      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity. Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by order_lunch and create_draft_order. For orders already placed, use get_orders.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -307,7 +307,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'create_draft_order',
     title: 'Create Draft Order',
     description:
-      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. FINANCIAL - confirm student, items, and date before calling.',
+      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. Each items entry pairs a menu_item_id from get_menu with a quantity; the draft total is the sum of item prices times quantities plus nothing else until finalize_order. FINANCIAL - confirm student, items, and date before calling.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -669,7 +669,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'register_event',
     title: 'Register for Event',
     description:
-      "Registers the authenticated user for a school event and issues tickets. For paid events the total is charged to the user's wallet - the call fails on insufficient balance. quantity defaults to 1. To volunteer at an event rather than attend, use sign_up_to_volunteer. FINANCIAL for paid events - confirm before registering.",
+      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, minimum 1 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance or when the event is sold out or registration is closed. To volunteer at an event rather than attend, use sign_up_to_volunteer. FINANCIAL for paid events - confirm before registering.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -834,7 +834,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'sign_up_to_volunteer',
     title: 'Sign Up to Volunteer',
     description:
-      "Signs the authenticated user up for a specific volunteer shift - no payment involved. To attend an event as a guest instead, use register_event. Requires shift_id (from the event's volunteer shifts). WRITE - confirm with the user before signing up.",
+      "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in get_upcoming_events. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_event. WRITE - confirm with the user before signing up.",
     inputSchema: {
       type: 'object',
       properties: {
