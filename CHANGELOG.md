@@ -5,6 +5,51 @@ All notable changes to the Paxaver MCP server are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] — 2026-09-27
+
+Canonical tool catalog: 26 tools renamed to unambiguous,
+domain-scoped names. Legacy names remain callable as undocumented
+aliases (`TOOL_ALIASES` in `src/lib/policies.ts`) but are no longer
+advertised in `tools/list`.
+
+### Changed
+
+- Renamed tools (legacy → canonical): `get_user_info` →
+  `get_my_context`, `get_wallet_balance` → `get_my_wallet_balance`,
+  `get_menu` → `get_lunch_menu`, `get_orders` → `list_my_lunch_orders`,
+  `create_draft_order` → `create_lunch_order_draft`, `update_draft_order`
+  → `update_lunch_order_draft`, `discard_draft_order` →
+  `discard_lunch_order_draft`, `finalize_order` →
+  `pay_lunch_order_draft`, `cancel_order` → `cancel_my_lunch_order`,
+  `get_upcoming_events` → `list_school_events`, `create_event` →
+  `create_school_event`, `update_event` → `update_school_event`,
+  `cancel_event` → `cancel_school_event`, `register_event` →
+  `register_for_event`, `get_my_event_registrations` →
+  `list_my_event_registrations`, `cancel_event_registration` →
+  `cancel_my_event_registration`, `sign_up_to_volunteer` →
+  `sign_up_for_volunteer_shift`, `get_my_volunteer_signups` →
+  `list_my_volunteer_signups`, `cancel_volunteer_signup` →
+  `cancel_my_volunteer_signup`, `create_restaurant` →
+  `create_school_restaurant`, `list_menu_items` →
+  `list_restaurant_menu_items`, `create_menu_item` →
+  `create_restaurant_menu_item`, `update_menu_item` →
+  `update_restaurant_menu_item`, `delete_menu_item` →
+  `archive_restaurant_menu_item`, `set_daily_menu` →
+  `schedule_lunch_menu_item`.
+- `order_lunch` removed from `tools/list`; ordering is
+  draft → review → `pay_lunch_order_draft`. The legacy name stays
+  callable for compatibility.
+- Backend payload contracts: tool args map explicitly to the camelCase
+  fields the Paxaver backend expects (draft items, tips, shift IDs,
+  school slugs, tax percent); `update_school_event` deliberately keeps
+  snake_case, matching the backend's `allowedFields`.
+- Missing/malformed tool arguments now return JSON-RPC `-32602`
+  (invalid params) instead of `-32603`.
+- Menu-item `ingredients` is an array; the unused `is_available` input
+  was dropped (day-level orderability is `schedule_lunch_menu_item`).
+- Prompt `order_lunch_helper` renamed to `lunch_order_helper` and now
+  walks the draft → review → payment flow.
+
 ## [2.4.1] — 2026-09-11
 
 ### Changed

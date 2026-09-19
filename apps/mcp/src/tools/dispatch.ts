@@ -21,6 +21,7 @@ import { getToolPolicy } from '../lib/policies.js';
 import { originFrom } from '../transport/streamable-http.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId } from './shared.js';
+import { InvalidParamsError } from './shared.js';
 import { handleTool } from './tools.js';
 
 function toolResult(id: RpcId, data: unknown): Response {
@@ -119,6 +120,9 @@ export async function dispatchTool(
     const data = (result.data as { data?: unknown })?.data ?? result.data;
     return toolResult(id, data);
   } catch (err) {
+    if (err instanceof InvalidParamsError) {
+      return toolError(id, -32602, err.message);
+    }
     // Never leak internal error details to the AI client.
     console.error(`[dispatchTool] ${name} error:`, err instanceof Error ? err.message : String(err));
     return toolError(id, -32603, 'The request could not be completed. Please try again later.');
