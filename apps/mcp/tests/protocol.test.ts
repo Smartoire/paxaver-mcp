@@ -45,39 +45,34 @@ describe('MCP protocol', () => {
     expect(json.result).toEqual({});
   });
 
-  it('tools/list returns the consolidated catalog', async () => {
+  it('tools/list returns the canonical catalog for a PAC-capable user', async () => {
     const token = TEST_TOKEN;
     const res = await mcpPost({ jsonrpc: '2.0', id: 3, method: 'tools/list' }, token);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
     const names = json.result.tools.map((t) => t.name);
-    expect(names.length).toBe(17);
-    expect(names).toContain('get_user_info');
-    for (const merged of [
-      'order',
-      'draft_order',
-      'manage_event',
-      'event_registration',
-      'volunteer_signup',
-      'manage_menu_item',
-    ]) {
-      expect(names).toContain(merged);
-    }
-    for (const retired of ['order_lunch', 'cancel_order', 'create_draft_order', 'register_event', 'delete_menu_item']) {
-      expect(names).not.toContain(retired);
+    // TEST_TOKEN's context carries pac_cordinator -> full catalog.
+    expect(names.length).toBe(26);
+    expect(names).toContain('get_my_context');
+    expect(names).toContain('create_lunch_order_draft');
+    // Retired/legacy names are never advertised.
+    for (const legacy of ['order_lunch', 'get_menu', 'register_event', 'create_menu_item', 'delete_menu_item']) {
+      expect(names).not.toContain(legacy);
     }
   });
 
-  it('unauthenticated tools/list probe returns full catalog', async () => {
+  it('unauthenticated tools/list probe returns the static canonical catalog', async () => {
     const res = await mcpPost({ jsonrpc: '2.0', id: 7, method: 'tools/list' }, undefined, 'tools/list');
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
-    expect(json.result.tools.length).toBeGreaterThan(10);
+    expect(json.result.tools.length).toBe(26);
+    // Anonymous catalog carries schemas only - no account data.
+    expect(JSON.stringify(json.result)).not.toContain('test-school');
   });
 
   it('spoofed Mcp-Method header cannot bypass auth on tools/call', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 8, method: 'tools/call', params: { name: 'get_wallet_balance', arguments: {} } },
+      { jsonrpc: '2.0', id: 8, method: 'tools/call', params: { name: 'get_my_wallet_balance', arguments: {} } },
       undefined,
       'tools/list',
     );
@@ -104,7 +99,7 @@ describe('MCP protocol', () => {
 
   it('unsubscribed read tool executes (reads are free)', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'get_wallet_balance', arguments: {} } },
+      { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'get_my_wallet_balance', arguments: {} } },
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
@@ -114,7 +109,7 @@ describe('MCP protocol', () => {
 
   it('unsubscribed write tool is blocked', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'order', arguments: {} } },
+      { jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'create_lunch_order_draft', arguments: {} } },
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -124,7 +119,7 @@ describe('MCP protocol', () => {
 
   it('unsubscribed event registration is blocked', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'event_registration', arguments: {} } },
+      { jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'register_for_event', arguments: {} } },
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -134,7 +129,7 @@ describe('MCP protocol', () => {
 
   it('expired subscription write is blocked with renewal message', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'order', arguments: {} } },
+      { jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'create_lunch_order_draft', arguments: {} } },
       EXPIRED_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -144,7 +139,7 @@ describe('MCP protocol', () => {
 
   it('expired subscription read still executes', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'get_menu', arguments: {} } },
+      { jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'get_lunch_menu', arguments: {} } },
       EXPIRED_TOKEN,
     );
     const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
@@ -153,31 +148,16 @@ describe('MCP protocol', () => {
 
   it('active parent subscription write executes', async () => {
     const res = await mcpPost(
-      {
-        jsonrpc: '2.0',
-        id: 14,
-        method: 'tools/call',
-        params: { name: 'order', arguments: { action: 'place', menu_item_id: 'item-1', menu_date: '2099-01-15' } },
-      },
+      { jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'create_lunch_order_draft', arguments: {} } },
       ACTIVE_TOKEN,
     );
     const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
     expect(json.error?.message ?? '').not.toContain('subscription');
   });
 
-  it('retired tool name returns an error, not silent dispatch', async () => {
-    const res = await mcpPost(
-      { jsonrpc: '2.0', id: 17, method: 'tools/call', params: { name: 'order_lunch', arguments: {} } },
-      ACTIVE_TOKEN,
-    );
-    const json = (await res.json()) as unknown as { error?: { code: number }; result?: unknown };
-    expect(json.error, 'retired name must not silently execute').toBeDefined();
-    expect(json.result).toBeUndefined();
-  });
-
   it('parent-level subscription is blocked from admin write tools', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'set_daily_menu', arguments: {} } },
+      { jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'schedule_lunch_menu_item', arguments: {} } },
       ACTIVE_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
@@ -187,11 +167,46 @@ describe('MCP protocol', () => {
 
   it('full-level subscription can use admin write tools', async () => {
     const res = await mcpPost(
-      { jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'set_daily_menu', arguments: {} } },
+      { jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'schedule_lunch_menu_item', arguments: {} } },
       FULL_TOKEN,
     );
     const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
     expect(json.error?.message ?? '').not.toContain('subscription');
+  });
+
+  it('legacy alias resolves to the canonical tool', async () => {
+    // 'get_menu' is a legacy alias for 'get_lunch_menu' - callable, unlisted.
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 18, method: 'tools/call', params: { name: 'get_menu', arguments: {} } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { code: number; message: string }; result?: unknown };
+    expect(json.error?.code).not.toBe(-32601);
+    expect(json.result).toBeTruthy();
+  });
+
+  it('legacy order_lunch stays callable but unlisted', async () => {
+    const res = await mcpPost(
+      {
+        jsonrpc: '2.0',
+        id: 19,
+        method: 'tools/call',
+        params: { name: 'order_lunch', arguments: { menu_item_id: 'mi-1', menu_date: '2099-01-15' } },
+      },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error?: { code: number; message: string }; result?: unknown };
+    expect(json.error?.code).not.toBe(-32601);
+    expect(json.result).toBeTruthy();
+  });
+
+  it('truly unknown tool names return -32601', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 20, method: 'tools/call', params: { name: 'definitely_not_a_tool', arguments: {} } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number } };
+    expect(json.error.code).toBe(-32601);
   });
 
   it('parse error on invalid JSON', async () => {

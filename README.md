@@ -137,19 +137,26 @@ The worker requires no secrets. See
 
 ## Tools
 
-The server exposes 17 tools grouped into six categories. Lifecycle operations
-are consolidated behind an `action` discriminator (e.g. `draft_order` covers
-create, update, discard, and finalize). Visibility in `tools/list` is filtered
-by the caller's roles; every call is re-authorized before dispatch, and the
-backend re-checks data-level access (defense-in-depth).
+The server exposes 26 tools grouped into five categories. Visibility in
+`tools/list` is filtered by the caller's roles; every call is re-authorized
+before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
-| Category           | Tools                                                                                                                                     |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| User / account     | `get_user_info`                                                                                                                           |
-| Wallet             | `get_wallet_balance`                                                                                                                      |
-| Orders & menu      | `order`, `draft_order`, `get_orders`, `get_menu`                                                                                          |
-| Events             | `get_upcoming_events`, `manage_event`, `event_registration`, `get_my_event_registrations`, `volunteer_signup`, `get_my_volunteer_signups` |
-| Admin / restaurant | `list_school_restaurants`, `create_restaurant`, `list_menu_items`, `manage_menu_item`, `set_daily_menu`                                   |
+| Category                | Tools                                                                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User / account          | `get_my_context`, `get_my_wallet_balance`                                                                                                                                                                     |
+| Lunch ordering          | `get_lunch_menu`, `list_my_lunch_orders`, `create_lunch_order_draft`, `update_lunch_order_draft`, `discard_lunch_order_draft`, `pay_lunch_order_draft`, `cancel_my_lunch_order`                               |
+| Events & volunteering   | `list_school_events`, `register_for_event`, `list_my_event_registrations`, `cancel_my_event_registration`, `list_my_volunteer_signups`, `sign_up_for_volunteer_shift`, `cancel_my_volunteer_signup`           |
+| Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`                                                                                                                                           |
+| Restaurant / menu admin | `list_school_restaurants`, `create_school_restaurant`, `list_restaurant_menu_items`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `archive_restaurant_menu_item`, `schedule_lunch_menu_item` |
+
+Ordering is draft → review → payment: `create_lunch_order_draft`, adjust
+with `update_lunch_order_draft`, then `pay_lunch_order_draft`.
+
+**Compatibility:** pre-2.5 tool names (`get_menu`, `register_event`,
+`create_menu_item`, …) still work — they resolve to the canonical tools —
+but are no longer advertised. `order_lunch` also remains callable for
+existing integrations. See [`docs/tools.md`](./docs/tools.md) for the full
+legacy-name mapping.
 
 Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
@@ -158,7 +165,7 @@ reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 ### Privacy
 
 No personal contact information (email, phone, address) is collected or
-returned through MCP tools. The `get_user_info` tool returns only the user's
+returned through MCP tools. The `get_my_context` tool returns only the user's
 name, school, students, and roles. Student data is limited to IDs, names, and
 school slugs. Allergies, notes, birthday, and other PII are not exposed in
 read responses. The MCP server does not log user data.

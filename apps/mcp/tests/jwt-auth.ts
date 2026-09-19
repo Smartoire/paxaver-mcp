@@ -75,22 +75,10 @@ export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
 
-// Records every backend call as `${METHOD} ${path}` plus the parsed body,
-// so contract tests can assert the exact route and payload each tool maps to.
-export const backendCalls: { method: string; path: string; body: unknown }[] = [];
-
-const mockBackend = {
+export const mockBackend = {
   async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
     const req = typeof request === 'string' ? new Request(request, init) : request;
     const url = new URL(req.url);
-    const bodyText = await req.text();
-    let body: unknown;
-    try {
-      body = bodyText ? JSON.parse(bodyText) : undefined;
-    } catch {
-      body = bodyText;
-    }
-    backendCalls.push({ method: req.method, path: url.pathname + url.search, body });
     if (url.pathname === '/api/users/me/context') {
       const authHeader = req.headers.get('Authorization') || '';
       const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';

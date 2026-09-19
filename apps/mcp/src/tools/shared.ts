@@ -30,8 +30,8 @@ export interface ToolHandlerArgs {
 
 /**
  * Thrown when a tool call is missing required parameters or carries an
- * unknown action discriminator. Maps to JSON-RPC -32602 (invalid params)
- * in the dispatcher — distinct from backend/internal failures.
+ * invalid identifier. Maps to JSON-RPC -32602 (invalid params) in the
+ * dispatcher — distinct from backend/internal failures.
  */
 export class InvalidParamsError extends Error {}
 
