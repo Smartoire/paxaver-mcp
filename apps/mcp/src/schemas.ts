@@ -329,7 +329,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
           },
         },
       },
-      required: ['student_id', 'school_slug', 'menu_date', 'items'],
+      required: ['menu_date', 'items'],
       additionalProperties: false,
     },
     outputSchema: {
@@ -436,7 +436,21 @@ export const ALL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
-        items: { type: 'array', description: 'Replacement line items (menu_item_id from get_menu + quantity); replaces all existing items when provided' },
+        items: {
+          type: 'array',
+          description:
+            'Replacement line items (same shape as create_draft_order); replaces all existing items when provided',
+          items: {
+            type: 'object',
+            properties: {
+              menu_item_id: { type: 'string', description: 'Menu item ID from get_menu' },
+              menu_item_name: { type: 'string', description: 'Item display name from get_menu' },
+              price_cents: { type: 'integer', description: 'Unit price in cents from get_menu' },
+              quantity: { type: 'integer', description: 'Number of servings', minimum: 1 },
+            },
+            required: ['menu_item_id', 'menu_item_name', 'price_cents', 'quantity'],
+          },
+        },
         menu_date: { type: 'string', description: 'New date the lunch is served, YYYY-MM-DD' },
       },
       required: ['order_id'],
@@ -1100,7 +1114,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         description: { type: 'string', description: 'Optional item description' },
         cost_cents: { type: 'integer', description: 'Kitchen cost in cents (internal margin tracking)' },
         price_cents: { type: 'integer', description: 'Sale price in cents (e.g. 550 = $5.50)' },
-        ingredients: { type: 'string', description: 'Ingredient list text' },
+        ingredients: { type: 'array', items: { type: 'string' }, description: 'Ingredient list' },
         calories: { type: 'integer', description: 'Calorie count' },
       },
       required: ['restaurant_id', 'name'],
@@ -1139,7 +1153,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'update_menu_item',
     title: 'Update Menu Item (Admin)',
     description:
-      'ADMIN: Partially updates an existing menu item - only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents - FINANCIAL, confirm the new price), nutrition updates, or toggling availability (is_available for out-of-stock, is_active to retire an item). Use delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
+      'ADMIN: Partially updates an existing menu item - only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents - FINANCIAL, confirm the new price), nutrition updates, or is_active to retire an item. Per-day orderability is set on the daily menu (set_daily_menu available_qty), not on the item. Use delete_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1148,17 +1162,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
         name: { type: 'string', description: 'New display name for the item' },
         description: { type: 'string', description: 'New item description shown to parents' },
         cost_cents: { type: 'integer', description: 'Kitchen cost in cents (internal margin tracking)' },
-        ingredients: { type: 'string', description: 'Ingredient list text' },
+        ingredients: { type: 'array', items: { type: 'string' }, description: 'Ingredient list' },
         calories: { type: 'integer', description: 'Calorie count' },
         is_active: {
           type: 'boolean',
           description: 'Whether the item stays on the restaurant menu - set false to retire it',
         },
         price_cents: { type: 'integer', description: 'Sale price in cents (e.g. 550 = $5.50)' },
-        is_available: {
-          type: 'boolean',
-          description: 'Whether the item can be ordered - set false while out of stock',
-        },
       },
       required: ['restaurant_id', 'menu_item_id'],
       additionalProperties: false,
@@ -1200,7 +1210,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'delete_menu_item',
     title: 'Delete Menu Item (Admin)',
     description:
-      'ADMIN: Soft-deletes a menu item so it can no longer be ordered. To only hide it temporarily, prefer update_menu_item with is_available=false. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
+      'ADMIN: Soft-deletes a menu item so it can no longer be ordered. To retire it without deleting, prefer update_menu_item with is_active=false; for per-day orderability use set_daily_menu. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_menu_items.',
     inputSchema: {
       type: 'object',
       properties: {

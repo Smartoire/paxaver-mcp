@@ -75,10 +75,16 @@ export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
 
-const mockBackend = {
+// Records `${method} ${path}` for every mocked backend call so tests can
+// assert which backend route a tool maps to.
+export const backendCalls: string[] = [];
+
+// Exported so tests can wrap it to observe the requests tools send.
+export const mockBackend = {
   async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
     const req = typeof request === 'string' ? new Request(request, init) : request;
     const url = new URL(req.url);
+    backendCalls.push(`${req.method} ${url.pathname}`);
     if (url.pathname === '/api/users/me/context') {
       const authHeader = req.headers.get('Authorization') || '';
       const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
