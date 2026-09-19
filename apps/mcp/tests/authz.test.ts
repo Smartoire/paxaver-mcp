@@ -21,6 +21,8 @@ describe('Authorization policy', () => {
       'get_my_event_registrations',
       'cancel_event_registration',
       'sign_up_to_volunteer',
+      'update_draft_order',
+      'discard_draft_order',
       'get_my_volunteer_signups',
       'cancel_volunteer_signup',
       'list_school_restaurants',

@@ -125,6 +125,19 @@ export async function handleTool({
         body: { tip_cents: args.tip_cents },
         idempotencyKey,
       });
+    case 'update_draft_order':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'PATCH',
+        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
+        body: { items: args.items, menuDate: args.menu_date },
+        idempotencyKey,
+      });
+    case 'discard_draft_order':
+      return callPaxaverApi(env, ctx, origin, {
+        method: 'DELETE',
+        path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}`,
+        idempotencyKey,
+      });
     case 'cancel_order':
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',

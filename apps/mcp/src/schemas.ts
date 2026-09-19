@@ -307,7 +307,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'create_draft_order',
     title: 'Create Draft Order',
     description:
-      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. Each items entry pairs a menu_item_id from get_menu with a quantity; the draft total is the sum of item prices times quantities plus nothing else until finalize_order. FINANCIAL - confirm student, items, and date before calling.',
+      'Creates an unpaid draft lunch order with one or more items - nothing is charged until finalize_order commits it. Use for multi-item orders or when the user should review the total first; for a single item paid immediately, order_lunch is simpler. Each items entry pairs a menu_item_id from get_menu with a quantity; the draft total is the sum of item prices times quantities plus nothing else until finalize_order. To change or abandon the draft, use update_draft_order or discard_draft_order. FINANCIAL - confirm student, items, and date before calling.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -428,6 +428,64 @@ export const ALL_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'update_draft_order',
+    title: 'Update Draft Order',
+    description:
+      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_draft_order). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from price times quantity. Only draft orders can be updated; once finalized, use cancel_order. WRITE - confirm the new contents with the user.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
+        items: { type: 'array', description: 'Replacement line items (menu_item_id from get_menu + quantity); replaces all existing items when provided' },
+        menu_date: { type: 'string', description: 'New date the lunch is served, YYYY-MM-DD' },
+      },
+      required: ['order_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orderId: { type: 'string', description: 'Updated draft order ID' },
+        status: { type: 'string', description: 'Order status (draft)' },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Update Draft Order',
+    },
+  },
+  {
+    name: 'discard_draft_order',
+    title: 'Discard Draft Order',
+    description:
+      "Permanently discards an unpaid draft order - the caller must own it and it must still be in draft status (order_id from create_draft_order). Nothing was ever charged, so there is no refund; the draft is simply deleted. For a finalized order use cancel_order instead. DESTRUCTIVE - confirm with the user before discarding.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        order_id: { type: 'string', description: 'Draft order ID from create_draft_order - must still be in draft status' },
+      },
+      required: ['order_id'],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        orderId: { type: 'string', description: 'Discarded draft order ID' },
+        status: { type: 'string', description: 'Order status (discarded)' },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      title: 'Discard Draft Order',
+    },
+  },
+  {
     name: 'cancel_order',
     title: 'Cancel Order',
     description:
@@ -475,7 +533,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_upcoming_events',
     title: 'Get Upcoming Events',
     description:
-      "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed register_event; shift IDs feed sign_up_to_volunteer. To review or undo your own registrations and signups, use get_my_event_registrations / cancel_event_registration and get_my_volunteer_signups / cancel_volunteer_signup. Admins with coordinator roles additionally get create_event, update_event, and cancel_event for managing the events themselves. Optionally filter by date range.",
+      "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed register_event; shift IDs feed sign_up_to_volunteer. To review or undo your own registrations and signups, use get_my_event_registrations / cancel_event_registration and get_my_volunteer_signups / cancel_volunteer_signup. Optionally filter by date range.",
     inputSchema: {
       type: 'object',
       properties: {
