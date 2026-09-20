@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: [self-hosted, linux, office, public-repo]
+    runs-on: ubuntu-latest
     container: node:26-bookworm
     timeout-minutes: 15
     steps:
