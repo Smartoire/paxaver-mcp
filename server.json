@@ -12,5 +12,6 @@
       "type": "streamable-http",
       "url": "https://mcp.paxaver.com/mcp"
     }
-  ]
+  ],
+  "websiteUrl": "https://paxaver.com"
 }
