@@ -94,6 +94,22 @@ npm run deploy:prod
 npm run wrangler:check
 ```
 
+## Release checklist
+
+A version bump is not done at deploy. External metadata must also be
+updated or the audit's version/directory checks flag the release:
+
+1. `gh release create vX.Y.Z` on GitHub (deploy pipeline tags but does not
+   create release objects).
+2. `mcp-publisher publish` to the Official MCP Registry — or rely on
+   `.github/workflows/publish-registry.yml`, which runs automatically on
+   `v*` tags via GitHub OIDC.
+3. Update the Wellknown agent record (`PATCH
+   https://wellknown.network/api/v1/agents/paxaver-mcp`, `declared.version`)
+   with the Smartoire owner's API key — no automated path exists yet.
+4. Verify `pnpm package:microsoft` output was committed before tagging so
+   `certification/microsoft/mcptools.json` matches the tool surface.
+
 ## Smoke tests
 
 Post-deploy smoke tests hit the live endpoint:
