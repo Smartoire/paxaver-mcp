@@ -5,7 +5,7 @@ All notable changes to the Paxaver MCP server are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.5.0] — 2026-09-27
+## [2.5.0] — 2026-09-19
 
 Canonical tool catalog: 26 tools renamed to unambiguous,
 domain-scoped names. Legacy names remain callable as undocumented
