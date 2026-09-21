@@ -138,9 +138,14 @@ drafts are uncharged. **DESTRUCTIVE**.
 
 ### `pay_lunch_order_draft`
 
-Commits a reviewed draft and charges the wallet exactly once (`order_id`
-required, optional `tip_cents`). **FINANCIAL + WRITE** — confirm the total
-with the user before calling.
+Commits a reviewed draft and charges the wallet (`order_id` required,
+optional `tip_cents`). **FINANCIAL + WRITE** — confirm the total with the
+user before calling.
+
+**Wallet-only:** card payments are never offered through MCP. If the wallet
+balance cannot cover the full total, the call fails with an error telling
+the user to open the Paxaver panel and top up the wallet balance, then
+retry.
 
 |                          |                  |
 | ------------------------ | ---------------- |

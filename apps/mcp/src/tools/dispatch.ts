@@ -40,6 +40,9 @@ function toolError(id: RpcId, code: number, message: string): Response {
   return Response.json(mcpError(id, code, message));
 }
 
+const WALLET_TOP_UP_MESSAGE =
+  'Insufficient wallet balance. Open the Paxaver panel, top up the wallet balance, then retry this tool.';
+
 function makeIdempotencyKey(toolName: string, args: Record<string, unknown>, correlationId: string): string {
   // Derive a stable key from tool + critical args + correlation id.
   // The correlation id is unique per MCP request, so retries of the SAME
@@ -112,12 +115,35 @@ export async function dispatchTool(
     }
 
     if (!result.ok) {
+      // pay_lunch_order_draft is wallet-only: an insufficient-balance
+      // rejection must direct the user to top up in the panel — the
+      // card-payment link is never surfaced through MCP.
+      if (
+        name === 'pay_lunch_order_draft' &&
+        result.status === 422 &&
+        /insufficient/i.test(JSON.stringify(result.data ?? ''))
+      ) {
+        return toolError(id, -32602, WALLET_TOP_UP_MESSAGE);
+      }
       const err = apiErrorToMcp(result.status);
       return toolError(id, err.code, err.message);
     }
 
     // Extract the backend's `data` envelope if present.
     const data = (result.data as { data?: unknown })?.data ?? result.data;
+
+    // Wallet-only is enforced backend-side, but a backend that does not
+    // yet honor the flag can still return a split-checkout shape. Never
+    // relay a card payment link through MCP regardless of deploy order.
+    if (
+      name === 'pay_lunch_order_draft' &&
+      typeof data === 'object' &&
+      data !== null &&
+      ('paymentUrl' in data || (data as Record<string, unknown>).status === 'awaiting_payment')
+    ) {
+      return toolError(id, -32602, WALLET_TOP_UP_MESSAGE);
+    }
+
     return toolResult(id, data);
   } catch (err) {
     if (err instanceof InvalidParamsError) {

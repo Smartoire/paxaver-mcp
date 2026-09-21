@@ -179,7 +179,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Orders' },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+      title: 'List My Lunch Orders',
+    },
   },
   {
     name: 'get_lunch_menu',
@@ -332,7 +337,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'pay_lunch_order_draft',
     title: 'Pay Lunch Order Draft',
     description:
-      "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
+      "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Wallet-only: if the balance cannot cover the full total, the call fails with an error directing the user to open the Paxaver panel and top up the wallet balance, then retry - no card payment is offered through this tool. Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -349,13 +354,13 @@ export const ALL_TOOLS: ToolDefinition[] = [
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
+        orderId: {
           type: 'string',
           description: 'Order ID',
         },
         status: {
           type: 'string',
-          description: 'Order status (finalized)',
+          description: "'finalized' when the wallet covered the full total",
         },
         itemTotalCents: {
           type: 'integer',
@@ -364,14 +369,6 @@ export const ALL_TOOLS: ToolDefinition[] = [
         tipCents: {
           type: 'integer',
           description: 'PAC donation added, in cents',
-        },
-        totalCents: {
-          type: 'integer',
-          description: 'Total charged to the wallet, in cents',
-        },
-        balanceCents: {
-          type: ['number', 'null'],
-          description: 'Wallet balance after the charge, in cents',
         },
       },
     },

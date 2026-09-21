@@ -131,7 +131,7 @@ describe('tool → backend contract', () => {
   it('pay_lunch_order_draft sends tipCents', async () => {
     const c = await callTool('pay_lunch_order_draft', { order_id: 'o1', tip_cents: 100 });
     expect(`${c?.method} ${c?.path}`).toBe('POST /api/lunch/orders/o1/finalize');
-    expect(c?.body).toEqual({ tipCents: 100 });
+    expect(c?.body).toEqual({ tipCents: 100, walletOnly: true });
   });
 
   it('create_school_event posts camelCase to /api/events', async () => {
@@ -180,5 +180,93 @@ describe('tool → backend contract', () => {
   it('order tools stay under /api/lunch/orders', async () => {
     const c = await callTool('list_my_lunch_orders', {});
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/lunch/orders');
+  });
+
+  it('pay_lunch_order_draft requests wallet-only finalize and never advertises paymentUrl (#988)', async () => {
+    const c = await callTool('pay_lunch_order_draft', { order_id: 'o1', tip_cents: 100 });
+    expect(c?.body).toEqual({ tipCents: 100, walletOnly: true });
+
+    const { ALL_TOOLS } = await import('../src/schemas.js');
+    const tool = ALL_TOOLS.find((t) => t.name === 'pay_lunch_order_draft');
+    const props = tool?.outputSchema?.properties as Record<string, unknown>;
+    expect(props.orderId).toBeDefined();
+    expect(props.paymentUrl).toBeUndefined();
+    expect(JSON.stringify(tool)).not.toContain('paymentUrl');
+  });
+
+  it('insufficient wallet balance returns top-up guidance, not a payment link (#988)', async () => {
+    const insufficientBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/lunch/orders/o1/finalize') {
+          return new Response(JSON.stringify({ error: '0XEC9798CDD8: Insufficient balance' }), {
+            status: 422,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return mockBackend.fetch(req);
+      },
+    };
+    const res = await app.request(
+      'https://mcp.paxaver.test/mcp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'pay_lunch_order_draft', arguments: { order_id: 'o1' } },
+        }),
+      },
+      { ...TEST_ENV, PAXAVER_API_CA: insufficientBackend, PAXAVER_API_US: insufficientBackend },
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error.message).toContain('top up');
+    expect(json.error.message).not.toContain('paymentUrl');
+  });
+
+  it('a 200 awaiting_payment split response never relays paymentUrl (#988)', async () => {
+    const splitBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/lunch/orders/o1/finalize') {
+          return new Response(
+            JSON.stringify({
+              data: {
+                orderId: 'o1',
+                status: 'awaiting_payment',
+                itemTotalCents: 1200,
+                tipCents: 0,
+                paymentUrl: 'https://checkout.stripe.com/c/pay/test-session',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        return mockBackend.fetch(req);
+      },
+    };
+    const res = await app.request(
+      'https://mcp.paxaver.test/mcp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'pay_lunch_order_draft', arguments: { order_id: 'o1' } },
+        }),
+      },
+      { ...TEST_ENV, PAXAVER_API_CA: splitBackend, PAXAVER_API_US: splitBackend },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect((json as { error?: { message: string } }).error?.message).toContain('top up');
+    expect(JSON.stringify(json)).not.toContain('checkout.stripe.com');
   });
 });

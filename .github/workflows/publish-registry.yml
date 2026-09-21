@@ -1,0 +1,34 @@
+name: Publish to MCP Registry
+
+# Publishes server.json to the Official MCP Registry
+# (registry.modelcontextprotocol.io) using GitHub OIDC auth — the OIDC
+# identity is the repo's org, which grants io.github.Smartoire/* without a
+# stored token or interactive login. Runs on every v* tag push; can also be
+# dispatched manually after a release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for github-oidc auth
+
+jobs:
+  publish:
+    runs-on: [self-hosted, linux, office, public-repo]
+    container: node:26-bookworm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher validate
+
+      - name: Authenticate and publish server.json
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
