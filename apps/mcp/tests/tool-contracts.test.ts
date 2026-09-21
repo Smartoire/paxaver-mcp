@@ -181,4 +181,56 @@ describe('tool → backend contract', () => {
     const c = await callTool('list_my_lunch_orders', {});
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/lunch/orders');
   });
+
+  it('pay_lunch_order_draft schema advertises the split-checkout shape (#972)', async () => {
+    const { ALL_TOOLS } = await import('../src/schemas.js');
+    const tool = ALL_TOOLS.find((t) => t.name === 'pay_lunch_order_draft');
+    const props = tool?.outputSchema?.properties as Record<string, { description?: string }>;
+    expect(props.orderId).toBeDefined();
+    expect(props.paymentUrl).toBeDefined();
+    expect(props.status.description).toContain('awaiting_payment');
+    expect(tool?.description).toContain('paymentUrl');
+  });
+
+  it('awaiting_payment backend response passes paymentUrl through unchanged (#972)', async () => {
+    const splitBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/lunch/orders/o1/finalize') {
+          return new Response(
+            JSON.stringify({
+              data: {
+                orderId: 'o1',
+                status: 'awaiting_payment',
+                itemTotalCents: 1100,
+                tipCents: 100,
+                paymentUrl: 'https://checkout.stripe.com/c/pay/cs_test_123',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        return mockBackend.fetch(req);
+      },
+    };
+    const res = await app.request(
+      'https://mcp.paxaver.test/mcp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'pay_lunch_order_draft', arguments: { order_id: 'o1', tip_cents: 100 } },
+        }),
+      },
+      { ...TEST_ENV, PAXAVER_API_CA: splitBackend, PAXAVER_API_US: splitBackend },
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { result: { structuredContent: Record<string, unknown> } };
+    expect(json.result.structuredContent.status).toBe('awaiting_payment');
+    expect(json.result.structuredContent.paymentUrl).toBe('https://checkout.stripe.com/c/pay/cs_test_123');
+  });
 });

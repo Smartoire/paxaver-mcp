@@ -156,11 +156,21 @@ export const ALL_TOOLS: ToolDefinition[] = [
               },
               status: {
                 type: 'string',
-                description: 'Order status',
+                description:
+                  "Order status - 'awaiting_payment' means the wallet covered part of the total and the card remainder is still unpaid (see paymentUrl)",
               },
               itemTotalCents: {
                 type: 'integer',
                 description: 'Item total in cents',
+              },
+              paymentUrl: {
+                type: ['string', 'null'],
+                description:
+                  'Stripe Checkout URL for the unpaid remainder - present only while status is awaiting_payment; the user must open it in a browser to finish paying',
+              },
+              walletPortionCents: {
+                type: ['integer', 'null'],
+                description: 'Amount already debited from the wallet toward this order, in cents',
               },
               items: {
                 type: 'array',
@@ -179,7 +189,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Orders' },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+      title: 'List My Lunch Orders',
+    },
   },
   {
     name: 'get_lunch_menu',
@@ -332,7 +347,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'pay_lunch_order_draft',
     title: 'Pay Lunch Order Draft',
     description:
-      "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
+      "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). If the wallet cannot cover the full total, the wallet is debited for the covered portion and the response returns status 'awaiting_payment' with a paymentUrl - relay that Stripe Checkout URL to the user verbatim; they must open it in a browser to pay the remainder by card (the Stripe webhook then finalizes the order; do not retry this tool). Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -349,13 +364,14 @@ export const ALL_TOOLS: ToolDefinition[] = [
     outputSchema: {
       type: 'object',
       properties: {
-        id: {
+        orderId: {
           type: 'string',
           description: 'Order ID',
         },
         status: {
           type: 'string',
-          description: 'Order status (finalized)',
+          description:
+            "'finalized' when the wallet covered the full total; 'awaiting_payment' when a card remainder is pending (see paymentUrl)",
         },
         itemTotalCents: {
           type: 'integer',
@@ -365,13 +381,10 @@ export const ALL_TOOLS: ToolDefinition[] = [
           type: 'integer',
           description: 'PAC donation added, in cents',
         },
-        totalCents: {
-          type: 'integer',
-          description: 'Total charged to the wallet, in cents',
-        },
-        balanceCents: {
-          type: ['number', 'null'],
-          description: 'Wallet balance after the charge, in cents',
+        paymentUrl: {
+          type: ['string', 'null'],
+          description:
+            'Stripe Checkout URL for the remainder - present only when status is awaiting_payment; the user must open it in a browser to complete the card portion',
         },
       },
     },
