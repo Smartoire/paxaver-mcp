@@ -142,11 +142,10 @@ Commits a reviewed draft and charges the wallet (`order_id` required,
 optional `tip_cents`). **FINANCIAL + WRITE** — confirm the total with the
 user before calling.
 
-**Split checkout:** if the wallet cannot cover the full total, the response
-returns `status: "awaiting_payment"` with a `paymentUrl` — a Stripe
-Checkout link for the remainder. Relay it to the user verbatim; they
-complete the card portion in a browser and the Stripe webhook finalizes
-the order. Do not retry the tool.
+**Wallet-only:** card payments are never offered through MCP. If the wallet
+balance cannot cover the full total, the call fails with an error telling
+the user to open the Paxaver panel and top up the wallet balance, then
+retry.
 
 |                          |                  |
 | ------------------------ | ---------------- |

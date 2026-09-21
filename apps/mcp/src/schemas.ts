@@ -156,21 +156,11 @@ export const ALL_TOOLS: ToolDefinition[] = [
               },
               status: {
                 type: 'string',
-                description:
-                  "Order status - 'awaiting_payment' means the wallet covered part of the total and the card remainder is still unpaid (see paymentUrl)",
+                description: 'Order status',
               },
               itemTotalCents: {
                 type: 'integer',
                 description: 'Item total in cents',
-              },
-              paymentUrl: {
-                type: ['string', 'null'],
-                description:
-                  'Stripe Checkout URL for the unpaid remainder - present only while status is awaiting_payment; the user must open it in a browser to finish paying',
-              },
-              walletPortionCents: {
-                type: ['integer', 'null'],
-                description: 'Amount already debited from the wallet toward this order, in cents',
               },
               items: {
                 type: 'array',
@@ -347,7 +337,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'pay_lunch_order_draft',
     title: 'Pay Lunch Order Draft',
     description:
-      "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). If the wallet cannot cover the full total, the wallet is debited for the covered portion and the response returns status 'awaiting_payment' with a paymentUrl - relay that Stripe Checkout URL to the user verbatim; they must open it in a browser to pay the remainder by card (the Stripe webhook then finalizes the order; do not retry this tool). Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
+      "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Wallet-only: if the balance cannot cover the full total, the call fails with an error directing the user to open the Paxaver panel and top up the wallet balance, then retry - no card payment is offered through this tool. Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -370,8 +360,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
         status: {
           type: 'string',
-          description:
-            "'finalized' when the wallet covered the full total; 'awaiting_payment' when a card remainder is pending (see paymentUrl)",
+          description: "'finalized' when the wallet covered the full total",
         },
         itemTotalCents: {
           type: 'integer',
@@ -380,11 +369,6 @@ export const ALL_TOOLS: ToolDefinition[] = [
         tipCents: {
           type: 'integer',
           description: 'PAC donation added, in cents',
-        },
-        paymentUrl: {
-          type: ['string', 'null'],
-          description:
-            'Stripe Checkout URL for the remainder - present only when status is awaiting_payment; the user must open it in a browser to complete the card portion',
         },
       },
     },

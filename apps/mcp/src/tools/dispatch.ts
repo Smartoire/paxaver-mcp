@@ -112,6 +112,20 @@ export async function dispatchTool(
     }
 
     if (!result.ok) {
+      // pay_lunch_order_draft is wallet-only: an insufficient-balance
+      // rejection must direct the user to top up in the panel — the
+      // card-payment link is never surfaced through MCP.
+      if (
+        name === 'pay_lunch_order_draft' &&
+        result.status === 422 &&
+        /insufficient/i.test(JSON.stringify(result.data ?? ''))
+      ) {
+        return toolError(
+          id,
+          -32602,
+          'Insufficient wallet balance. Open the Paxaver panel, top up the wallet balance, then retry this tool.',
+        );
+      }
       const err = apiErrorToMcp(result.status);
       return toolError(id, err.code, err.message);
     }

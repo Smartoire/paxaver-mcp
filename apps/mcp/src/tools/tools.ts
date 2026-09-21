@@ -145,11 +145,13 @@ export async function handleTool({
     }
     case 'pay_lunch_order_draft':
       // Backend reads tipCents — a snake_case key would silently drop the tip.
+      // walletOnly: MCP must never surface a card payment link; an
+      // insufficient balance rejects instead of splitting to Stripe.
       requireArgs(args, 'order_id');
       return callPaxaverApi(env, ctx, origin, {
         method: 'POST',
         path: `/api/lunch/orders/${validatePathId(args.order_id, 'order_id')}/finalize`,
-        body: { tipCents: args.tip_cents },
+        body: { tipCents: args.tip_cents, walletOnly: true },
         idempotencyKey,
       });
     case 'update_lunch_order_draft':
