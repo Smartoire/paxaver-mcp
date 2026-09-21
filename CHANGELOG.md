@@ -5,6 +5,15 @@ All notable changes to the Paxaver MCP server are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] — 2026-09-21
+
+### Fixed
+
+- `pay_lunch_order_draft` never relays payment links: wallet-only
+  finalize returns top-up guidance for both the 422 insufficient-balance
+  path and any split-shaped 200 response carrying `paymentUrl` or
+  `awaiting_payment` (#988).
+
 ## [2.5.0] — 2026-09-19
 
 Canonical tool catalog: 26 tools renamed to unambiguous,
