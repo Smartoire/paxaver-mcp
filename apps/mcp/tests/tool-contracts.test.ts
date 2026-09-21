@@ -227,4 +227,46 @@ describe('tool → backend contract', () => {
     expect(json.error.message).toContain('top up');
     expect(json.error.message).not.toContain('paymentUrl');
   });
+
+  it('a 200 awaiting_payment split response never relays paymentUrl (#988)', async () => {
+    const splitBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/lunch/orders/o1/finalize') {
+          return new Response(
+            JSON.stringify({
+              data: {
+                orderId: 'o1',
+                status: 'awaiting_payment',
+                itemTotalCents: 1200,
+                tipCents: 0,
+                paymentUrl: 'https://checkout.stripe.com/c/pay/test-session',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        return mockBackend.fetch(req);
+      },
+    };
+    const res = await app.request(
+      'https://mcp.paxaver.test/mcp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'pay_lunch_order_draft', arguments: { order_id: 'o1' } },
+        }),
+      },
+      { ...TEST_ENV, PAXAVER_API_CA: splitBackend, PAXAVER_API_US: splitBackend },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect((json as { error?: { message: string } }).error?.message).toContain('top up');
+    expect(JSON.stringify(json)).not.toContain('checkout.stripe.com');
+  });
 });
