@@ -48,6 +48,16 @@ export function authServers(env: Env): string[] {
   return ['https://paxaver.ca/auth', 'https://paxaver.com/auth', 'https://paxaver.mx/auth'];
 }
 
+// Warn once per isolate when the revocation check is inactive due to a
+// missing INTERNAL_SERVICE_SECRET — avoids per-request log spam.
+let warnedNoSecret = false;
+function warnNoSecret(): void {
+  if (!warnedNoSecret) {
+    warnedNoSecret = true;
+    console.warn('[auth] INTERNAL_SERVICE_SECRET unset — token revocation check inactive');
+  }
+}
+
 // ponytail: one JWKS per issuer, cached in a Map. Enough for 3 regional issuers.
 // Upgrade path: use a KV-backed JWKS cache for long-lived isolates.
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
@@ -111,11 +121,20 @@ export async function authenticateRequest(
         // JWKS only proves signature+expiry; MCP tokens live 30 days, so a
         // revoked token (deactivated client, revoked session) must be
         // rejected here. Fail closed: any verify failure rejects.
+        //
+        // The check only runs when INTERNAL_SERVICE_SECRET is provisioned —
+        // the backend's internalServiceGuard fails closed on non-dev
+        // environments, so an unprovisioned worker would reject every
+        // request. Skipping preserves the JWKS + context posture until ops
+        // provisions the secret; enforcement then activates automatically.
+        const verifyResultPromise = env.INTERNAL_SERVICE_SECRET
+          ? verifyAccessToken(env, country, token).catch((err) => {
+              console.error('[auth] internal token verify failed:', err instanceof Error ? err.message : String(err));
+              return { ok: false, status: 0, data: null };
+            })
+          : (warnNoSecret(), Promise.resolve({ ok: true, status: 0, data: null }));
         const [verifyResult, result] = await Promise.all([
-          verifyAccessToken(env, country, token).catch((err) => {
-            console.error('[auth] internal token verify failed:', err instanceof Error ? err.message : String(err));
-            return { ok: false, status: 0, data: null };
-          }),
+          verifyResultPromise,
           callPaxaverApi(
             env,
             {

@@ -91,8 +91,40 @@ describe('token revocation check', () => {
           params: { name: 'get_wallet_balance', arguments: {} },
         }),
       },
-      { ...TEST_ENV, PAXAVER_API_CA: downBackend, PAXAVER_API_US: downBackend },
+      {
+        ...TEST_ENV,
+        INTERNAL_SERVICE_SECRET: 'test-internal-secret',
+        PAXAVER_API_CA: downBackend,
+        PAXAVER_API_US: downBackend,
+      },
     );
     expect(res.status).toBe(401);
+  });
+
+  it('skips the verify call entirely when INTERNAL_SERVICE_SECRET is unset', async () => {
+    let verifyCalled = false;
+    const observingBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        if (new URL(req.url).pathname === '/internal/auth/verify') verifyCalled = true;
+        return mockBackend.fetch(req);
+      },
+    };
+    const res = await app.request(
+      'https://mcp.paxaver.test/mcp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TEST_TOKEN}` },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'get_wallet_balance', arguments: {} },
+        }),
+      },
+      { ...TEST_ENV, PAXAVER_API_CA: observingBackend, PAXAVER_API_US: observingBackend },
+    );
+    expect(res.status).toBe(200);
+    expect(verifyCalled).toBe(false);
   });
 });

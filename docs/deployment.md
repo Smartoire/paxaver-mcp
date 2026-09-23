@@ -78,13 +78,12 @@ required for production.
 ## Secrets
 
 - `INTERNAL_SERVICE_SECRET` — shared secret sent as `x-internal-secret` on the
-  internal token-revocation check (`GET /internal/auth/verify`). Required in
-  staging and production; without it the backend guard rejects the call and
-  all bearer auth fails closed. Set it per environment with
-  `wrangler secret put --env <env> INTERNAL_SERVICE_SECRET`. Local
-  development and tests may leave it unset — the backend guard skips
-  enforcement for `development`/`test` environments — or use a `.dev.vars`
-  file (gitignored).
+  internal token-revocation check (`GET /internal/auth/verify`). Should be set
+  in staging and production to activate revocation enforcement; until it is
+  provisioned the check is skipped (a warning is logged once per isolate) and
+  bearer validation falls back to JWKS + live context. Set it per environment
+  with `wrangler secret put --env <env> INTERNAL_SERVICE_SECRET`. For local
+  development use a `.dev.vars` file (gitignored).
 
 ## Deploy commands
 
