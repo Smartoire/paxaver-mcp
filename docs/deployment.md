@@ -77,9 +77,14 @@ required for production.
 
 ## Secrets
 
-The worker currently requires no secrets. If a future change adds one, set it
-per environment with `wrangler secret put --env <env> <NAME>` and use a
-`.dev.vars` file (gitignored) for local development.
+- `INTERNAL_SERVICE_SECRET` — shared secret sent as `x-internal-secret` on the
+  internal token-revocation check (`GET /internal/auth/verify`). Required in
+  staging and production; without it the backend guard rejects the call and
+  all bearer auth fails closed. Set it per environment with
+  `wrangler secret put --env <env> INTERNAL_SERVICE_SECRET`. Local
+  development and tests may leave it unset — the backend guard skips
+  enforcement for `development`/`test` environments — or use a `.dev.vars`
+  file (gitignored).
 
 ## Deploy commands
 
@@ -105,7 +110,7 @@ updated or the audit's version/directory checks flag the release:
    `.github/workflows/publish-registry.yml`, which runs automatically on
    `v*` tags via GitHub OIDC.
 3. Update the Wellknown agent record (`PATCH
-   https://wellknown.network/api/v1/agents/paxaver-mcp`, `declared.version`)
+https://wellknown.network/api/v1/agents/paxaver-mcp`, `declared.version`)
    with the Smartoire owner's API key — no automated path exists yet.
 4. Verify `pnpm package:microsoft` output was committed before tagging so
    `certification/microsoft/mcptools.json` matches the tool surface.

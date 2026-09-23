@@ -14,7 +14,7 @@
 
 import { jwtVerify, createRemoteJWKSet, decodeJwt } from 'jose';
 import type { Env, AuthContext, McpCountry } from '../env.js';
-import { callPaxaverApi } from '../api/client.js';
+import { callPaxaverApi, verifyAccessToken } from '../api/client.js';
 
 export interface AuthResult {
   ok: boolean;
@@ -106,21 +106,41 @@ export async function authenticateRequest(
       if (payload.sub) {
         const country = countryFromTenantId(payload.tenant_id as string | undefined);
 
-        const result = await callPaxaverApi(
-          env,
-          {
-            userId: payload.sub,
-            email: '',
-            schoolSlug: '',
-            permissions: [],
-            isPlatformAdmin: false,
-            studentIds: [],
-            country,
-            userToken: token,
-          },
-          origin,
-          { method: 'GET', path: '/api/users/me/context' },
-        );
+        // Revocation check + context load run in parallel — the context hop
+        // already exists per request, so the verify call adds ~no latency.
+        // JWKS only proves signature+expiry; MCP tokens live 30 days, so a
+        // revoked token (deactivated client, revoked session) must be
+        // rejected here. Fail closed: any verify failure rejects.
+        const [verifyResult, result] = await Promise.all([
+          verifyAccessToken(env, country, token).catch((err) => {
+            console.error('[auth] internal token verify failed:', err instanceof Error ? err.message : String(err));
+            return { ok: false, status: 0, data: null };
+          }),
+          callPaxaverApi(
+            env,
+            {
+              userId: payload.sub,
+              email: '',
+              schoolSlug: '',
+              permissions: [],
+              isPlatformAdmin: false,
+              studentIds: [],
+              country,
+              userToken: token,
+            },
+            origin,
+            { method: 'GET', path: '/api/users/me/context' },
+          ),
+        ]);
+
+        if (!verifyResult.ok) {
+          console.error(`[auth] token revocation check rejected (status ${verifyResult.status})`);
+          return {
+            ok: false,
+            status: 401,
+            error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+          };
+        }
 
         if (!result.ok || !result.data) {
           return {

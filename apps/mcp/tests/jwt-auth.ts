@@ -53,6 +53,9 @@ const BASE_CONTEXT = {
 // userId -> AuthContext returned by the mocked /api/users/me/context.
 const USER_CONTEXTS: Record<string, typeof BASE_CONTEXT & { userId: string; subscription?: unknown }> = {
   'user-1': { userId: 'user-1', ...BASE_CONTEXT },
+  // Valid context — only the internal /verify check rejects this user,
+  // simulating a revoked token with an otherwise-live account.
+  'user-revoked': { userId: 'user-revoked', ...BASE_CONTEXT },
   'user-active': {
     userId: 'user-active',
     ...BASE_CONTEXT,
@@ -71,6 +74,7 @@ const USER_CONTEXTS: Record<string, typeof BASE_CONTEXT & { userId: string; subs
 };
 
 export const TEST_TOKEN = await makeToken('user-1');
+export const REVOKED_TOKEN = await makeToken('user-revoked');
 export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
@@ -85,6 +89,23 @@ export const mockBackend = {
     const req = typeof request === 'string' ? new Request(request, init) : request;
     const url = new URL(req.url);
     backendCalls.push(`${req.method} ${url.pathname}`);
+    if (url.pathname === '/internal/auth/verify') {
+      // Internal revocation check: sub 'user-revoked' simulates a revoked
+      // token / deactivated client; everyone else verifies.
+      const authHeader = req.headers.get('Authorization') || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+      const sub = decodeJwt(token).sub ?? '';
+      if (sub === 'user-revoked') {
+        return new Response(JSON.stringify({ error: 'invalid_token' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ user_id: sub, tenant_id: 'user-ca' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     if (url.pathname === '/api/users/me/context') {
       const authHeader = req.headers.get('Authorization') || '';
       const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
