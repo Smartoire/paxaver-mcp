@@ -25,6 +25,14 @@ export interface Env {
   API_BASE_URL_US: string;
   API_BASE_URL_MX: string;
 
+  /**
+   * Shared secret for internal service-binding endpoints
+   * (GET /internal/auth/verify — token revocation check). Required in
+   * staging/production; unset is allowed in development/test where the
+   * backend guard skips enforcement.
+   */
+  INTERNAL_SERVICE_SECRET?: string;
+
   /** Git SHA injected by the deploy command (--var); exposed on /health. */
   COMMIT_SHA?: string;
 

@@ -99,3 +99,38 @@ export async function callPaxaverApi(
   }
   return { ok: response.ok, status: response.status, data };
 }
+
+/**
+ * Ask the backend's internal auth endpoint whether an access token is still
+ * valid — not revoked and issued by an active OAuth client. Unlike the user
+ * API, this route is guarded by x-internal-secret rather than user auth.
+ * Fails closed: callers must treat any non-2xx (or a thrown error) as
+ * "token rejected".
+ */
+export async function verifyAccessToken(env: Env, country: McpCountry, token: string): Promise<ApiCallResult> {
+  const { fetcher, baseUrl } = resolveBackend(env, country);
+  const url = new URL('/internal/auth/verify', baseUrl);
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+  if (env.INTERNAL_SERVICE_SECRET) {
+    headers['x-internal-secret'] = env.INTERNAL_SERVICE_SECRET;
+  }
+
+  const response = fetcher
+    ? await fetcher.fetch(url.toString(), { method: 'GET', headers })
+    : await fetch(url.toString(), { method: 'GET', headers });
+
+  const text = await response.text();
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+  return { ok: response.ok, status: response.status, data };
+}
