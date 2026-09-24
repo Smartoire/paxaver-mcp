@@ -5,6 +5,18 @@ All notable changes to the Paxaver MCP server are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.2] — 2026-09-23
+
+### Security
+
+- Bearer tokens are now checked for revocation on every request: after
+  JWKS validation the server calls the backend's internal
+  `GET /internal/auth/verify` (service binding, `x-internal-secret`) in
+  parallel with the context load. Tokens revoked server-side — e.g. a
+  deactivated OAuth client — are rejected with 401 instead of remaining
+  valid for the 30-day token lifetime. The check fails closed and runs
+  only when `INTERNAL_SERVICE_SECRET` is provisioned (#1156).
+
 ## [2.5.1] — 2026-09-21
 
 ### Fixed
