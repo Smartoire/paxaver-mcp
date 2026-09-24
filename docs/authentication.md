@@ -87,6 +87,22 @@ If the user has been deactivated, removed from the school, or had permissions
 revoked since the token was issued, the context call fails and the request is
 rejected with `401`. There is no cached session trust — revocation is immediate.
 
+### Token revocation check
+
+In parallel with the context call, the server calls the backend's internal
+`GET /internal/auth/verify` endpoint (service binding, guarded by the
+`x-internal-secret` shared secret) with the bearer token. The endpoint rejects
+tokens whose `access_tokens` row is revoked or whose OAuth client is
+deactivated — closing the gap where a 30-day MCP token would otherwise remain
+usable after revocation. The check fails closed: any non-2xx response or
+transport error rejects the request with `401`.
+
+The check runs only when `INTERNAL_SERVICE_SECRET` is provisioned on the
+worker — the backend guard fails closed on non-local environments, so an
+unprovisioned worker would otherwise reject every request. When the secret is
+unset the check is skipped (logged once per isolate) and validation falls back
+to JWKS + live context, today's baseline posture.
+
 The user's JWT is forwarded to the backend as `Authorization: Bearer <token>`,
 so the backend performs its own authorization checks (defense-in-depth).
 

@@ -14,7 +14,7 @@
 
 import { jwtVerify, createRemoteJWKSet, decodeJwt } from 'jose';
 import type { Env, AuthContext, McpCountry } from '../env.js';
-import { callPaxaverApi } from '../api/client.js';
+import { callPaxaverApi, verifyAccessToken } from '../api/client.js';
 
 export interface AuthResult {
   ok: boolean;
@@ -46,6 +46,16 @@ export function authServers(env: Env): string[] {
   if (env.ENVIRONMENT === 'development') return ['http://localhost:8788'];
   if (env.ENVIRONMENT === 'staging') return ['https://paxaver.dev/auth'];
   return ['https://paxaver.ca/auth', 'https://paxaver.com/auth', 'https://paxaver.mx/auth'];
+}
+
+// Warn once per isolate when the revocation check is inactive due to a
+// missing INTERNAL_SERVICE_SECRET — avoids per-request log spam.
+let warnedNoSecret = false;
+function warnNoSecret(): void {
+  if (!warnedNoSecret) {
+    warnedNoSecret = true;
+    console.warn('[auth] INTERNAL_SERVICE_SECRET unset — token revocation check inactive');
+  }
 }
 
 // ponytail: one JWKS per issuer, cached in a Map. Enough for 3 regional issuers.
@@ -106,21 +116,50 @@ export async function authenticateRequest(
       if (payload.sub) {
         const country = countryFromTenantId(payload.tenant_id as string | undefined);
 
-        const result = await callPaxaverApi(
-          env,
-          {
-            userId: payload.sub,
-            email: '',
-            schoolSlug: '',
-            permissions: [],
-            isPlatformAdmin: false,
-            studentIds: [],
-            country,
-            userToken: token,
-          },
-          origin,
-          { method: 'GET', path: '/api/users/me/context' },
-        );
+        // Revocation check + context load run in parallel — the context hop
+        // already exists per request, so the verify call adds ~no latency.
+        // JWKS only proves signature+expiry; MCP tokens live 30 days, so a
+        // revoked token (deactivated client, revoked session) must be
+        // rejected here. Fail closed: any verify failure rejects.
+        //
+        // The check only runs when INTERNAL_SERVICE_SECRET is provisioned —
+        // the backend's internalServiceGuard fails closed on non-dev
+        // environments, so an unprovisioned worker would reject every
+        // request. Skipping preserves the JWKS + context posture until ops
+        // provisions the secret; enforcement then activates automatically.
+        const verifyResultPromise = env.INTERNAL_SERVICE_SECRET
+          ? verifyAccessToken(env, country, token).catch((err) => {
+              console.error('[auth] internal token verify failed:', err instanceof Error ? err.message : String(err));
+              return { ok: false, status: 0, data: null };
+            })
+          : (warnNoSecret(), Promise.resolve({ ok: true, status: 0, data: null }));
+        const [verifyResult, result] = await Promise.all([
+          verifyResultPromise,
+          callPaxaverApi(
+            env,
+            {
+              userId: payload.sub,
+              email: '',
+              schoolSlug: '',
+              permissions: [],
+              isPlatformAdmin: false,
+              studentIds: [],
+              country,
+              userToken: token,
+            },
+            origin,
+            { method: 'GET', path: '/api/users/me/context' },
+          ),
+        ]);
+
+        if (!verifyResult.ok) {
+          console.error(`[auth] token revocation check rejected (status ${verifyResult.status})`);
+          return {
+            ok: false,
+            status: 401,
+            error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+          };
+        }
 
         if (!result.ok || !result.data) {
           return {
