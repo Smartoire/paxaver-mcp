@@ -346,7 +346,6 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
 export async function handleTool({
   env,
   ctx,
-  origin,
   name,
   args,
   idempotencyKey,
@@ -354,7 +353,7 @@ export async function handleTool({
   const spec = TOOL_SPECS[name];
   if (!spec) return undefined;
   if (spec.required) requireArgs(args, ...spec.required);
-  const result = await callPaxaverApi(env, ctx, origin, {
+  const result = await callPaxaverApi(env, ctx, {
     method: spec.method,
     path: typeof spec.path === 'function' ? spec.path(args, ctx) : resolvePath(spec.path, args),
     body: spec.body?.(args, ctx),
