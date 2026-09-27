@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
+import { request } from './request.js';
 import { TEST_TOKEN, TEST_ENV } from './jwt-auth.js';
 
 async function mcpPost(body: unknown, token?: string) {
@@ -12,7 +13,8 @@ async function mcpPost(body: unknown, token?: string) {
     'Content-Type': 'application/json',
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  return app.request(
+  return request(
+    app,
     'https://mcp.paxaver.test/mcp',
     {
       method: 'POST',
@@ -83,7 +85,7 @@ describe('Safety', () => {
   });
 
   it('security headers are present', async () => {
-    const res = await app.request('https://mcp.paxaver.test/health', {}, TEST_ENV);
+    const res = await request(app, 'https://mcp.paxaver.test/health', {}, TEST_ENV);
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
     expect(res.headers.get('X-Frame-Options')).toBe('DENY');
     expect(res.headers.get('Referrer-Policy')).toBe('no-referrer');

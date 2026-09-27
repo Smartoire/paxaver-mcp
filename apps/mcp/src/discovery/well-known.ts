@@ -247,10 +247,4 @@ async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
   return response;
 }
 
-// Test helper that matches the shape of Hono's app.request(path, init, env)
-async function request(path: string, init: RequestInit = {}, env: Record<string, unknown>): Promise<Response> {
-  const req = new Request(new URL(path, 'http://localhost'), init);
-  return wellKnownFetch(req, env as unknown as Env);
-}
-
-export const wellKnownApp = { fetch: wellKnownFetch, request };
+export const wellKnownApp = { fetch: wellKnownFetch };

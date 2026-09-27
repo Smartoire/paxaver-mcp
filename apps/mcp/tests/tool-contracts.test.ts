@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
+import { request } from './request.js';
 import { FULL_TOKEN, TEST_ENV, mockBackend } from './jwt-auth.js';
 
 interface BackendCall {
@@ -37,7 +38,8 @@ const ENV = { ...TEST_ENV, PAXAVER_API_CA: recordingBackend, PAXAVER_API_US: rec
 
 async function callTool(name: string, args: Record<string, unknown>) {
   calls.length = 0;
-  const res = await app.request(
+  const res = await request(
+    app,
     'https://mcp.paxaver.test/mcp',
     {
       method: 'POST',
@@ -208,7 +210,8 @@ describe('tool → backend contract', () => {
         return mockBackend.fetch(req);
       },
     };
-    const res = await app.request(
+    const res = await request(
+      app,
       'https://mcp.paxaver.test/mcp',
       {
         method: 'POST',
@@ -250,7 +253,8 @@ describe('tool → backend contract', () => {
         return mockBackend.fetch(req);
       },
     };
-    const res = await app.request(
+    const res = await request(
+      app,
       'https://mcp.paxaver.test/mcp',
       {
         method: 'POST',

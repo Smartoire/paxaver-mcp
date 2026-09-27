@@ -147,7 +147,6 @@ export async function authenticateRequest(
               country,
               userToken: token,
             },
-            origin,
             { method: 'GET', path: '/api/users/me/context' },
           ),
         ]);

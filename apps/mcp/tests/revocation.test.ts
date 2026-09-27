@@ -7,10 +7,12 @@
 
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
+import { request } from './request.js';
 import { TEST_TOKEN, REVOKED_TOKEN, TEST_ENV, mockBackend, backendCalls } from './jwt-auth.js';
 
 function mcpCall(token: string) {
-  return app.request(
+  return request(
+    app,
     'https://mcp.paxaver.test/mcp',
     {
       method: 'POST',
@@ -38,7 +40,8 @@ describe('token revocation check', () => {
         return mockBackend.fetch(req);
       },
     };
-    const res = await app.request(
+    const res = await request(
+      app,
       'https://mcp.paxaver.test/mcp',
       {
         method: 'POST',
@@ -79,7 +82,8 @@ describe('token revocation check', () => {
         return mockBackend.fetch(req);
       },
     };
-    const res = await app.request(
+    const res = await request(
+      app,
       'https://mcp.paxaver.test/mcp',
       {
         method: 'POST',
@@ -110,7 +114,8 @@ describe('token revocation check', () => {
         return mockBackend.fetch(req);
       },
     };
-    const res = await app.request(
+    const res = await request(
+      app,
       'https://mcp.paxaver.test/mcp',
       {
         method: 'POST',
