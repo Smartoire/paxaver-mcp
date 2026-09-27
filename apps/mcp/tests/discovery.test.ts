@@ -120,7 +120,7 @@ describe('well-known endpoints', () => {
       '/nonexistent',
     ];
     for (const path of paths) {
-      const res = await wellKnownApp.request(path, {}, mockEnv({ ENVIRONMENT: 'production' }));
+      const res = await request(wellKnownApp, path, {}, mockEnv({ ENVIRONMENT: 'production' }));
       expect(res.headers.get('Cache-Control')).toBe('no-store, max-age=0');
     }
   });
