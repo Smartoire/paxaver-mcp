@@ -12,8 +12,6 @@ export type RpcId = string | number | null;
 export interface DispatchContext {
   env: Env;
   var: AppVariables;
-  req?: { url: string };
-  url: string;
 }
 
 /**
@@ -22,7 +20,6 @@ export interface DispatchContext {
 export interface ToolHandlerArgs {
   env: Env;
   ctx: AppVariables;
-  origin: string;
   name: string;
   args: Record<string, unknown>;
   idempotencyKey?: string;

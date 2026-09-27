@@ -18,7 +18,6 @@
 import type { AppVariables } from '../env.js';
 import { mcpError, apiErrorToMcp } from '../lib/errors.js';
 import { getToolPolicy } from '../lib/policies.js';
-import { originFrom } from '../transport/streamable-http.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId } from './shared.js';
 import { InvalidParamsError } from './shared.js';
@@ -91,7 +90,6 @@ export async function dispatchTool(
 ): Promise<Response> {
   const env = c.env;
   const ctx = c.var;
-  const origin = originFrom(c.req ? c.req.url : c.url);
   const policy = getToolPolicy(name);
 
   try {
@@ -104,7 +102,6 @@ export async function dispatchTool(
     const result: ApiCallResult | undefined = await handleTool({
       env,
       ctx,
-      origin,
       name,
       args,
       idempotencyKey,

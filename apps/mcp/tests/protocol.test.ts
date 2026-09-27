@@ -1,10 +1,11 @@
 /**
  * Protocol tests: initialize, ping, tools/list, tools/call, session lifecycle.
- * Uses Hono's app.request() — no network needed.
+ * Calls app.fetch() directly — no network needed.
  */
 
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
+import { request } from './request.js';
 import { TEST_TOKEN, ACTIVE_TOKEN, FULL_TOKEN, EXPIRED_TOKEN, TEST_ENV } from './jwt-auth.js';
 
 async function mcpPost(body: unknown, token?: string, mcpMethod?: string) {
@@ -13,7 +14,8 @@ async function mcpPost(body: unknown, token?: string, mcpMethod?: string) {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (mcpMethod) headers['Mcp-Method'] = mcpMethod;
-  return app.request(
+  return request(
+    app,
     'https://mcp.paxaver.test/mcp',
     {
       method: 'POST',
@@ -211,7 +213,8 @@ describe('MCP protocol', () => {
 
   it('parse error on invalid JSON', async () => {
     const token = TEST_TOKEN;
-    const res = await app.request(
+    const res = await request(
+      app,
       'https://mcp.paxaver.test/mcp',
       {
         method: 'POST',
