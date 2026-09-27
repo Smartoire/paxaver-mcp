@@ -230,4 +230,16 @@ describe('MCP protocol', () => {
     const json = (await res.json()) as unknown as { error: { code: number } };
     expect(json.error.code).toBe(-32700);
   });
+
+  it('GET /mcp opens an SSE stream with an endpoint event', async () => {
+    const res = await request(app, 'https://mcp.paxaver.test/mcp', { method: 'GET' }, TEST_ENV);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('text/event-stream');
+    const reader = res.body!.getReader();
+    const { value } = await reader.read();
+    const text = typeof value === 'string' ? value : new TextDecoder().decode(value);
+    expect(text).toContain('event: endpoint');
+    expect(text).toContain('data: https://mcp.paxaver.test/mcp');
+    await reader.cancel();
+  });
 });
