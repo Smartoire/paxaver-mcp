@@ -7,12 +7,11 @@
  * tool name + key arguments + a per-request nonce. The backend is expected
  * to honor the Idempotency-Key header for duplicate suppression.
  *
- * The per-category handler logic lives in sibling files
- * (`user-tools.ts`, `wallet-tools.ts`, `order-tools.ts`, `event-tools.ts`,
- * `restaurant-tools.ts`, `menu-tools.ts`). This module is the orchestrator:
- * it resolves the tool policy, derives the idempotency key, performs the
- * shared ownership validation, delegates to the matching category handler,
- * and shapes the final MCP response.
+ * The tool → backend route mapping lives in `tools.ts` as a declarative
+ * spec table (`TOOL_SPECS`). This module is the orchestrator: it resolves
+ * the tool policy, derives the idempotency key, performs the shared
+ * ownership validation, delegates to the spec-driven handler, and shapes
+ * the final MCP response.
  */
 
 import type { AppVariables } from '../env.js';

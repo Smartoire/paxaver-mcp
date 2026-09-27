@@ -130,8 +130,9 @@ deploying. CI runs `wrangler:check` to ensure all environments build.
 1. Add the tool definition to the appropriate file in `src/schemas/` and export
    it from `src/schemas/index.ts` (add to `ALL_TOOLS`).
 2. Add a policy entry in `src/lib/policy.ts` (`TOOL_POLICIES`).
-3. Add a `case` in `src/tools/dispatch.ts` mapping the tool to a backend API
-   path. Set `idempotencyKey` for mutations.
+3. Add a spec entry in `src/tools/tools.ts` (`TOOL_SPECS`) mapping the tool
+   to a backend API path. Mutations get an `Idempotency-Key` automatically
+   via `mutates: true` in their policy.
 4. Add tests in `tests/authz.test.ts` (visibility/authorization) and
    `tests/protocol.test.ts` (dispatch) as appropriate.
 5. Document the tool in [`docs/tools.md`](./docs/tools.md).
