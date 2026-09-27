@@ -110,6 +110,21 @@ describe('well-known endpoints', () => {
     expect(body).toContain('No authorization code or error received');
   });
 
+  it('every well-known response sets Cache-Control: no-store', async () => {
+    const paths = [
+      '/.well-known/oauth-protected-resource',
+      '/.well-known/oauth-authorization-server',
+      '/.well-known/openid-configuration',
+      '/.well-known/mcp/server-card.json',
+      '/oauth/callback',
+      '/nonexistent',
+    ];
+    for (const path of paths) {
+      const res = await request(wellKnownApp, path, {}, mockEnv({ ENVIRONMENT: 'production' }));
+      expect(res.headers.get('Cache-Control')).toBe('no-store, max-age=0');
+    }
+  });
+
   // Regression: ChatGPT "Unsafe URL" error. No endpoint on the MCP server
   // must return a redirect to a different domain. The /oauth redirect was
   // the root cause.
