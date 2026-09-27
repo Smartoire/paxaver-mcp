@@ -26,11 +26,6 @@ This document lists the test scenarios for the Paxaver MCP server. It is intende
 - [x] `checkToolAuthorization` enforces role gating per tool.
 - [x] `getToolPolicy` returns the policy for a given tool name.
 
-### Crypto Helpers (`apps/mcp/tests/crypto.test.ts`)
-
-- [x] `generateSessionId` produces a valid hex string.
-- [x] Session IDs are unique across multiple calls.
-
 ### Protocol (`apps/mcp/tests/protocol.test.ts`)
 
 - [x] `initialize` handshake returns correct protocol version and capabilities.
