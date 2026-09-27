@@ -17,7 +17,7 @@
 import type { AppVariables } from '../env.js';
 import { mcpError, apiErrorToMcp } from '../lib/errors.js';
 import { getToolPolicy } from '../lib/policies.js';
-import { originFrom } from '../transport/streamable-http.js';
+import { originFrom } from '../lib/url.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId } from './shared.js';
 import { InvalidParamsError } from './shared.js';

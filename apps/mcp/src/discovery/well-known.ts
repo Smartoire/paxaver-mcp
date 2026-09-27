@@ -8,16 +8,13 @@
 import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
 import { authUrl, authServers } from '../auth/validate.js';
+import { originFrom } from '../lib/url.js';
 import { SERVER_VERSION } from '../lib/version.js';
 
 function withCache(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set('Cache-Control', 'no-store, max-age=0');
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-}
-
-function originFrom(url: string): string {
-  return new URL(url).origin.replace(/^http:/, 'https:');
 }
 
 // RFC 9728: Protected Resource Metadata

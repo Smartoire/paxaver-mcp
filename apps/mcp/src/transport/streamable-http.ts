@@ -8,11 +8,8 @@
  */
 
 import type { Env, AppVariables } from '../env.js';
+import { originFrom } from '../lib/url.js';
 import { handleJsonRpc, type RpcRequest } from '../server/json-rpc.js';
-
-export function originFrom(url: string): string {
-  return new URL(url).origin.replace(/^http:/, 'https:');
-}
 
 interface TransportContext {
   env: Env;
