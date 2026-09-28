@@ -64,26 +64,20 @@ function handleGet(request: Request): Response {
   // Per spec, GET opens an SSE stream. We send a single endpoint event
   // pointing back to /mcp, then keep-alive. Server-initiated notifications
   // are not generated in this stateless deployment.
+  let heartbeat: ReturnType<typeof setInterval>;
   const stream = new ReadableStream({
     start(controller) {
-      const origin = originFrom(request.url);
-      controller.enqueue(`event: endpoint\ndata: ${origin}/mcp\n\n`);
-      const heartbeat = setInterval(() => {
+      controller.enqueue(`event: endpoint\ndata: ${originFrom(request.url)}/mcp\n\n`);
+      heartbeat = setInterval(() => {
         try {
-          controller.enqueue(`: heartbeat\n\n`);
+          controller.enqueue(': heartbeat\n\n');
         } catch {
           clearInterval(heartbeat);
         }
       }, 15000);
-      request.signal?.addEventListener('abort', () => {
-        clearInterval(heartbeat);
-        try {
-          controller.close();
-        } catch {
-          /* ignore */
-        }
-      });
     },
+    // The runtime cancels the stream when the client disconnects.
+    cancel: () => clearInterval(heartbeat),
   });
 
   return new Response(stream, {
