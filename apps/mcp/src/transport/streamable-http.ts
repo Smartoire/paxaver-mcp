@@ -8,11 +8,8 @@
  */
 
 import type { Env, AppVariables } from '../env.js';
+import { originFrom } from '../lib/url.js';
 import { handleJsonRpc } from '../server/json-rpc.js';
-
-export function originFrom(url: string): string {
-  return new URL(url).origin.replace(/^http:/, 'https:');
-}
 
 type JsonRpcMessage = Parameters<typeof handleJsonRpc>[1];
 

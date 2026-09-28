@@ -10,7 +10,8 @@
 
 import type { Env, AppVariables } from './env.js';
 import { authenticateRequest, authUrl } from './auth/validate.js';
-import { transportApp, originFrom } from './transport/streamable-http.js';
+import { transportApp } from './transport/streamable-http.js';
+import { originFrom } from './lib/url.js';
 import { wellKnownApp } from './discovery/well-known.js';
 import { SERVER_VERSION } from './lib/version.js';
 
