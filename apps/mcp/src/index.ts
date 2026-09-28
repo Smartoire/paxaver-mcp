@@ -25,6 +25,11 @@ Canonical: https://paxaver.com/.well-known/security.txt
 Policy: https://paxaver.com/privacy/security
 `;
 
+// The MCP host has no indexable content — keep crawlers off it entirely.
+const ROBOTS_TXT = `User-agent: *
+Disallow: /
+`;
+
 // Metadata-only methods callable without a bearer token. Everything else
 // (tools/call, resources/read, prompts/get, unknown methods) requires auth.
 const PUBLIC_MCP_METHODS = new Set([
@@ -192,6 +197,8 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       response = new Response(healthBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    } else if (url.pathname === '/robots.txt') {
+      response = new Response(ROBOTS_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     } else if (url.pathname === '/oauth/authorize') {
       // Per AGENTS.md: external systems (MCP) use paxaver.com/auth as the
       // single trusted auth server. No region detection for OAuth.

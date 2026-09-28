@@ -90,4 +90,16 @@ describe('Safety', () => {
     expect(res.headers.get('X-Frame-Options')).toBe('DENY');
     expect(res.headers.get('Referrer-Policy')).toBe('no-referrer');
   });
+
+  // #1523: the MCP host has no indexable content — robots.txt must tell
+  // crawlers to skip it entirely (a 404 reads as "allow all").
+  it('/robots.txt disallows all crawlers', async () => {
+    const res = await request(app, 'https://mcp.paxaver.test/robots.txt', {}, TEST_ENV);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('text/plain');
+    const body = await res.text();
+    expect(body).toContain('User-agent: *');
+    expect(body).toContain('Disallow: /');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
 });
