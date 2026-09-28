@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { wellKnownApp } from '../src/discovery/well-known.js';
+import { request } from './request.js';
 
 function mockEnv(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -14,7 +15,8 @@ function mockEnv(overrides: Record<string, unknown> = {}): Record<string, unknow
 
 describe('well-known endpoints', () => {
   it('RFC 9728 protected resource metadata returns correct shape', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-protected-resource',
       {},
       mockEnv({ ENVIRONMENT: 'production' }),
@@ -32,7 +34,8 @@ describe('well-known endpoints', () => {
   });
 
   it('RFC 9728 points to staging auth in staging', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-protected-resource',
       {},
       mockEnv({ ENVIRONMENT: 'staging' }),
@@ -42,7 +45,8 @@ describe('well-known endpoints', () => {
   });
 
   it('RFC 9728 points to localhost in development', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-protected-resource',
       {},
       mockEnv({ ENVIRONMENT: 'development' }),
@@ -52,7 +56,8 @@ describe('well-known endpoints', () => {
   });
 
   it('MCP server serves authorization-server metadata pointing to auth server', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-authorization-server',
       {},
       mockEnv({ ENVIRONMENT: 'production' }),
@@ -67,17 +72,17 @@ describe('well-known endpoints', () => {
   });
 
   it('/oauth does NOT redirect (removed to prevent Unsafe URL)', async () => {
-    const res = await wellKnownApp.request('/oauth', {}, mockEnv({ ENVIRONMENT: 'production' }));
+    const res = await request(wellKnownApp, '/oauth', {}, mockEnv({ ENVIRONMENT: 'production' }));
     expect(res.status).toBe(404);
   });
 
   it('/oauth/ does NOT redirect', async () => {
-    const res = await wellKnownApp.request('/oauth/', {}, mockEnv({ ENVIRONMENT: 'production' }));
+    const res = await request(wellKnownApp, '/oauth/', {}, mockEnv({ ENVIRONMENT: 'production' }));
     expect(res.status).toBe(404);
   });
 
   it('/oauth/callback renders code for successful auth', async () => {
-    const res = await wellKnownApp.request('/oauth/callback?code=test-code-123&state=abc', {}, mockEnv());
+    const res = await request(wellKnownApp, '/oauth/callback?code=test-code-123&state=abc', {}, mockEnv());
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain('test-code-123');
@@ -85,7 +90,8 @@ describe('well-known endpoints', () => {
   });
 
   it('/oauth/callback renders error for failed auth', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/oauth/callback?error=access_denied&error_description=Consent+required',
       {},
       mockEnv(),
@@ -98,10 +104,25 @@ describe('well-known endpoints', () => {
   });
 
   it('/oauth/callback handles missing params gracefully', async () => {
-    const res = await wellKnownApp.request('/oauth/callback', {}, mockEnv());
+    const res = await request(wellKnownApp, '/oauth/callback', {}, mockEnv());
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain('No authorization code or error received');
+  });
+
+  it('every well-known response sets Cache-Control: no-store', async () => {
+    const paths = [
+      '/.well-known/oauth-protected-resource',
+      '/.well-known/oauth-authorization-server',
+      '/.well-known/openid-configuration',
+      '/.well-known/mcp/server-card.json',
+      '/oauth/callback',
+      '/nonexistent',
+    ];
+    for (const path of paths) {
+      const res = await request(wellKnownApp, path, {}, mockEnv({ ENVIRONMENT: 'production' }));
+      expect(res.headers.get('Cache-Control')).toBe('no-store, max-age=0');
+    }
   });
 
   // Regression: ChatGPT "Unsafe URL" error. No endpoint on the MCP server
@@ -119,7 +140,7 @@ describe('well-known endpoints', () => {
       '/oauth/',
     ];
     for (const path of paths) {
-      const res = await wellKnownApp.request(path, {}, mockEnv({ ENVIRONMENT: 'production' }));
+      const res = await request(wellKnownApp, path, {}, mockEnv({ ENVIRONMENT: 'production' }));
       const location = res.headers.get('location');
       if (location) {
         // Any redirect must stay on the same origin (localhost in test)
@@ -131,7 +152,8 @@ describe('well-known endpoints', () => {
   // Compatibility: the metadata is also served at the legacy path-derived
   // URL that ChatGPT and older clients may construct.
   it('RFC 9728 path-derived metadata URL returns 200', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-protected-resource/mcp',
       {},
       mockEnv({ ENVIRONMENT: 'production' }),
@@ -147,7 +169,8 @@ describe('well-known endpoints', () => {
   });
 
   it('RFC 9728 path-derived auth server metadata URL returns 200', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-authorization-server/mcp',
       {},
       mockEnv({ ENVIRONMENT: 'production' }),
@@ -159,7 +182,8 @@ describe('well-known endpoints', () => {
 
   // Regression: protected resource metadata must use HTTPS resource URL
   it('production protected resource metadata is HTTPS', async () => {
-    const res = await wellKnownApp.request(
+    const res = await request(
+      wellKnownApp,
       '/.well-known/oauth-protected-resource',
       {},
       mockEnv({ ENVIRONMENT: 'production' }),

@@ -11,12 +11,6 @@ import { authUrl, authServers } from '../auth/validate.js';
 import { originFrom } from '../lib/url.js';
 import { SERVER_VERSION } from '../lib/version.js';
 
-function withCache(response: Response): Response {
-  const headers = new Headers(response.headers);
-  headers.set('Cache-Control', 'no-store, max-age=0');
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-}
-
 // RFC 9728: Protected Resource Metadata
 // Points to the auth worker as the authorization server. Cross-domain
 // OAuth is explicitly supported by ChatGPT (see OpenAI apps-sdk auth docs).
@@ -224,42 +218,30 @@ async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
     '/mcp/.well-known/openid-configuration',
   ];
 
+  let response: Response;
   if (protectedPaths.includes(pathname)) {
-    return withCache(protectedResourceHandler(request, env));
-  }
-  if (authPaths.includes(pathname)) {
-    return withCache(authorizationServerHandler(env));
-  }
-  if (openidPaths.includes(pathname)) {
-    return withCache(openidConfigurationHandler(env));
-  }
-  if (pathname === '/.well-known/mcp/server-card.json') {
-    return withCache(serverCardHandler(request));
-  }
-  if (pathname === '/.well-known/openai-apps-challenge') {
+    response = protectedResourceHandler(request, env);
+  } else if (authPaths.includes(pathname)) {
+    response = authorizationServerHandler(env);
+  } else if (openidPaths.includes(pathname)) {
+    response = openidConfigurationHandler(env);
+  } else if (pathname === '/.well-known/mcp/server-card.json') {
+    response = serverCardHandler(request);
+  } else if (pathname === '/.well-known/openai-apps-challenge') {
     // ChatGPT app submission domain verification. The token is provided by
     // OpenAI during submission; until then the endpoint does not exist.
     const token = env.OPENAI_APPS_CHALLENGE;
-    return withCache(
-      token
-        ? new Response(token, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
-        : new Response('Not found', { status: 404 }),
-    );
-  }
-  if (pathname === '/oauth/callback') {
-    return withCache(oauthCallbackHandler(request));
-  }
-  if (pathname === '/oauth' || pathname === '/oauth/') {
-    return withCache(new Response('Not found', { status: 404 }));
+    response = token
+      ? new Response(token, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+      : new Response('Not found', { status: 404 });
+  } else if (pathname === '/oauth/callback') {
+    response = oauthCallbackHandler(request);
+  } else {
+    response = new Response('Not found', { status: 404 });
   }
 
-  return withCache(new Response('Not found', { status: 404 }));
+  response.headers.set('Cache-Control', 'no-store, max-age=0');
+  return response;
 }
 
-// Test helper that matches the shape of Hono's app.request(path, init, env)
-async function request(path: string, init: RequestInit = {}, env: Record<string, unknown>): Promise<Response> {
-  const req = new Request(new URL(path, 'http://localhost'), init);
-  return wellKnownFetch(req, env as unknown as Env);
-}
-
-export const wellKnownApp = { fetch: wellKnownFetch, request };
+export const wellKnownApp = { fetch: wellKnownFetch };

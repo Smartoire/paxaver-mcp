@@ -12,12 +12,6 @@ import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';
 import { SERVER_VERSION } from '../lib/version.js';
 
-export interface RpcRequest {
-  method: string;
-  params?: { name?: string; arguments?: Record<string, unknown>; uri?: string };
-  id: string | number | null;
-}
-
 export const PROTOCOL_VERSION = '2025-06-18';
 const SUPPORTED_VERSIONS = ['2026-07-28', PROTOCOL_VERSION];
 
@@ -26,7 +20,14 @@ const SUPPORTED_VERSIONS = ['2026-07-28', PROTOCOL_VERSION];
 // routes. Ceiling = no compile-time check that callers pass a real Hono
 // context; upgrade path = use Hono's generic Context<Env, AppVariables>.
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export async function handleJsonRpc(c: any, req: RpcRequest): Promise<Response> {
+export async function handleJsonRpc(
+  c: any,
+  req: {
+    method: string;
+    params?: { name?: string; arguments?: Record<string, unknown>; uri?: string };
+    id: string | number | null;
+  },
+): Promise<Response> {
   const { method, params, id } = req;
 
   // server/discover is the 2026-07-28 protocol discovery probe.

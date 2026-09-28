@@ -37,20 +37,18 @@ Two Vitest configurations:
 
 ```bash
 npm test             # runs both: vitest ( Workers-style ) + vitest.node
-npm run test:node    # node-pool tests only (tests/node/**/*.test.ts)
+npm run test:node    # node-pool tests only (apps/mcp/tests/node/**/*.test.ts)
 npm run test:watch   # watch mode for the primary config
 ```
 
-Test files live in `tests/`:
+Test files live in `apps/mcp/tests/`:
 
-| File                          | Coverage                                                 |
-| ----------------------------- | -------------------------------------------------------- |
-| `tests/authz.test.ts`         | `canSeeTool`, `checkToolAuthorization`, policy table     |
-| `tests/crypto.test.ts`        | Session ID generation                                    |
-| `tests/node/regional.test.ts` | Wrangler config validation, regional routing             |
-| `tests/protocol.test.ts`      | JSON-RPC initialize, tools/list, tools/call, error codes |
-| `tests/safety.test.ts`        | Error sanitization, financial/destructive labeling       |
-| `tests/node/*.test.ts`        | Node-pool tests (crypto, pure functions)                 |
+| File                                   | Coverage                                                 |
+| -------------------------------------- | -------------------------------------------------------- |
+| `apps/mcp/tests/authz.test.ts`         | `canSeeTool`, `checkToolAuthorization`, policy table     |
+| `apps/mcp/tests/node/regional.test.ts` | Wrangler config validation, regional routing             |
+| `apps/mcp/tests/protocol.test.ts`      | JSON-RPC initialize, tools/list, tools/call, error codes |
+| `apps/mcp/tests/safety.test.ts`        | Error sanitization, financial/destructive labeling       |
 
 ### Smoke tests
 

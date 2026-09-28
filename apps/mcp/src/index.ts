@@ -25,12 +25,6 @@ Canonical: https://paxaver.com/.well-known/security.txt
 Policy: https://paxaver.com/privacy/security
 `;
 
-interface RequestContext {
-  env: Env;
-  request: Request;
-  var: Partial<AppVariables>;
-}
-
 // Metadata-only methods callable without a bearer token. Everything else
 // (tools/call, resources/read, prompts/get, unknown methods) requires auth.
 const PUBLIC_MCP_METHODS = new Set([
@@ -83,7 +77,7 @@ function mergeHeaders(response: Response, extra: Record<string, string>): Respon
   });
 }
 
-async function mcpAuth(request: Request, ctx: RequestContext): Promise<Response | null> {
+async function mcpAuth(request: Request, ctx: { env: Env; var: Partial<AppVariables> }): Promise<Response | null> {
   const url = new URL(request.url);
 
   // Well-known endpoints under /mcp/ are public (some clients construct
@@ -184,14 +178,17 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
 
   const url = new URL(request.url);
   let response: Response;
-  const ctx: RequestContext = { env, request, var: { correlationId } };
+  const ctx: { env: Env; var: Partial<AppVariables> } = { env, var: { correlationId } };
 
   try {
     if (
       url.pathname === '/health' ||
       (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     ) {
-      const healthBody = request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', version: SERVER_VERSION, commit: env.COMMIT_SHA ?? 'unknown' });
+      const healthBody =
+        request.method === 'HEAD'
+          ? null
+          : JSON.stringify({ status: 'ok', version: SERVER_VERSION, commit: env.COMMIT_SHA ?? 'unknown' });
       response = new Response(healthBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
@@ -234,11 +231,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       if (authResult) {
         response = authResult;
       } else {
-        response = await transportApp.fetch(request, {
-          env,
-          var: ctx.var as AppVariables,
-          request,
-        });
+        response = await transportApp.fetch(request, { env, var: ctx.var as AppVariables });
       }
     } else {
       response = Response.json({ error: 'Not found' }, { status: 404 });
@@ -251,16 +244,6 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
   return mergeHeaders(response, { ...cors, ...securityHeaders });
 }
 
-async function request(
-  input: string,
-  init: RequestInit = {},
-  env: Record<string, unknown>,
-  executionCtx?: unknown,
-): Promise<Response> {
-  const req = new Request(input, init);
-  return mcpFetch(req, env as unknown as Env, executionCtx);
-}
-
-const app = { fetch: mcpFetch, request };
+const app = { fetch: mcpFetch };
 
 export default app;

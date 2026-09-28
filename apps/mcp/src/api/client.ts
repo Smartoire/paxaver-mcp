@@ -46,12 +46,7 @@ function resolveBackend(env: Env, country: McpCountry): { fetcher: Fetcher | und
  * Uses the service binding when configured; falls back to HTTPS.
  * Forwards the user's OAuth access token to the backend.
  */
-export async function callPaxaverApi(
-  env: Env,
-  ctx: AuthContext,
-  _origin: string,
-  opts: ApiCallOptions,
-): Promise<ApiCallResult> {
+export async function callPaxaverApi(env: Env, ctx: AuthContext, opts: ApiCallOptions): Promise<ApiCallResult> {
   if (!ctx.userToken) {
     return { ok: false, status: 401, data: { error: 'No user token available' } };
   }

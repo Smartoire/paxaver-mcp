@@ -7,11 +7,13 @@
 
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
+import { request } from './request.js';
 import { FULL_TOKEN, TEST_ENV, backendCalls } from './jwt-auth.js';
 
 async function callTool(name: string, args: Record<string, unknown>) {
   backendCalls.length = 0;
-  const res = await app.request(
+  const res = await request(
+    app,
     'https://mcp.paxaver.test/mcp',
     {
       method: 'POST',

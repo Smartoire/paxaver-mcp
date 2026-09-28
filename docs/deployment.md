@@ -113,6 +113,9 @@ https://wellknown.network/api/v1/agents/paxaver-mcp`, `declared.version`)
    with the Smartoire owner's API key — no automated path exists yet.
 4. Verify `pnpm package:microsoft` output was committed before tagging so
    `certification/microsoft/mcptools.json` matches the tool surface.
+5. When resubmitting the ChatGPT app, run `pnpm package:chatgpt` first —
+   it regenerates `chatgpt-app-submission.json` (gitignored) from the
+   canonical tool registry in `apps/mcp/src/schemas.ts`.
 
 ## Smoke tests
 
