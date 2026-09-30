@@ -92,6 +92,12 @@ describe('Safety', () => {
     expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
   });
 
+  it('health endpoint reports the v2.6.2 release version', async () => {
+    const res = await app.request('https://mcp.paxaver.test/health', {}, TEST_ENV);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: 'ok', version: '2.6.2' });
+  });
+
   it('security headers are present', async () => {
     const res = await request(app, 'https://mcp.paxaver.test/health', {}, TEST_ENV);
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
