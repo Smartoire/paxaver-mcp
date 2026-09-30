@@ -15,6 +15,13 @@ import { originFrom } from './lib/url.js';
 import { wellKnownApp } from './discovery/well-known.js';
 import { SERVER_VERSION } from './lib/version.js';
 
+const ROBOTS_TXT = `User-agent: *
+Allow: /mcp
+Allow: /.well-known/
+Allow: /health
+Disallow: /
+`;
+
 const SECURITY_TXT = `# Paxaver security.txt (RFC 9116)
 # https://securitytxt.org/
 
@@ -186,7 +193,9 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
   const ctx: { env: Env; var: Partial<AppVariables> } = { env, var: { correlationId } };
 
   try {
-    if (
+    if (url.pathname === '/robots.txt') {
+      response = new Response(ROBOTS_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    } else if (
       url.pathname === '/health' ||
       (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     ) {

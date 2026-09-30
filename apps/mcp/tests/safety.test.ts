@@ -84,6 +84,14 @@ describe('Safety', () => {
     expect(text).not.toContain('TypeError');
   });
 
+  it('robots.txt permits service discovery probes while disallowing other paths', async () => {
+    const res = await app.request('https://mcp.paxaver.test/robots.txt', {}, TEST_ENV);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('text/plain');
+    expect(await res.text()).toBe('User-agent: *\nAllow: /mcp\nAllow: /.well-known/\nAllow: /health\nDisallow: /\n');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
+
   it('security headers are present', async () => {
     const res = await request(app, 'https://mcp.paxaver.test/health', {}, TEST_ENV);
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
