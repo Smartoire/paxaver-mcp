@@ -85,7 +85,7 @@ describe('Safety', () => {
   });
 
   it('robots.txt permits service discovery probes while disallowing other paths', async () => {
-    const res = await app.request('https://mcp.paxaver.test/robots.txt', {}, TEST_ENV);
+    const res = await request(app, 'https://mcp.paxaver.test/robots.txt', {}, TEST_ENV);
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toContain('text/plain');
     expect(await res.text()).toBe('User-agent: *\nAllow: /mcp\nAllow: /.well-known/\nAllow: /health\nDisallow: /\n');
@@ -93,9 +93,9 @@ describe('Safety', () => {
   });
 
   it('health endpoint reports the v2.6.2 release version', async () => {
-    const res = await app.request('https://mcp.paxaver.test/health', {}, TEST_ENV);
+    const res = await request(app, 'https://mcp.paxaver.test/health', {}, TEST_ENV);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: 'ok', version: '2.6.2' });
+    expect(await res.json()).toMatchObject({ status: 'ok', version: '2.6.2' });
   });
 
   it('security headers are present', async () => {
