@@ -1,13 +1,19 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.27/MicrosoftTeams.schema.json",
-  "manifestVersion": "1.27",
-  "version": "2.4.1",
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "version": "2.6.3",
   "id": "800c5555-f984-42d7-808c-6c93aeb9b605",
   "developer": {
     "name": "Smartoire Solutions",
     "websiteUrl": "https://paxaver.com",
     "privacyUrl": "https://paxaver.com/privacy",
-    "termsOfUseUrl": "https://paxaver.com/privacy/terms"
+    "termsOfUseUrl": "https://paxaver.com/privacy/terms",
+    "contactInfo": {
+      "defaultSupport": {
+        "emailsForEmailSupport": ["support@paxaver.com"],
+        "userEmailsForChatSupport": ["support@paxaver.com"]
+      }
+    }
   },
   "name": {
     "short": "Paxaver MCP",
