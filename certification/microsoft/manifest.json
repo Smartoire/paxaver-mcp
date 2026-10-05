@@ -1,5 +1,5 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
   "manifestVersion": "devPreview",
   "version": "2.6.3",
   "id": "800c5555-f984-42d7-808c-6c93aeb9b605",
@@ -46,5 +46,6 @@
     "outline": "icons/outline.png",
     "color": "icons/color.png"
   },
+  "validDomains": ["paxaver.com", "*.paxaver.com"],
   "accentColor": "#3B82F6"
 }
