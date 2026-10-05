@@ -30,7 +30,7 @@ describe('well-known endpoints', () => {
     ]);
     expect(body.scopes_supported).toEqual(['openid', 'profile', 'email', 'offline_access', 'tools']);
     expect(body.bearer_methods_supported).toEqual(['header']);
-    expect(body.resource).toBe('https://localhost');
+    expect(body.resource).toBe('https://localhost/mcp');
   });
 
   it('RFC 9728 points to staging auth in staging', async () => {
@@ -160,7 +160,7 @@ describe('well-known endpoints', () => {
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.resource).toBe('https://localhost');
+    expect(body.resource).toBe('https://localhost/mcp');
     expect(body.authorization_servers).toEqual([
       'https://paxaver.ca/auth',
       'https://paxaver.com/auth',
@@ -189,7 +189,7 @@ describe('well-known endpoints', () => {
       mockEnv({ ENVIRONMENT: 'production' }),
     );
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.resource).toBe('https://localhost');
+    expect(body.resource).toBe('https://localhost/mcp');
     expect((body.authorization_servers as string[])[0]).toMatch(/^https:/);
   });
 });

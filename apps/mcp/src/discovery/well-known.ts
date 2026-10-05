@@ -14,14 +14,16 @@ import { SERVER_VERSION } from '../lib/version.js';
 // RFC 9728: Protected Resource Metadata
 // Points to the auth worker as the authorization server. Cross-domain
 // OAuth is explicitly supported by ChatGPT (see OpenAI apps-sdk auth docs).
-// The `resource` field is the canonical HTTPS identifier for the MCP
-// server (the origin). Clients send this as the OAuth `resource`
-// parameter, and the token audience must cover the whole server.
+// The `resource` field is the canonical identifier of the protected
+// resource — the MCP endpoint URL (`<origin>/mcp`), the same URL clients
+// configure as the MCP server. Clients send it as the OAuth `resource`
+// parameter and it lands verbatim in the token audience, so validate.ts
+// accepts both the origin and the endpoint form.
 function protectedResourceHandler(request: Request, env: Env): Response {
   const origin = originFrom(request.url);
   const servers = authServers(env);
   return Response.json({
-    resource: origin,
+    resource: `${origin}/mcp`,
     authorization_servers: servers,
     scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
     bearer_methods_supported: ['header'],

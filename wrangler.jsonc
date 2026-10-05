@@ -36,7 +36,7 @@
       "name": "paxaver-mcp",
       "vars": {
         "ENVIRONMENT": "production",
-        "ALLOWED_ORIGINS": "https://paxaver.com,https://*.paxaver.com,https://paxaver.ca,https://*.paxaver.ca,https://paxaver.mx,https://*.paxaver.mx,https://chatgpt.com,https://claude.ai,https://www.perplexity.ai,https://glama.ai,https://*.glama.ai,https://policylayer.com,https://*.policylayer.com,https://openai.com,https://*.openai.com",
+        "ALLOWED_ORIGINS": "https://paxaver.com,https://*.paxaver.com,https://paxaver.ca,https://*.paxaver.ca,https://paxaver.mx,https://*.paxaver.mx,https://chatgpt.com,https://claude.ai,https://www.perplexity.ai,https://glama.ai,https://*.glama.ai,https://policylayer.com,https://*.policylayer.com,https://openai.com,https://*.openai.com,https://vscode.dev,https://insiders.vscode.dev,https://*.teams.microsoft.com,https://*.cloud.microsoft",
         "API_BASE_URL_CA": "https://paxaver.ca",
         "API_BASE_URL_US": "https://paxaver.com",
         "API_BASE_URL_MX": "https://paxaver.mx",

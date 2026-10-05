@@ -114,7 +114,7 @@ so the backend performs its own authorization checks (defense-in-depth).
 
 ```json
 {
-  "resource": "https://mcp.paxaver.com",
+  "resource": "https://mcp.paxaver.com/mcp",
   "authorization_servers": ["https://auth.paxaver.com"],
   "scopes_supported": ["tools"],
   "bearer_methods_supported": ["header"],
@@ -126,7 +126,7 @@ When a request arrives without a valid bearer token, the `401` response includes
 a `WWW-Authenticate` header pointing the client here:
 
 ```
-Bearer resource_metadata="https://mcp.paxaver.com/.well-known/oauth-protected-resource", scope="tools"
+Bearer resource_metadata="https://mcp.paxaver.com/.well-known/oauth-protected-resource/mcp", scope="tools"
 ```
 
 ### RFC 8414 — Authorization Server Metadata

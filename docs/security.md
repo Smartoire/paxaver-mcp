@@ -43,11 +43,19 @@ The MCP server uses an allowlist-based CORS policy. Production allows:
 
 - `https://paxaver.com`, `https://*.paxaver.com`
 - `https://paxaver.ca`, `https://*.paxaver.ca`
-- `https://chatgpt.com`
+- `https://paxaver.mx`, `https://*.paxaver.mx`
+- `https://chatgpt.com`, `https://openai.com`, `https://*.openai.com`
 - `https://claude.ai`
 - `https://www.perplexity.ai`
+- `https://glama.ai`, `https://*.glama.ai`
+- `https://policylayer.com`, `https://*.policylayer.com`
+- `https://vscode.dev`, `https://insiders.vscode.dev`
+- `https://*.teams.microsoft.com`, `https://*.cloud.microsoft`
 
-Wildcard subdomains are supported via the `*.domain` pattern.
+Wildcard subdomains are supported via the `*.domain` pattern. The VS Code
+and Microsoft 365/Teams origins exist so browser-hosted MCP clients
+(vscode.dev, Teams web, M365 Copilot) can run the OAuth discovery, DCR,
+and token legs against this worker.
 
 ## Security headers
 

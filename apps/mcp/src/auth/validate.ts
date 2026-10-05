@@ -89,7 +89,7 @@ export async function authenticateRequest(
       ok: false,
       status: 401,
       error: { code: 'UNAUTHORIZED', message: 'Authorization required' },
-      wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`,
+      wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
     };
   }
 
@@ -110,7 +110,7 @@ export async function authenticateRequest(
       const { payload } = await jwtVerify(token, jwks, {
         algorithms: ['RS256'],
         issuer,
-        audience: ['paxaver-api', 'mcp', origin],
+        audience: ['paxaver-api', 'mcp', origin, `${origin}/mcp`],
       });
 
       if (payload.sub) {
@@ -189,6 +189,6 @@ export async function authenticateRequest(
     ok: false,
     status: 401,
     error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' },
-    wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`,
+    wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
   };
 }

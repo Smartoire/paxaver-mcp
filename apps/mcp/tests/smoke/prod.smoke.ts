@@ -21,7 +21,7 @@ describe('Production smoke (read-only)', () => {
     const res = await fetch(`${BASE}/.well-known/oauth-protected-resource`);
     expect(res.status).toBe(200);
     const json = (await res.json()) as { resource: string; authorization_servers: string[] };
-    expect(json.resource).toBe('https://mcp.paxaver.com');
+    expect(json.resource).toBe('https://mcp.paxaver.com/mcp');
     expect(json.authorization_servers).toContain('https://paxaver.com/auth');
   });
 

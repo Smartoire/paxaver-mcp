@@ -54,7 +54,9 @@ requisite DNS record on first deploy.
 `ALLOWED_ORIGINS` is a comma-separated list. Wildcard subdomains are supported
 via the `*.domain` pattern. Production environments include the AI client
 origins (`chatgpt.com`, `claude.ai`, `www.perplexity.ai`) in addition to the
-Paxaver app origins. See [security.md](./security.md) for the CORS policy.
+Paxaver app origins. Production also allows browser-hosted MCP clients
+(`vscode.dev`, `insiders.vscode.dev`, `*.teams.microsoft.com`,
+`*.cloud.microsoft`). See [security.md](./security.md) for the CORS policy.
 
 ## Service binding: `PAXAVER_API`
 

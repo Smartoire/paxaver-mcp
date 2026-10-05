@@ -45,20 +45,21 @@ const PUBLIC_MCP_METHODS = new Set([
   'prompts/list',
 ]);
 
-function isAllowedOrigin(origin: string, allowed: string): boolean {
+export function isAllowedOrigin(origin: string, allowed: string): boolean {
   const list = allowed.split(',').map((o) => o.trim());
   return list.some((pattern) => {
     if (pattern === origin) return true;
-    if (pattern.startsWith('*.')) {
-      const base = pattern.slice(2);
-      try {
-        const url = new URL(origin);
-        return url.hostname === base || url.hostname.endsWith('.' + base);
-      } catch {
-        return false;
-      }
+    // Wildcard entries may carry an explicit scheme ('https://*.domain');
+    // strip it — matching is on hostname, per the documented '*.domain' rule.
+    const normalized = pattern.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, '');
+    if (!normalized.startsWith('*.')) return false;
+    const base = normalized.slice(2);
+    try {
+      const url = new URL(origin);
+      return url.hostname === base || url.hostname.endsWith('.' + base);
+    } catch {
+      return false;
     }
-    return false;
   });
 }
 
