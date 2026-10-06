@@ -10,13 +10,14 @@ import { describe, it, expect } from 'vitest';
 import { isAllowedOrigin } from '../src/index.js';
 
 const ALLOWED =
-  'https://paxaver.com,https://*.paxaver.com,https://vscode.dev,https://insiders.vscode.dev,https://*.teams.microsoft.com,https://*.cloud.microsoft';
+  'https://paxaver.com,https://*.paxaver.com,https://vscode.dev,https://insiders.vscode.dev,vscode-file://vscode-app,https://*.teams.microsoft.com,https://*.cloud.microsoft';
 
 describe('isAllowedOrigin', () => {
   it('matches exact origins', () => {
     expect(isAllowedOrigin('https://paxaver.com', ALLOWED)).toBe(true);
     expect(isAllowedOrigin('https://vscode.dev', ALLOWED)).toBe(true);
     expect(isAllowedOrigin('https://insiders.vscode.dev', ALLOWED)).toBe(true);
+    expect(isAllowedOrigin('vscode-file://vscode-app', ALLOWED)).toBe(true);
   });
 
   it('matches scheme-prefixed wildcard patterns', () => {
