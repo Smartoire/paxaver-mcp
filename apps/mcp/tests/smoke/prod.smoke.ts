@@ -22,7 +22,7 @@ describe('Production smoke (read-only)', () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as { resource: string; authorization_servers: string[] };
     expect(json.resource).toBe('https://mcp.paxaver.com/mcp');
-    expect(json.authorization_servers).toContain('https://paxaver.com/auth');
+    expect(json.authorization_servers).toEqual(['https://paxaver.com/auth']);
   });
 
   it('authorization server metadata points to auth server', async () => {

@@ -31,7 +31,7 @@ network hop). The MCP server's only responsibilities are:
 - Per-tool capability policy and role gating
 - Sanitized, user-safe error mapping
 
-Authentication is handled by the Paxaver auth worker (`auth.paxaver.com`), which
+Authentication is handled by the Paxaver auth worker (`paxaver.com/auth`), which
 serves as the OAuth 2.0 / OIDC authorization server. The MCP server validates
 the resulting RS256 JWTs and forwards them to the backend. The MCP server itself
 is not an authorization server.
@@ -196,7 +196,7 @@ read responses. The MCP server does not log user data.
 - **Framework:** [Hono](https://hono.dev) v4
 - **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
 - **Protocol:** MCP `2025-06-18`, Streamable HTTP
-- **Auth:** RS256 JWT validation via centralized auth worker (`auth.paxaver.com`)
+- **Auth:** RS256 JWT validation via centralized auth worker (`paxaver.com/auth`)
 - **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
 - **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)
 

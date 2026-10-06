@@ -21,7 +21,7 @@ jwk.use = 'sig';
 const realFetch = globalThis.fetch;
 vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  if (url === `${TEST_ISSUER}/.well-known/jwks.json`) {
+  if ([TEST_ISSUER, 'https://paxaver.com/auth'].some((issuer) => url === `${issuer}/.well-known/jwks.json`)) {
     return new Response(JSON.stringify({ keys: [jwk] }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -30,11 +30,11 @@ vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
   return realFetch(input, init);
 });
 
-async function makeToken(userId: string): Promise<string> {
+export async function makeToken(userId: string, issuer = TEST_ISSUER): Promise<string> {
   return new SignJWT({ tenant_id: 'user-ca' })
     .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
     .setSubject(userId)
-    .setIssuer(TEST_ISSUER)
+    .setIssuer(issuer)
     .setAudience('paxaver-api')
     .setIssuedAt()
     .setExpirationTime('1h')

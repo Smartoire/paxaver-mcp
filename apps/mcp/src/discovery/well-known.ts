@@ -1,18 +1,18 @@
 /**
  * Well-known discovery endpoints (RFC 9728, RFC 8414) and ChatGPT domain verification.
  *
- * OAuth is delegated to the centralized auth worker (paxaver.com/auth).
+ * OAuth is delegated to the canonical auth worker for the current environment.
  * The MCP server is a resource server, not an authorization server.
  */
 
 import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
-import { authUrl, authServers } from '../auth/validate.js';
+import { authUrl } from '../auth/validate.js';
 import { originFrom } from '../lib/url.js';
 import { SERVER_VERSION } from '../lib/version.js';
 
 // RFC 9728: Protected Resource Metadata
-// Points to the auth worker as the authorization server. Cross-domain
+// Points to the environment's canonical auth worker. Cross-domain
 // OAuth is explicitly supported by ChatGPT (see OpenAI apps-sdk auth docs).
 // The `resource` field is the canonical identifier of the protected
 // resource — the MCP endpoint URL (`<origin>/mcp`), the same URL clients
@@ -21,10 +21,9 @@ import { SERVER_VERSION } from '../lib/version.js';
 // accepts both the origin and the endpoint form.
 function protectedResourceHandler(request: Request, env: Env): Response {
   const origin = originFrom(request.url);
-  const servers = authServers(env);
   return Response.json({
     resource: `${origin}/mcp`,
-    authorization_servers: servers,
+    authorization_servers: [authUrl(env)],
     scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
     bearer_methods_supported: ['header'],
     resource_parameter_supported: true,
@@ -35,7 +34,7 @@ function protectedResourceHandler(request: Request, env: Env): Response {
 // Served on the MCP server as a fallback for clients that try
 // /.well-known/oauth-authorization-server on the MCP server directly
 // instead of following the protected-resource → authorization_servers chain.
-// All endpoint URLs point to the real auth server (paxaver.com/auth).
+// All endpoint URLs point to the canonical auth server for this environment.
 function authorizationServerHandler(env: Env): Response {
   const authServer = authUrl(env);
   return Response.json({

@@ -63,13 +63,19 @@ describe('MCP protocol', () => {
     }
   });
 
-  it('unauthenticated tools/list probe returns the static canonical catalog', async () => {
-    const res = await mcpPost({ jsonrpc: '2.0', id: 7, method: 'tools/list' }, undefined, 'tools/list');
-    expect(res.status).toBe(200);
-    const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
-    expect(json.result.tools.length).toBe(26);
-    // Anonymous catalog carries schemas only - no account data.
-    expect(JSON.stringify(json.result)).not.toContain('test-school');
+  it.each(['initialize', 'tools/list', 'ping'])(
+    'unauthenticated %s request returns 401 with OAuth challenge',
+    async (method) => {
+      const res = await mcpPost({ jsonrpc: '2.0', id: 7, method });
+      expect(res.status).toBe(401);
+      expect(res.headers.get('WWW-Authenticate')).toContain('resource_metadata');
+    },
+  );
+
+  it('unauthenticated SSE connection returns 401 with OAuth challenge', async () => {
+    const res = await request(app, 'https://mcp.paxaver.test/mcp', { method: 'GET' }, TEST_ENV);
+    expect(res.status).toBe(401);
+    expect(res.headers.get('WWW-Authenticate')).toContain('resource_metadata');
   });
 
   it('spoofed Mcp-Method header cannot bypass auth on tools/call', async () => {
@@ -232,7 +238,12 @@ describe('MCP protocol', () => {
   });
 
   it('GET /mcp opens an SSE stream with an endpoint event', async () => {
-    const res = await request(app, 'https://mcp.paxaver.test/mcp', { method: 'GET' }, TEST_ENV);
+    const res = await request(
+      app,
+      'https://mcp.paxaver.test/mcp',
+      { method: 'GET', headers: { Authorization: `Bearer ${TEST_TOKEN}` } },
+      TEST_ENV,
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toContain('text/event-stream');
     const reader = res.body!.getReader();

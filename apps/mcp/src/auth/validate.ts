@@ -1,10 +1,10 @@
 /**
  * OAuth access-token validation for incoming MCP requests.
  *
- * Validates RS256 JWTs from regional auth workers via JWKS.
- * Each region has its own auth worker (paxaver.ca/auth, paxaver.com/auth,
- * paxaver.mx/auth) with its own JWKS endpoint. The issuer is extracted
- * from the JWT `iss` claim to select the correct JWKS.
+ * Validates RS256 JWTs from the environment's authorization server via JWKS.
+ * Production uses paxaver.com/auth; development and staging use
+ * paxaver.dev/auth. The issuer is extracted from the JWT `iss` claim and
+ * must match the server for the current environment.
  *
  * User context (permissions, schoolSlug, studentIds, country) is loaded
  * from the backend via the service-binding API client. The user's region
@@ -24,28 +24,9 @@ export interface AuthResult {
   wwwAuthenticate?: string;
 }
 
-/** Known regional auth issuer URLs. */
-const AUTH_ISSUERS: Record<string, string> = {
-  'https://paxaver.ca/auth': 'ca',
-  'https://paxaver.com/auth': 'us',
-  'https://paxaver.mx/auth': 'mx',
-  // Staging/dev
-  'https://paxaver.dev/auth': 'ca',
-  'http://localhost:8788': 'ca',
-};
-
 /** Get the auth issuer URL for the environment. Used for OAuth metadata endpoints. */
 export function authUrl(env: Env): string {
-  if (env.ENVIRONMENT === 'development') return 'http://localhost:8788';
-  if (env.ENVIRONMENT === 'staging') return 'https://paxaver.dev/auth';
-  return 'https://paxaver.com/auth';
-}
-
-/** All supported authorization servers for the current environment. */
-export function authServers(env: Env): string[] {
-  if (env.ENVIRONMENT === 'development') return ['http://localhost:8788'];
-  if (env.ENVIRONMENT === 'staging') return ['https://paxaver.dev/auth'];
-  return ['https://paxaver.ca/auth', 'https://paxaver.com/auth', 'https://paxaver.mx/auth'];
+  return env.ENVIRONMENT === 'production' ? 'https://paxaver.com/auth' : 'https://paxaver.dev/auth';
 }
 
 // Warn once per isolate when the revocation check is inactive due to a
@@ -93,9 +74,9 @@ export async function authenticateRequest(
     };
   }
 
-  // --- RS256 path (regional auth worker JWT via JWKS) ---
+  // --- RS256 path (configured auth issuer via JWKS) ---
   // Peek at the unverified payload to get the issuer, then verify with the
-  // correct regional JWKS. This supports JWTs from any regional auth worker.
+  // JWKS for the issuer configured in this environment.
   let issuer: string | undefined;
   try {
     const unverified = decodeJwt(token);
@@ -104,7 +85,7 @@ export async function authenticateRequest(
     // Malformed JWT — fall through to the 401 below.
   }
 
-  if (issuer && AUTH_ISSUERS[issuer]) {
+  if (issuer && issuer === authUrl(env)) {
     const jwks = getJwks(issuer);
     try {
       const { payload } = await jwtVerify(token, jwks, {

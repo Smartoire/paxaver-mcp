@@ -2,7 +2,7 @@
 
 The Paxaver MCP server is a **resource server**, not an authorization server.
 Authentication is delegated to the centralized Paxaver auth worker
-(`auth.paxaver.com`), which serves as the OAuth 2.0 / OIDC authorization server.
+(`paxaver.com/auth`), which serves as the OAuth 2.0 / OIDC authorization server.
 The MCP server validates the resulting RS256 JWTs via JWKS and forwards them to
 the backend on every request.
 
@@ -10,7 +10,7 @@ the backend on every request.
 
 ```
 AI Client             Auth Worker               MCP Server            Paxaver Backend
-   │                (auth.paxaver.com)        (mcp.paxaver.com)
+   │                (paxaver.com/auth)        (mcp.paxaver.com)
    │                       │                       │                       │
    │  1. OAuth 2.0 Authorization Code + PKCE      │                       │
    │     GET /authorize    │                       │                       │
@@ -45,7 +45,7 @@ The MCP server validates RS256 JWTs using the auth worker's JWKS endpoint
 ```ts
 const { payload } = await jwtVerify(token, jwks, {
   algorithms: ['RS256'],
-  issuer, // auth.paxaver.com (or auth.paxaver.dev / localhost)
+  issuer, // paxaver.com/auth (or paxaver.dev/auth)
   audience: ['paxaver-api', 'mcp', origin],
 });
 ```
@@ -59,7 +59,7 @@ effectively per-request.
 | Claim       | Value                                           |
 | ----------- | ----------------------------------------------- |
 | `sub`       | Paxaver user ID                                 |
-| `iss`       | Auth worker origin (`https://auth.paxaver.com`) |
+| `iss`       | Auth worker origin (`https://paxaver.com/auth`) |
 | `aud`       | `paxaver-api`, `mcp`, or the request origin     |
 | `tenant_id` | User tenant ID (used for regional routing)      |
 | `exp`       | Token expiration                                |
@@ -115,7 +115,7 @@ so the backend performs its own authorization checks (defense-in-depth).
 ```json
 {
   "resource": "https://mcp.paxaver.com/mcp",
-  "authorization_servers": ["https://auth.paxaver.com"],
+  "authorization_servers": ["https://paxaver.com/auth"],
   "scopes_supported": ["tools"],
   "bearer_methods_supported": ["header"],
   "resource_documentation": "https://github.com/Smartoire/paxaver-mcp/blob/main/docs/security.md"
@@ -134,19 +134,19 @@ Bearer resource_metadata="https://mcp.paxaver.com/.well-known/oauth-protected-re
 `GET /.well-known/oauth-authorization-server`
 
 Delegates to the auth worker's OIDC discovery. The MCP server returns metadata
-pointing to `auth.paxaver.com` as the authorization server:
+pointing to `paxaver.com/auth` as the authorization server:
 
 ```json
 {
-  "issuer": "https://auth.paxaver.com",
-  "authorization_endpoint": "https://auth.paxaver.com/authorize",
-  "token_endpoint": "https://auth.paxaver.com/token",
+  "issuer": "https://paxaver.com/auth",
+  "authorization_endpoint": "https://paxaver.com/auth/authorize",
+  "token_endpoint": "https://paxaver.com/auth/token",
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
   "scopes_supported": ["openid", "profile", "email", "tools", "offline_access"],
   "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
-  "jwks_uri": "https://auth.paxaver.com/.well-known/jwks.json"
+  "jwks_uri": "https://paxaver.com/auth/.well-known/jwks.json"
 }
 ```
 

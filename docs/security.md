@@ -15,7 +15,7 @@ business logic. Its security responsibilities are:
 
 All MCP requests (`POST /mcp`, `GET /mcp`, `DELETE /mcp`) require a
 valid Bearer token. The token is an RS256 JWT issued by the centralized
-auth worker (`auth.paxaver.com`).
+auth worker (`paxaver.com/auth`).
 
 Validation flow:
 

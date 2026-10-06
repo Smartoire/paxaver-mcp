@@ -32,19 +32,6 @@ Canonical: https://paxaver.com/.well-known/security.txt
 Policy: https://paxaver.com/privacy/security
 `;
 
-// Metadata-only methods callable without a bearer token. Everything else
-// (tools/call, resources/read, prompts/get, unknown methods) requires auth.
-const PUBLIC_MCP_METHODS = new Set([
-  'server/discover',
-  'initialize',
-  'notifications/initialized',
-  'ping',
-  'tools/list',
-  'resources/list',
-  'resources/templates/list',
-  'prompts/list',
-]);
-
 export function isAllowedOrigin(origin: string, allowed: string): boolean {
   const list = allowed.split(',').map((o) => o.trim());
   return list.some((pattern) => {
@@ -86,62 +73,10 @@ function mergeHeaders(response: Response, extra: Record<string, string>): Respon
 }
 
 async function mcpAuth(request: Request, ctx: { env: Env; var: Partial<AppVariables> }): Promise<Response | null> {
-  const url = new URL(request.url);
-
-  // Well-known endpoints under /mcp/ are public (some clients construct
-  // the metadata URL by appending /.well-known/ to the connector path).
-  if (url.pathname.includes('/.well-known/')) {
-    return null;
-  }
-
-  // Metadata-only RPC methods are public capability probes: they expose
-  // tool/resource/prompt schemas and server info but never user data.
-  // Marketplace crawlers (LobeHub, etc.) and MCP clients need these to
-  // answer before authentication. Data-touching methods (tools/call,
-  // resources/read, prompts/get) still require auth — enforced again in
-  // the JSON-RPC layer so a spoofed header on a batch can't bypass it.
-  const mcpMethod = request.headers.get('Mcp-Method')?.toLowerCase();
-  if (mcpMethod && PUBLIC_MCP_METHODS.has(mcpMethod)) {
-    return null;
-  }
-
-  // The SSE stream and public metadata probes do not carry user data.
-  // Some clients (Glama, OpenAI) send the RPC method in the JSON body
-  // without the Mcp-Method header; parse a small clone to allow them.
-  if (request.method === 'GET' && url.pathname === '/mcp') {
-    return null;
-  }
-  let publicBody = false;
-  if (!mcpMethod && request.method === 'POST' && url.pathname === '/mcp') {
-    try {
-      const raw = (await request.clone().json()) as unknown;
-      const batch = Array.isArray(raw) ? raw : [raw];
-      publicBody =
-        batch.length > 0 &&
-        batch.every(
-          (item) =>
-            typeof item === 'object' &&
-            item !== null &&
-            PUBLIC_MCP_METHODS.has(((item as { method?: string }).method ?? '').toLowerCase()),
-        );
-      if (publicBody && !request.headers.get('Authorization')) {
-        return null;
-      }
-    } catch {
-      // Not valid JSON or not a public method; fall through to auth.
-    }
-  }
-
   const origin = originFrom(request.url);
   const result = await authenticateRequest(ctx.env, request.headers.get('Authorization') || undefined, origin);
 
   if (!result.ok) {
-    // An expired/invalid token must not downgrade a public metadata probe
-    // below anonymous access — connectors like Glama keep polling with a
-    // stale bearer and would otherwise see 401s on methods that are public.
-    if (publicBody) {
-      return null;
-    }
     const headers: Record<string, string> = {};
     if (result.wwwAuthenticate) headers['WWW-Authenticate'] = result.wwwAuthenticate;
     return Response.json(result.error, { status: result.status, headers });
