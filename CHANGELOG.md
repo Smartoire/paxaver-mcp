@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Allow Microsoft OAuth client origins during staging validation.
 
+## [2.6.3] — 2026-10-05
+
+### Changed
+
+- Align the MCP runtime and distribution metadata with the Microsoft Teams manifest version 2.6.3.
+
 ## [2.6.2] — 2026-10-04
 
 ### Changed
