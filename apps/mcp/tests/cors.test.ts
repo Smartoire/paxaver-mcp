@@ -31,6 +31,8 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://evil.com', ALLOWED)).toBe(false);
     expect(isAllowedOrigin('https://paxaver.com.evil.com', ALLOWED)).toBe(false);
     expect(isAllowedOrigin('https://noteams.microsoft.com', ALLOWED)).toBe(false);
+    expect(isAllowedOrigin('http://app.paxaver.com', ALLOWED)).toBe(false);
+    expect(isAllowedOrigin('http://prod.teams.microsoft.com', ALLOWED)).toBe(false);
     expect(isAllowedOrigin('', ALLOWED)).toBe(false);
   });
 });

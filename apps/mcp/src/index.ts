@@ -49,13 +49,13 @@ export function isAllowedOrigin(origin: string, allowed: string): boolean {
   const list = allowed.split(',').map((o) => o.trim());
   return list.some((pattern) => {
     if (pattern === origin) return true;
-    // Wildcard entries may carry an explicit scheme ('https://*.domain');
-    // strip it — matching is on hostname, per the documented '*.domain' rule.
-    const normalized = pattern.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, '');
-    if (!normalized.startsWith('*.')) return false;
-    const base = normalized.slice(2);
+    const wildcard = pattern.match(/^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)?\*\.([^/]+)$/);
+    if (!wildcard) return false;
+    const [, scheme, base] = wildcard;
+    if (!base) return false;
     try {
       const url = new URL(origin);
+      if (scheme && `${url.protocol}//` !== scheme) return false;
       return url.hostname === base || url.hostname.endsWith('.' + base);
     } catch {
       return false;
