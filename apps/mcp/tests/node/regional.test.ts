@@ -50,6 +50,19 @@ describe('Regional routing', () => {
     expect(vars.API_BASE_URL_CA).toContain('paxaver.dev');
   });
 
+  it.each(['staging', 'production'])('%s allows Microsoft OAuth client origins', (environment) => {
+    const vars = envs[environment]!.vars as Record<string, string>;
+    const origins = vars.ALLOWED_ORIGINS!.split(',');
+    expect(origins).toEqual(
+      expect.arrayContaining([
+        'https://vscode.dev',
+        'https://insiders.vscode.dev',
+        'https://*.teams.microsoft.com',
+        'https://*.cloud.microsoft',
+      ]),
+    );
+  });
+
   it('no production-ca or production-us environments exist', () => {
     expect(envs['production-ca']).toBeUndefined();
     expect(envs['production-us']).toBeUndefined();
