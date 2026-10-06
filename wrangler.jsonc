@@ -23,7 +23,7 @@
       "name": "paxaver-mcp-staging",
       "vars": {
         "ENVIRONMENT": "staging",
-        "ALLOWED_ORIGINS": "https://paxaver.dev,https://*.paxaver.dev",
+        "ALLOWED_ORIGINS": "https://paxaver.dev,https://*.paxaver.dev,https://vscode.dev,https://insiders.vscode.dev,https://*.teams.microsoft.com,https://*.cloud.microsoft",
         "API_BASE_URL_CA": "https://paxaver.dev",
         "API_BASE_URL_US": "https://paxaver.dev",
         "API_BASE_URL_MX": "https://paxaver.dev",
