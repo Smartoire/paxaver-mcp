@@ -108,6 +108,8 @@ so the backend performs its own authorization checks (defense-in-depth).
 
 ## Discovery endpoints
 
+The MCP JSON-RPC `server/discover` method is public so clients can inspect supported protocol versions without authenticating. Other `/mcp` requests still require a valid bearer token; tools and protected operations also retain their subscription and authorization checks.
+
 ### RFC 9728 — Protected Resource Metadata
 
 `GET /.well-known/oauth-protected-resource`

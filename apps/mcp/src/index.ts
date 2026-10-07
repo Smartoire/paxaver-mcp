@@ -72,6 +72,22 @@ function mergeHeaders(response: Response, extra: Record<string, string>): Respon
   });
 }
 
+async function isPublicDiscoveryRequest(request: Request): Promise<boolean> {
+  if (request.method !== 'POST') return false;
+  try {
+    const body: unknown = await request.clone().json();
+    return (
+      !Array.isArray(body) &&
+      body !== null &&
+      typeof body === 'object' &&
+      'method' in body &&
+      body.method === 'server/discover'
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function mcpAuth(request: Request, ctx: { env: Env; var: Partial<AppVariables> }): Promise<Response | null> {
   const origin = originFrom(request.url);
   const result = await authenticateRequest(ctx.env, request.headers.get('Authorization') || undefined, origin);
@@ -172,7 +188,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
         response = await fetch(proxied);
       }
     } else if (url.pathname === '/mcp') {
-      const authResult = await mcpAuth(request, ctx);
+      const authResult = (await isPublicDiscoveryRequest(request)) ? null : await mcpAuth(request, ctx);
       if (authResult) {
         response = authResult;
       } else if (request.method === 'GET' && !ctx.var.isPlatformAdmin && ctx.var.subscription?.status !== 'active') {
