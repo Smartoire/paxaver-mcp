@@ -63,6 +63,17 @@ describe('MCP protocol', () => {
     }
   });
 
+  it('unauthenticated server/discover request returns public protocol metadata', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 7, method: 'server/discover' });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as unknown as {
+      result: { resultType: string; supportedVersions: string[]; cacheScope: string };
+    };
+    expect(json.result.resultType).toBe('complete');
+    expect(json.result.supportedVersions).toContain('2026-07-28');
+    expect(json.result.cacheScope).toBe('public');
+  });
+
   it.each(['initialize', 'tools/list', 'ping'])(
     'unauthenticated %s request returns 401 with OAuth challenge',
     async (method) => {
