@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
 import { request } from './request.js';
-import { TEST_TOKEN, TEST_ENV } from './jwt-auth.js';
+import { ACTIVE_TOKEN, TEST_TOKEN, TEST_ENV } from './jwt-auth.js';
 
 async function mcpPost(body: unknown, token?: string) {
   const headers: Record<string, string> = {
@@ -27,7 +27,7 @@ async function mcpPost(body: unknown, token?: string) {
 
 describe('Safety', () => {
   it('unknown tool returns -32601, not internal error', async () => {
-    const token = TEST_TOKEN;
+    const token = ACTIVE_TOKEN;
     const res = await mcpPost(
       {
         jsonrpc: '2.0',

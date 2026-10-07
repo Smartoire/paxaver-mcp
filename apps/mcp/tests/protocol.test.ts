@@ -27,15 +27,16 @@ async function mcpPost(body: unknown, token?: string, mcpMethod?: string) {
 }
 
 describe('MCP protocol', () => {
-  it('initialize returns protocol version and server info', async () => {
-    const token = TEST_TOKEN;
-    const res = await mcpPost({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }, token);
+  it('initialize explains portal subscription requirements to free users', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }, TEST_TOKEN);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as {
-      result: { protocolVersion: string; serverInfo: { name: string } };
+      result: { protocolVersion: string; serverInfo: { name: string }; instructions: string };
     };
     expect(json.result.protocolVersion).toBe('2025-06-18');
     expect(json.result.serverInfo.name).toBe('paxaver-mcp');
+    expect(json.result.instructions).toContain('subscription');
+    expect(json.result.instructions).toContain('portal');
     expect(res.headers.get('Mcp-Session-Id')).toBeTruthy();
   });
 
@@ -48,8 +49,7 @@ describe('MCP protocol', () => {
   });
 
   it('tools/list returns the canonical catalog for a PAC-capable user', async () => {
-    const token = TEST_TOKEN;
-    const res = await mcpPost({ jsonrpc: '2.0', id: 3, method: 'tools/list' }, token);
+    const res = await mcpPost({ jsonrpc: '2.0', id: 3, method: 'tools/list' }, FULL_TOKEN);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
     const names = json.result.tools.map((t) => t.name);
@@ -99,20 +99,34 @@ describe('MCP protocol', () => {
   });
 
   it('unknown method returns -32601', async () => {
-    const token = TEST_TOKEN;
-    const res = await mcpPost({ jsonrpc: '2.0', id: 6, method: 'nonexistent/method' }, token);
+    const res = await mcpPost({ jsonrpc: '2.0', id: 6, method: 'nonexistent/method' }, ACTIVE_TOKEN);
     const json = (await res.json()) as unknown as { error: { code: number } };
     expect(json.error.code).toBe(-32601);
   });
 
-  it('unsubscribed read tool executes (reads are free)', async () => {
+  it('unsubscribed read tool is blocked with portal guidance and no payment link', async () => {
     const res = await mcpPost(
       { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'get_my_wallet_balance', arguments: {} } },
       TEST_TOKEN,
     );
-    const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
-    expect(json.error?.message ?? '').not.toContain('subscription');
-    expect(json.result).toBeTruthy();
+    const json = (await res.json()) as unknown as { error: { message: string } };
+    expect(json.error.message).toContain('subscription');
+    expect(json.error.message).toContain('portal');
+    expect(json.error.message).not.toContain('https://');
+  });
+
+  it('tools/list is blocked for users without an active MCP subscription', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 9, method: 'tools/list' }, TEST_TOKEN);
+    const json = (await res.json()) as unknown as { error: { message: string } };
+    expect(json.error.message).toContain('subscription');
+    expect(json.error.message).toContain('portal');
+    expect(json.error.message).not.toContain('https://');
+  });
+
+  it('resources/list is blocked for users without an active MCP subscription', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 9, method: 'resources/list' }, TEST_TOKEN);
+    const json = (await res.json()) as unknown as { error: { message: string } };
+    expect(json.error.message).toContain('subscription');
   });
 
   it('unsubscribed write tool is blocked', async () => {
@@ -121,7 +135,7 @@ describe('MCP protocol', () => {
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
-    expect(json.error.code).toBe(-32603);
+    expect(json.error.code).toBe(-32002);
     expect(json.error.message).toContain('subscription');
   });
 
@@ -131,27 +145,27 @@ describe('MCP protocol', () => {
       TEST_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
-    expect(json.error.code).toBe(-32603);
+    expect(json.error.code).toBe(-32002);
     expect(json.error.message).toContain('subscription');
   });
 
-  it('expired subscription write is blocked with renewal message', async () => {
+  it('expired subscription is blocked with portal guidance', async () => {
     const res = await mcpPost(
       { jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'create_lunch_order_draft', arguments: {} } },
       EXPIRED_TOKEN,
     );
     const json = (await res.json()) as unknown as { error: { code: number; message: string } };
-    expect(json.error.code).toBe(-32603);
-    expect(json.error.message).toContain('expired');
+    expect(json.error.code).toBe(-32002);
+    expect(json.error.message).toContain('portal');
   });
 
-  it('expired subscription read still executes', async () => {
+  it('expired subscription read is blocked', async () => {
     const res = await mcpPost(
       { jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'get_lunch_menu', arguments: {} } },
       EXPIRED_TOKEN,
     );
-    const json = (await res.json()) as unknown as { error?: { message: string }; result?: unknown };
-    expect(json.error?.message ?? '').not.toContain('subscription');
+    const json = (await res.json()) as unknown as { error: { message: string } };
+    expect(json.error.message).toContain('subscription');
   });
 
   it('active parent subscription write executes', async () => {
@@ -237,11 +251,25 @@ describe('MCP protocol', () => {
     expect(json.error.code).toBe(-32700);
   });
 
-  it('GET /mcp opens an SSE stream with an endpoint event', async () => {
+  it('GET /mcp denies free users before opening an SSE stream', async () => {
     const res = await request(
       app,
       'https://mcp.paxaver.test/mcp',
       { method: 'GET', headers: { Authorization: `Bearer ${TEST_TOKEN}` } },
+      TEST_ENV,
+    );
+    expect(res.status).toBe(403);
+    const json = (await res.json()) as unknown as { error: string };
+    expect(json.error).toContain('subscription');
+    expect(json.error).toContain('portal');
+    expect(json.error).not.toContain('https://');
+  });
+
+  it('GET /mcp opens an SSE stream with an endpoint event', async () => {
+    const res = await request(
+      app,
+      'https://mcp.paxaver.test/mcp',
+      { method: 'GET', headers: { Authorization: `Bearer ${ACTIVE_TOKEN}` } },
       TEST_ENV,
     );
     expect(res.status).toBe(200);

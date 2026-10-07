@@ -175,6 +175,14 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       const authResult = await mcpAuth(request, ctx);
       if (authResult) {
         response = authResult;
+      } else if (request.method === 'GET' && !ctx.var.isPlatformAdmin && ctx.var.subscription?.status !== 'active') {
+        response = Response.json(
+          {
+            error:
+              'An active Parent AI or PAC AI subscription is required to use Paxaver MCP. Please visit your Paxaver portal to subscribe.',
+          },
+          { status: 403 },
+        );
       } else {
         response = await transportApp.fetch(request, { env, var: ctx.var as AppVariables });
       }

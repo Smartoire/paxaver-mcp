@@ -14,6 +14,24 @@ import { SERVER_VERSION } from '../lib/version.js';
 
 export const PROTOCOL_VERSION = '2025-06-18';
 const SUPPORTED_VERSIONS = ['2026-07-28', PROTOCOL_VERSION];
+const SUBSCRIPTION_REQUIRED =
+  'An active Parent AI or PAC AI subscription is required to use Paxaver MCP. Please visit your Paxaver portal to subscribe.';
+
+function subscriptionRequired(id: string | number | null): Response {
+  return Response.json(mcpError(id, -32002, SUBSCRIPTION_REQUIRED));
+}
+
+function hasMcpSubscription(
+  ctx:
+    | {
+        isPlatformAdmin?: boolean;
+        subscription?: { status?: string } | null;
+      }
+    | null
+    | undefined,
+): boolean {
+  return ctx?.isPlatformAdmin || ctx?.subscription?.status === 'active';
+}
 
 // ponytail: Hono's Context generic is complex and varies by route path.
 // The fields we use (env, var, req.header, url) are stable across all
@@ -73,15 +91,11 @@ export async function handleJsonRpc(
     const permissions = ctx.permissions ?? [];
     const admin = ctx.isPlatformAdmin || permissions.includes('pac_cordinator') || permissions.includes('pac_member');
     const subStatus = ctx.subscription?.status ?? 'none';
-    const needsRegistration = !ctx.isPlatformAdmin && subStatus !== 'active';
+    const needsSubscription = !ctx.isPlatformAdmin && subStatus !== 'active';
     const baseInstructions = admin
       ? "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Admin tools: list_school_restaurants, create_school_restaurant, list_restaurant_menu_items, create_restaurant_menu_item, update_restaurant_menu_item, archive_restaurant_menu_item, schedule_lunch_menu_item, create_school_event, update_school_event, cancel_school_event. Do not invent tool names - use only the tools returned by tools/list."
       : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Do not invent tool names - use only the tools returned by tools/list.";
-    const registrationNotice = needsRegistration
-      ? subStatus === 'expired'
-        ? ' IMPORTANT: Your Paxaver AI subscription has expired. Renew at https://paxaver.com/settings/mcp to restore add, edit, and update tools.'
-        : ' IMPORTANT: Read-only tools are free. Add, edit, and update tools require an active Paxaver AI subscription. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.'
-      : '';
+    const registrationNotice = needsSubscription ? ` IMPORTANT: ${SUBSCRIPTION_REQUIRED}` : '';
     return Response.json({
       jsonrpc: '2.0',
       id,
@@ -106,6 +120,7 @@ export async function handleJsonRpc(
 
   if (method === 'tools/list') {
     const ctx = c.var;
+    if (!hasMcpSubscription(ctx)) return subscriptionRequired(id);
     // Unauthenticated metadata probes (marketplace crawlers) see the full
     // catalog — tool schemas are public integration contracts. Auth stays
     // enforced on tools/call below.
@@ -140,14 +155,17 @@ export async function handleJsonRpc(
   }
 
   if (method === 'resources/list') {
+    if (!hasMcpSubscription(c.var)) return subscriptionRequired(id);
     return Response.json({ jsonrpc: '2.0', id, result: { resources: ALL_RESOURCES } });
   }
 
   if (method === 'resources/templates/list') {
+    if (!hasMcpSubscription(c.var)) return subscriptionRequired(id);
     return Response.json({ jsonrpc: '2.0', id, result: { resourceTemplates: [] } });
   }
 
   if (method === 'prompts/list') {
+    if (!hasMcpSubscription(c.var)) return subscriptionRequired(id);
     return Response.json({ jsonrpc: '2.0', id, result: { prompts: ALL_PROMPTS } });
   }
 
@@ -158,6 +176,8 @@ export async function handleJsonRpc(
   if (!c.var?.userId) {
     return Response.json(mcpError(id, -32600, 'Authorization required'), { status: 401 });
   }
+
+  if (!hasMcpSubscription(c.var)) return subscriptionRequired(id);
 
   if (method === 'tools/call') {
     // Legacy names resolve to canonical tools (TOOL_ALIASES) — they stay
