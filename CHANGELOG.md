@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the daily menu. Requires the backend release that prices drafts
   server-side — deployed against an older backend, draft creation fails
   (#1951).
+- Removed the `/oauth/callback` helper page. It embedded the `code`,
+  `state`, `error`, and `error_description` query values in an inline
+  `<script>` through `JSON.stringify`, which does not escape `<`: a
+  crafted `</script>` value ran injected JavaScript on the MCP origin and
+  could steal authorization codes (#1972). The endpoint now returns 404.
 
 ### Fixed
 
