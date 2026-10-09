@@ -53,7 +53,9 @@ async function callTool(name: string, args: Record<string, unknown>) {
 }
 
 const draftItem = { menu_item_id: 'item-1', menu_item_name: 'Pizza', price_cents: 550, quantity: 2 };
-const draftItemCamel = { menuItemId: 'item-1', menuItemName: 'Pizza', priceCents: 550, quantity: 2 };
+// The backend prices draft items from the menu — a client-sent
+// price_cents must never be forwarded (#1951).
+const draftItemCamel = { menuItemId: 'item-1', menuItemName: 'Pizza', quantity: 2 };
 
 describe('tool → backend contract', () => {
   it('get_lunch_menu hits /api/schools/:slug/menu/daily', async () => {
@@ -128,6 +130,15 @@ describe('tool → backend contract', () => {
     const c = await callTool('update_lunch_order_draft', { order_id: 'o1', items: [draftItem] });
     expect(`${c?.method} ${c?.path}`).toBe('PATCH /api/lunch/orders/o1');
     expect(c?.body?.items).toEqual([draftItemCamel]);
+  });
+
+  it('draft tools never forward a client-supplied price, even a negative one (#1951)', async () => {
+    const c = await callTool('create_lunch_order_draft', {
+      menu_date: '2026-10-01',
+      items: [{ menu_item_id: 'item-1', menu_item_name: 'Pizza', price_cents: -5000, quantity: 1 }],
+    });
+    expect(c?.body?.items).toEqual([{ menuItemId: 'item-1', menuItemName: 'Pizza', quantity: 1 }]);
+    expect(JSON.stringify(c?.body)).not.toContain('priceCents');
   });
 
   it('pay_lunch_order_draft sends tipCents', async () => {
