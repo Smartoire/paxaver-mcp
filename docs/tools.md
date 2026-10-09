@@ -101,8 +101,9 @@ for existing integrations but is not advertised (see
 
 Creates an unpaid lunch order draft for a student the authenticated user is
 a guardian of. Takes `menu_date` plus an `items` array (each item:
-`menu_item_id`, `menu_item_name`, `price_cents`, `quantity` — all from
-`get_lunch_menu`). `student_id` and `school_slug` default to the caller's
+`menu_item_id`, `menu_item_name`, `quantity` — IDs from `get_lunch_menu`;
+the server prices each item from the menu, a client-sent price is ignored).
+`student_id` and `school_slug` default to the caller's
 first student / active school. **WRITE** — returns the draft `order_id` and
 computed total; no charge occurs.
 

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- `create_lunch_order_draft` and `update_lunch_order_draft` no longer accept
+  or forward `price_cents`: draft items carry only `menu_item_id`,
+  `menu_item_name`, and `quantity`, and the backend prices each item from
+  the daily menu. Requires the backend release that prices drafts
+  server-side — deployed against an older backend, draft creation fails
+  (#1951).
 - Removed the `/oauth/callback` helper page. It embedded the `code`,
   `state`, `error`, and `error_description` query values in an inline
   `<script>` through `JSON.stringify`, which does not escape `<`: a

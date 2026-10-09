@@ -35,15 +35,14 @@ interface ToolSpec {
   after?: (result: ApiCallResult, args: Args, ctx: AppVariables) => void;
 }
 
-// Backend draft-order routes store items verbatim and recompute the total
-// from priceCents * quantity — every item must carry camelCase keys or the
-// total silently becomes NaN.
+// The backend prices every draft item from the daily menu and ignores a
+// client-sent priceCents — never forward one (#1951). Items still need
+// camelCase keys: menuItemId / menuItemName / quantity.
 function mapDraftItems(items: unknown): unknown {
   if (!Array.isArray(items)) return items;
   return (items as Record<string, unknown>[]).map((i) => ({
     menuItemId: i.menu_item_id ?? i.menuItemId,
     menuItemName: i.menu_item_name ?? i.menuItemName,
-    priceCents: i.price_cents ?? i.priceCents,
     quantity: i.quantity,
   }));
 }

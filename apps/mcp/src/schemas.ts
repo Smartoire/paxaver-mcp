@@ -273,16 +273,16 @@ export const ALL_TOOLS: ToolDefinition[] = [
         menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
         items: {
           type: 'array',
-          description: 'Line items to order; get IDs and prices from get_lunch_menu',
+          description:
+            'Line items to order; get IDs from get_lunch_menu. The server prices each item from the menu - a client-sent price is ignored',
           items: {
             type: 'object',
             properties: {
               menu_item_id: { type: 'string', description: 'Menu item ID from get_lunch_menu' },
               menu_item_name: { type: 'string', description: 'Item display name from get_lunch_menu' },
-              price_cents: { type: 'integer', description: 'Unit price in cents from get_lunch_menu' },
               quantity: { type: 'integer', description: 'Number of servings', minimum: 1 },
             },
-            required: ['menu_item_id', 'menu_item_name', 'price_cents', 'quantity'],
+            required: ['menu_item_id', 'menu_item_name', 'quantity'],
           },
         },
       },
@@ -384,7 +384,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'update_lunch_order_draft',
     title: 'Update Lunch Order Draft',
     description:
-      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_lunch_order_draft). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from price times quantity. Only draft orders can be updated; once finalized, use cancel_my_lunch_order. WRITE - confirm the new contents with the user.",
+      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_lunch_order_draft). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from menu prices times quantity. Only draft orders can be updated; once finalized, use cancel_my_lunch_order. WRITE - confirm the new contents with the user.",
     inputSchema: {
       type: 'object',
       properties: {
