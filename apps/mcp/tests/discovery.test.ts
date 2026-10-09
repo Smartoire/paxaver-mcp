@@ -77,33 +77,25 @@ describe('well-known endpoints', () => {
     expect(res.status).toBe(404);
   });
 
-  it('/oauth/callback renders code for successful auth', async () => {
+  // Regression (#1972): the /oauth/callback helper page embedded query values
+  // in an inline <script> via JSON.stringify, which does not escape '<' — a
+  // crafted </script> value produced reflected XSS on the MCP origin. The page
+  // was a convenience for MCP Inspector and has been removed.
+  it('/oauth/callback returns 404 (helper page removed)', async () => {
     const res = await request(wellKnownApp, '/oauth/callback?code=test-code-123&state=abc', {}, mockEnv());
-    expect(res.status).toBe(200);
-    const body = await res.text();
-    expect(body).toContain('test-code-123');
-    expect(body).toContain('Authorization successful');
+    expect(res.status).toBe(404);
   });
 
-  it('/oauth/callback renders error for failed auth', async () => {
+  it('/oauth/callback does not reflect </script><script> (XSS)', async () => {
     const res = await request(
       wellKnownApp,
-      '/oauth/callback?error=access_denied&error_description=Consent+required',
+      '/oauth/callback?error=%3C%2Fscript%3E%3Cscript%3Ex()%3C%2Fscript%3E',
       {},
       mockEnv(),
     );
-    expect(res.status).toBe(200);
     const body = await res.text();
-    expect(body).toContain('access_denied');
-    expect(body).toContain('Consent required');
-    expect(body).toContain('Authorization failed');
-  });
-
-  it('/oauth/callback handles missing params gracefully', async () => {
-    const res = await request(wellKnownApp, '/oauth/callback', {}, mockEnv());
-    expect(res.status).toBe(200);
-    const body = await res.text();
-    expect(body).toContain('No authorization code or error received');
+    expect(body).not.toContain('</script><script>');
+    expect(body).not.toContain('<script');
   });
 
   it('every well-known response sets Cache-Control: no-store', async () => {
