@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.1] — 2026-10-09
+
+Republishes the 2.7.0 changes with the declared version aligned to the
+release tag. The `v2.7.0` tag declared 2.6.3, so the MCP Registry publish
+failed.
+
 ### Added
 
 - Alexa routing on `mcp.paxaver.com` for CA, US and MX users (#2056):
@@ -45,6 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registered at `paxaver.com/auth` before this change keep working.
 
 - Allow Microsoft OAuth client origins during staging validation.
+- `package.json`, `server.json` and `lhm.plugin.json` declare 2.7.1, so
+  `/health`, discovery and the MCP Registry entry report the release
+  version. CI now fails when `package.json` and `server.json` disagree.
+
+### Changed
+
+- CI and registry workflows use `actions/checkout@v7`,
+  `actions/setup-node@v7` and `pnpm/action-setup@v6`, which run on
+  Node 24. The project Node version (26) does not change.
 
 ## [2.6.3] — 2026-10-05
 

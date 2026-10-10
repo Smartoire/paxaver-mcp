@@ -21,7 +21,7 @@ jobs:
     container: node:26-bookworm
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # A tag pushed without a version bump would publish the previous
       # version's server.json and fail as a duplicate — assert agreement
