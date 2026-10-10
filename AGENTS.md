@@ -33,7 +33,7 @@ The server is a thin adapter. It contains no business logic and never touches th
 
 ## Tech Stack
 
-- TypeScript 6
+- TypeScript 7 (`tsc`); TypeScript 6 API for tooling
 - Cloudflare Workers
 - Native `fetch` handler
 - jose (JWT validation)

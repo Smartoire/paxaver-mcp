@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      # The `typescript` alias resolves to @typescript/typescript6 (JS API
+      # for typescript-eslint) while @typescript/native is the TS 7
+      # compiler. They must move together: never bump `typescript` to 7
+      # alone.
+      typescript:
+        patterns:
+          - 'typescript'
+          - '@typescript/native'
+          - '@typescript/typescript6'
