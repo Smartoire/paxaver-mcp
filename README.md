@@ -130,8 +130,8 @@ npm run deploy:staging   # wrangler deploy --env staging
 npm run deploy:prod      # wrangler deploy --env production
 ```
 
-The worker requires no secrets. See
-[`docs/deployment.md`](./docs/deployment.md).
+The worker reads two Worker secrets, `INTERNAL_SERVICE_SECRET` and
+`ALEXA_SKILL_ID`. See [`docs/deployment.md`](./docs/deployment.md#secrets).
 
 ---
 

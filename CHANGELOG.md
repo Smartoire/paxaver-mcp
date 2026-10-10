@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Alexa routing on `mcp.paxaver.com` for CA, US and MX users (#2056):
+  `GET /alexa/authorize` (region picker), `POST /alexa/token` (routes by
+  the region tag on the code or refresh token) and `POST /alexa` (skill
+  endpoint, routes by the token issuer). The skill endpoint verifies the
+  Amazon request signature, the timestamp and the skill id
+  (`ALEXA_SKILL_ID`). Requires the backend release that adds the region
+  tag to Alexa authorization codes.
+- Staging binds `PAXAVER_API_US` and `PAXAVER_API_MX` to the dev backend.
+
 ### Security
 
 - `create_lunch_order_draft` and `update_lunch_order_draft` no longer accept

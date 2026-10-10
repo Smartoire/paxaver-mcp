@@ -23,6 +23,7 @@ authorization policy, but contains no business logic and no direct data access.
                               Cloudflare service bindings (regional routing)
                               PAXAVER_API_CA → paxaver-api-ca (CA users)
                               PAXAVER_API_US → paxaver-api-us (US users)
+                              PAXAVER_API_MX → paxaver-api-mx (MX users)
                               selected per-request from JWT tenant_id
                               forwards user's RS256 JWT
                                                                 │
@@ -75,22 +76,44 @@ the API directly. This means:
 
 ## Regional isolation
 
-Paxaver operates two production regions, each with its own API backend. The
-MCP worker is a single deployment at `mcp.paxaver.com` that serves both regions:
+Paxaver operates three production regions, each with its own API backend. The
+MCP worker is a single deployment at `mcp.paxaver.com` that serves all regions:
 
 | Region | API backend       | MCP endpoint      |
 | ------ | ----------------- | ----------------- |
 | `ca`   | `paxaver.ca/api`  | `mcp.paxaver.com` |
 | `us`   | `paxaver.com/api` | `mcp.paxaver.com` |
+| `mx`   | `paxaver.mx/api`  | `mcp.paxaver.com` |
 
-The MCP worker binds to both regional backends (`PAXAVER_API_CA`,
-`PAXAVER_API_US`) and routes each request to the correct region based on the
-JWT `tenant_id` claim. This keeps user data within its region while exposing
+The MCP worker binds to the three regional backends (`PAXAVER_API_CA`,
+`PAXAVER_API_US`, `PAXAVER_API_MX`) and routes each request to the correct
+region based on the JWT `tenant_id` claim. This keeps user data within its region while exposing
 a single public MCP endpoint. Currency is determined by the user's school,
 not by the MCP endpoint.
 
 Staging (`mcp.paxaver.dev`) is a single Canadian deployment used for integration
-testing against `paxaver.dev/api`.
+testing against `paxaver.dev/api`. All three staging bindings point to the same
+dev backend.
+
+## Alexa routing
+
+The Alexa skill uses one authorization URI, one token URI and one skill
+endpoint for all regions. The MCP worker routes each call to the user's
+region. It stores no user data and no linking state.
+
+| Route                  | Purpose                                                                                                                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /alexa/authorize` | Region picker. Shows one link per region to `<region host>/api/assistant/alexa/authorize` with the query unchanged. Login and consent run on the regional host. The page never redirects by itself.        |
+| `POST /alexa/token`    | Forwards the token request to the region that issued the grant. Authorization codes carry a region tag (`ca.`, `us.`, `mx.`) set by the backend. The worker adds the tag to each refresh token it returns. |
+| `POST /alexa`          | Skill endpoint. Verifies the Amazon request signature and the skill id, then forwards the raw body to the region of the access token issuer.                                                               |
+
+The regional backend does all OAuth checks (client authentication, PKCE,
+`redirect_uri`, single use) and all token checks. The MCP worker does not
+hold the Alexa client secret: it forwards the `Authorization` header as it is.
+
+A refresh token without a region tag (issued before this routing) is tried in
+each region in turn (`ca`, `us`, `mx`). The first answer that is not
+`invalid_grant` is returned. A miss is a read-only lookup in that region.
 
 ## Request lifecycle
 

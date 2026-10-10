@@ -81,9 +81,9 @@ format is:
 
 ## Secrets
 
-The worker currently requires no secrets. If a future change adds one, secrets
-are set via `wrangler secret put` and never appear in source code or
-configuration files.
+`INTERNAL_SERVICE_SECRET` and `ALEXA_SKILL_ID` are set as Worker secrets
+(`wrangler secret put`, see [deployment.md](deployment.md#secrets)). They never
+appear in source code or configuration files.
 
 ## Regional routing
 
@@ -91,11 +91,35 @@ The single MCP endpoint (`mcp.paxaver.com`) routes to the correct
 regional backend based on the authenticated user's tenant country:
 
 - `tenant_id` ending in `-us` → US backend (`PAXAVER_API_US`)
+- `tenant_id` ending in `-mx` → MX backend (`PAXAVER_API_MX`)
 - All others → CA backend (`PAXAVER_API_CA`)
 
 This ensures user data never crosses regions. Service bindings are
 same-account, same-region Cloudflare internal calls — no public network
 hop.
+
+## Alexa request verification
+
+`POST /alexa` accepts only requests that Amazon signed for this skill
+(`src/alexa/verify-request.ts`). Any failure returns `400`:
+
+- `SignatureCertChainUrl`, after normalization: scheme `https`, host
+  `s3.amazonaws.com`, path starts with `/echo.api/` (case-sensitive), port
+  443 when present.
+- The certificate chain: all certificates are within their validity dates,
+  the signing certificate has the SAN `echo-api.amazon.com`, each certificate
+  is signed by the next one (a CA), and the chain ends at a bundled public
+  root (Amazon Root CA 1 or Starfield Services Root CA G2,
+  `src/alexa/roots.ts`).
+- `Signature-256`: RSASSA-PKCS1-v1_5 with SHA-256 over the raw body.
+- `request.timestamp` is within 150 seconds of the current time.
+- The application id equals `ALEXA_SKILL_ID`. In staging and production an
+  unset `ALEXA_SKILL_ID` rejects every request. Only `development` skips the
+  signature check.
+
+The worker does not verify the Alexa access token. The regional backend does
+that. When `INTERNAL_SERVICE_SECRET` is set, the worker sends it to the
+backend, so the backend can accept skill calls only from this worker.
 
 ## Reporting vulnerabilities
 

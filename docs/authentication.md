@@ -69,7 +69,24 @@ effectively per-request.
 The user's region is determined from the JWT `tenant_id` claim:
 
 - `tenant_id` ending in `-us` → routes to `PAXAVER_API_US` (US backend)
+- `tenant_id` ending in `-mx` → routes to `PAXAVER_API_MX` (MX backend)
 - All others → routes to `PAXAVER_API_CA` (CA backend)
+
+### Alexa account linking
+
+Alexa uses its own routes (`/alexa/authorize`, `/alexa/token`, `/alexa`). The
+skill endpoint routes by the access token issuer (`iss`), because only the
+issuing region can verify the token:
+
+| Issuer (production)        | Region |
+| -------------------------- | ------ |
+| `https://paxaver.ca/auth`  | `ca`   |
+| `https://paxaver.com/auth` | `us`   |
+| `https://paxaver.mx/auth`  | `mx`   |
+
+Staging and development accept `https://paxaver.dev/auth` (one dev backend).
+An unknown issuer gets an Alexa "relink your account" response. See
+[architecture.md](architecture.md#alexa-routing).
 
 ## Context loading
 

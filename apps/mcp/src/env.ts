@@ -4,6 +4,7 @@
  * Service bindings (configured in wrangler.jsonc):
  *   - PAXAVER_API_CA        — Fetch interface to the CA Paxaver backend worker.
  *   - PAXAVER_API_US        — Fetch interface to the US Paxaver backend worker.
+ *   - PAXAVER_API_MX        — Fetch interface to the MX Paxaver backend worker.
  *
  * The MCP server routes to the correct regional backend based on the
  * authenticated user's tenant country (extracted from the JWT tenant_id claim
@@ -32,6 +33,12 @@ export interface Env {
    * backend guard skips enforcement.
    */
   INTERNAL_SERVICE_SECRET?: string;
+
+  /**
+   * Alexa skill id (`amzn1.ask.skill.…`). Requests to POST /alexa must carry
+   * this application id. Required in staging/production: unset fails closed.
+   */
+  ALEXA_SKILL_ID?: string;
 
   /** Git SHA injected by the deploy command (--var); exposed on /health. */
   COMMIT_SHA?: string;
