@@ -37,6 +37,11 @@ failed.
   `<script>` through `JSON.stringify`, which does not escape `<`: a
   crafted `</script>` value ran injected JavaScript on the MCP origin and
   could steal authorization codes (#1972). The endpoint now returns 404.
+- Development dependencies updated (#2073): `wrangler` 4.149.0 brings
+  `undici` 7.29.1 and `sharp` 0.35.5, which fixes the `undici` advisories
+  that `pnpm audit` reported. Patch and minor updates to
+  `@cloudflare/workers-types`, `vitest`, `@types/node`, `eslint`,
+  `globals` and `typescript-eslint`. The Worker runtime is not changed.
 
 ### Fixed
 
