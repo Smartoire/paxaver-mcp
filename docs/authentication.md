@@ -1,26 +1,33 @@
 # Authentication
 
-The Paxaver MCP server is a **resource server**, not an authorization server.
-Authentication is delegated to the centralized Paxaver auth worker
-(`paxaver.com/auth`), which serves as the OAuth 2.0 / OIDC authorization server.
-The MCP server validates the resulting RS256 JWTs via JWKS and forwards them to
-the backend on every request.
+The Paxaver MCP server is a **resource server**. Each region (CA, US, MX) has
+its own auth server (`paxaver.ca/auth`, `paxaver.com/auth`, `paxaver.mx/auth`),
+which issues the OAuth 2.0 / OIDC tokens. MCP clients use one authorization
+server, so the MCP server also shows a **facade** authorization server on its
+own origin: the user picks the region at login, and the facade sends each
+OAuth call to that region's auth server (see
+[architecture.md](architecture.md#mcp-oauth-routing)). The MCP server validates
+the resulting RS256 JWTs via JWKS and forwards them to the backend on every
+request.
 
 ## Flow at a glance
 
 ```
-AI Client             Auth Worker               MCP Server            Paxaver Backend
-   │                (paxaver.com/auth)        (mcp.paxaver.com)
+AI Client          Regional Auth Server         MCP Server            Paxaver Backend
+   │            (paxaver.{ca,com,mx}/auth)    (mcp.paxaver.com)
    │                       │                       │                       │
-   │  1. OAuth 2.0 Authorization Code + PKCE      │                       │
-   │     GET /authorize    │                       │                       │
+   │  0. POST /oauth/register, GET /oauth/authorize (region picker)        │
+   │ ─────────────────────────────────────────────▶│                       │
+   │  1. OAuth 2.0 Authorization Code + PKCE       │                       │
+   │     GET <issuer>/authorize (link on picker)   │                       │
    │ ─────────────────────▶│                       │                       │
    │  2. Login + consent   │                       │                       │
    │ ◀─────────────────────│                       │                       │
-   │  3. POST /token       │                       │                       │
-   │ ─────────────────────▶│                       │                       │
+   │  3. POST /oauth/token (routed to the region)  │                       │
+   │ ─────────────────────────────────────────────▶│                       │
+   │                       │◀──────────────────────│                       │
    │  4. RS256 access JWT  │                       │                       │
-   │ ◀─────────────────────│                       │                       │
+   │ ◀─────────────────────────────────────────────│                       │
    │                       │                       │                       │
    │  5. POST /mcp         │                       │                       │
    │  Authorization:       │                       │                       │
@@ -45,7 +52,7 @@ The MCP server validates RS256 JWTs using the auth worker's JWKS endpoint
 ```ts
 const { payload } = await jwtVerify(token, jwks, {
   algorithms: ['RS256'],
-  issuer, // paxaver.com/auth (or paxaver.dev/auth)
+  issuer, // a regional issuer of this environment (see below)
   audience: ['paxaver-api', 'mcp', origin],
 });
 ```
@@ -56,36 +63,33 @@ effectively per-request.
 
 ### Token claims
 
-| Claim       | Value                                           |
-| ----------- | ----------------------------------------------- |
-| `sub`       | Paxaver user ID                                 |
-| `iss`       | Auth worker origin (`https://paxaver.com/auth`) |
-| `aud`       | `paxaver-api`, `mcp`, or the request origin     |
-| `tenant_id` | User tenant ID (used for regional routing)      |
-| `exp`       | Token expiration                                |
+| Claim | Value                                                        |
+| ----- | ------------------------------------------------------------ |
+| `sub` | Paxaver user ID                                              |
+| `iss` | Regional auth server (for example `https://paxaver.ca/auth`) |
+| `aud` | `paxaver-api`, `mcp`, or the request origin                  |
+| `exp` | Token expiration                                             |
 
 ### Regional routing
 
-The user's region is determined from the JWT `tenant_id` claim:
+The user's region is the region of the verified token issuer (`iss`). Only
+these issuers are accepted:
 
-- `tenant_id` ending in `-us` → routes to `PAXAVER_API_US` (US backend)
-- `tenant_id` ending in `-mx` → routes to `PAXAVER_API_MX` (MX backend)
-- All others → routes to `PAXAVER_API_CA` (CA backend)
+| Issuer (production)        | Region | Backend          |
+| -------------------------- | ------ | ---------------- |
+| `https://paxaver.ca/auth`  | `ca`   | `PAXAVER_API_CA` |
+| `https://paxaver.com/auth` | `us`   | `PAXAVER_API_US` |
+| `https://paxaver.mx/auth`  | `mx`   | `PAXAVER_API_MX` |
+
+Staging and development accept `https://paxaver.dev/auth` only (one dev
+backend). An unknown issuer gets `401` before any backend call. All regions
+publish the same signing key, so the signed `iss` claim identifies the region.
 
 ### Alexa account linking
 
 Alexa uses its own routes (`/alexa/authorize`, `/alexa/token`, `/alexa`). The
-skill endpoint routes by the access token issuer (`iss`), because only the
-issuing region can verify the token:
-
-| Issuer (production)        | Region |
-| -------------------------- | ------ |
-| `https://paxaver.ca/auth`  | `ca`   |
-| `https://paxaver.com/auth` | `us`   |
-| `https://paxaver.mx/auth`  | `mx`   |
-
-Staging and development accept `https://paxaver.dev/auth` (one dev backend).
-An unknown issuer gets an Alexa "relink your account" response. See
+skill endpoint routes by the same issuer table. An unknown issuer gets an
+Alexa "relink your account" response. See
 [architecture.md](architecture.md#alexa-routing).
 
 ## Context loading
@@ -134,7 +138,7 @@ The MCP JSON-RPC `server/discover` method is public so clients can inspect suppo
 ```json
 {
   "resource": "https://mcp.paxaver.com/mcp",
-  "authorization_servers": ["https://paxaver.com/auth"],
+  "authorization_servers": ["https://mcp.paxaver.com"],
   "scopes_supported": ["tools"],
   "bearer_methods_supported": ["header"],
   "resource_documentation": "https://github.com/Smartoire/paxaver-mcp/blob/main/docs/security.md"
@@ -152,20 +156,23 @@ Bearer resource_metadata="https://mcp.paxaver.com/.well-known/oauth-protected-re
 
 `GET /.well-known/oauth-authorization-server`
 
-Delegates to the auth worker's OIDC discovery. The MCP server returns metadata
-pointing to `paxaver.com/auth` as the authorization server:
+The metadata of the facade authorization server on the MCP origin. Its
+endpoints route to the regional auth servers. `jwks_uri` points at one regional
+server, because every region publishes the same key:
 
 ```json
 {
-  "issuer": "https://paxaver.com/auth",
-  "authorization_endpoint": "https://paxaver.com/auth/authorize",
-  "token_endpoint": "https://paxaver.com/auth/token",
+  "issuer": "https://mcp.paxaver.com",
+  "authorization_endpoint": "https://mcp.paxaver.com/oauth/authorize",
+  "token_endpoint": "https://mcp.paxaver.com/oauth/token",
+  "registration_endpoint": "https://mcp.paxaver.com/oauth/register",
+  "revocation_endpoint": "https://mcp.paxaver.com/oauth/revoke",
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
   "scopes_supported": ["openid", "profile", "email", "tools", "offline_access"],
   "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
-  "jwks_uri": "https://paxaver.com/auth/.well-known/jwks.json"
+  "jwks_uri": "https://paxaver.ca/auth/.well-known/jwks.json"
 }
 ```
 

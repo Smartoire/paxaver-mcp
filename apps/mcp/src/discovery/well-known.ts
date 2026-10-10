@@ -1,81 +1,69 @@
 /**
  * Well-known discovery endpoints (RFC 9728, RFC 8414) and ChatGPT domain verification.
  *
- * OAuth is delegated to the canonical auth worker for the current environment.
- * The MCP server is a resource server, not an authorization server.
+ * Each region (CA, US, MX) has its own auth server. MCP clients use one
+ * authorization server only, so the MCP server is the authorization server
+ * that clients see: a facade. Its endpoints (/oauth/authorize, /oauth/token,
+ * /oauth/register, /oauth/revoke) let the user pick a region and route each
+ * call to that region's auth server. Tokens still come from the regional
+ * servers; the MCP server only validates them.
  */
 
 import type { Env } from '../env.js';
 import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
-import { authUrl } from '../auth/validate.js';
+import { issuersFor } from '../lib/regions.js';
 import { originFrom } from '../lib/url.js';
 import { SERVER_VERSION } from '../lib/version.js';
 
+const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'tools'];
+
 // RFC 9728: Protected Resource Metadata
-// Points to the environment's canonical auth worker. Cross-domain
-// OAuth is explicitly supported by ChatGPT (see OpenAI apps-sdk auth docs).
-// The `resource` field is the canonical identifier of the protected
-// resource — the MCP endpoint URL (`<origin>/mcp`), the same URL clients
-// configure as the MCP server. Clients send it as the OAuth `resource`
-// parameter and it lands verbatim in the token audience, so validate.ts
-// accepts both the origin and the endpoint form.
-function protectedResourceHandler(request: Request, env: Env): Response {
+// Points to the facade on this origin. The `resource` field is the
+// canonical identifier of the protected resource — the MCP endpoint URL
+// (`<origin>/mcp`), the same URL clients configure as the MCP server.
+// Clients send it as the OAuth `resource` parameter and it lands verbatim in
+// the token audience, so validate.ts accepts both the origin and the
+// endpoint form.
+function protectedResourceHandler(request: Request): Response {
   const origin = originFrom(request.url);
   return Response.json({
     resource: `${origin}/mcp`,
-    authorization_servers: [authUrl(env)],
-    scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
+    authorization_servers: [origin],
+    scopes_supported: SCOPES,
     bearer_methods_supported: ['header'],
     resource_parameter_supported: true,
   });
 }
 
-// RFC 8414: Authorization Server Metadata
-// Served on the MCP server as a fallback for clients that try
-// /.well-known/oauth-authorization-server on the MCP server directly
-// instead of following the protected-resource → authorization_servers chain.
-// All endpoint URLs point to the canonical auth server for this environment.
-function authorizationServerHandler(env: Env): Response {
-  const authServer = authUrl(env);
-  return Response.json({
-    issuer: authServer,
-    authorization_endpoint: `${authServer}/authorize`,
-    token_endpoint: `${authServer}/token`,
-    revocation_endpoint: `${authServer}/revoke`,
-    registration_endpoint: `${authServer}/register`,
-    jwks_uri: `${authServer}/.well-known/jwks.json`,
+// RFC 8414 / OIDC discovery: the facade's metadata. Clients find it from
+// authorization_servers above, or probe the MCP server for it directly.
+// jwks_uri points at one regional server: every region publishes the same
+// key, and the token `iss` (not the key) identifies the region.
+function authorizationServerMetadata(request: Request, env: Env): Record<string, unknown> {
+  const origin = originFrom(request.url);
+  const jwksIssuer = issuersFor(env)[0]?.issuer ?? 'https://paxaver.dev/auth';
+  return {
+    issuer: origin,
+    authorization_endpoint: `${origin}/oauth/authorize`,
+    token_endpoint: `${origin}/oauth/token`,
+    revocation_endpoint: `${origin}/oauth/revoke`,
+    registration_endpoint: `${origin}/oauth/register`,
+    jwks_uri: `${jwksIssuer}/.well-known/jwks.json`,
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
     code_challenge_methods_supported: ['S256'],
-    scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
+    scopes_supported: SCOPES,
     require_pkce: true,
     resource_parameter_supported: true,
-  });
+  };
 }
 
-// OIDC discovery document fallback, for clients that probe the MCP server
-// directly for /.well-known/openid-configuration.
-function openidConfigurationHandler(env: Env): Response {
-  const authServer = authUrl(env);
+function openidConfigurationHandler(request: Request, env: Env): Response {
   return Response.json({
-    issuer: authServer,
-    authorization_endpoint: `${authServer}/authorize`,
-    token_endpoint: `${authServer}/token`,
-    userinfo_endpoint: `${authServer}/userinfo`,
-    revocation_endpoint: `${authServer}/revoke`,
-    end_session_endpoint: `${authServer}/end_session`,
-    registration_endpoint: `${authServer}/register`,
-    jwks_uri: `${authServer}/.well-known/jwks.json`,
-    response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
+    ...authorizationServerMetadata(request, env),
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256'],
-    token_endpoint_auth_methods_supported: ['client_secret_post', 'none'],
-    code_challenge_methods_supported: ['S256'],
-    scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'tools'],
-    require_pkce: true,
-    resource_parameter_supported: true,
   });
 }
 
@@ -133,11 +121,11 @@ async function wellKnownFetch(request: Request, env: Env): Promise<Response> {
 
   let response: Response;
   if (protectedPaths.includes(pathname)) {
-    response = protectedResourceHandler(request, env);
+    response = protectedResourceHandler(request);
   } else if (authPaths.includes(pathname)) {
-    response = authorizationServerHandler(env);
+    response = Response.json(authorizationServerMetadata(request, env));
   } else if (openidPaths.includes(pathname)) {
-    response = openidConfigurationHandler(env);
+    response = openidConfigurationHandler(request, env);
   } else if (pathname === '/.well-known/mcp/server-card.json') {
     response = serverCardHandler(request);
   } else if (pathname === '/.well-known/openai-apps-challenge') {

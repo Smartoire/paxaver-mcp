@@ -23,48 +23,51 @@ describe('well-known endpoints', () => {
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.authorization_servers).toEqual(['https://paxaver.com/auth']);
+    expect(body.authorization_servers).toEqual(['https://localhost']);
     expect(body.scopes_supported).toEqual(['openid', 'profile', 'email', 'offline_access', 'tools']);
     expect(body.bearer_methods_supported).toEqual(['header']);
     expect(body.resource).toBe('https://localhost/mcp');
   });
 
-  it('RFC 9728 points to staging auth in staging', async () => {
-    const res = await request(
-      wellKnownApp,
-      '/.well-known/oauth-protected-resource',
-      {},
-      mockEnv({ ENVIRONMENT: 'staging' }),
-    );
-    const body = (await res.json()) as Record<string, unknown>;
-    expect(body.authorization_servers).toEqual(['https://paxaver.dev/auth']);
-  });
+  it.each(['production', 'staging', 'development'])(
+    'RFC 9728 points to the facade on the MCP origin (%s)',
+    async (ENVIRONMENT) => {
+      const res = await request(
+        wellKnownApp,
+        'https://mcp.example.test/.well-known/oauth-protected-resource',
+        {},
+        mockEnv({ ENVIRONMENT }),
+      );
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body.authorization_servers).toEqual(['https://mcp.example.test']);
+    },
+  );
 
-  it('RFC 9728 points to paxaver.dev in development', async () => {
-    const res = await request(
-      wellKnownApp,
-      '/.well-known/oauth-protected-resource',
-      {},
-      mockEnv({ ENVIRONMENT: 'development' }),
-    );
-    const body = (await res.json()) as Record<string, unknown>;
-    expect(body.authorization_servers).toEqual(['https://paxaver.dev/auth']);
-  });
-
-  it('MCP server serves authorization-server metadata pointing to auth server', async () => {
-    const res = await request(
-      wellKnownApp,
-      '/.well-known/oauth-authorization-server',
-      {},
-      mockEnv({ ENVIRONMENT: 'production' }),
-    );
+  it.each([
+    ['production', 'https://paxaver.ca/auth'],
+    ['staging', 'https://paxaver.dev/auth'],
+    ['development', 'https://paxaver.dev/auth'],
+  ])('authorization-server metadata is the facade (%s)', async (ENVIRONMENT, jwksIssuer) => {
+    const res = await request(wellKnownApp, '/.well-known/oauth-authorization-server', {}, mockEnv({ ENVIRONMENT }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.issuer).toBe('https://paxaver.com/auth');
-    expect(body.authorization_endpoint).toBe('https://paxaver.com/auth/authorize');
-    expect(body.token_endpoint).toBe('https://paxaver.com/auth/token');
+    expect(body.issuer).toBe('https://localhost');
+    expect(body.authorization_endpoint).toBe('https://localhost/oauth/authorize');
+    expect(body.token_endpoint).toBe('https://localhost/oauth/token');
+    expect(body.registration_endpoint).toBe('https://localhost/oauth/register');
+    expect(body.revocation_endpoint).toBe('https://localhost/oauth/revoke');
     expect(body.code_challenge_methods_supported).toEqual(['S256']);
-    expect(body.jwks_uri).toBe('https://paxaver.com/auth/.well-known/jwks.json');
+    expect(body.jwks_uri).toBe(`${jwksIssuer}/.well-known/jwks.json`);
+  });
+
+  it('OIDC fallback matches the facade and omits routes it does not serve', async () => {
+    const res = await request(wellKnownApp, '/.well-known/openid-configuration', {}, mockEnv());
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.issuer).toBe('https://localhost');
+    expect(body.token_endpoint).toBe('https://localhost/oauth/token');
+    expect(body.id_token_signing_alg_values_supported).toEqual(['RS256']);
+    expect(body.userinfo_endpoint).toBeUndefined();
+    expect(body.end_session_endpoint).toBeUndefined();
   });
 
   it('/oauth does NOT redirect (removed to prevent Unsafe URL)', async () => {
@@ -149,7 +152,7 @@ describe('well-known endpoints', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.resource).toBe('https://localhost/mcp');
-    expect(body.authorization_servers).toEqual(['https://paxaver.com/auth']);
+    expect(body.authorization_servers).toEqual(['https://localhost']);
   });
 
   it('RFC 9728 path-derived auth server metadata URL returns 200', async () => {
@@ -161,7 +164,7 @@ describe('well-known endpoints', () => {
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.issuer).toBe('https://paxaver.com/auth');
+    expect(body.issuer).toBe('https://localhost');
   });
 
   // Regression: protected resource metadata must use HTTPS resource URL

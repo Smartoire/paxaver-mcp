@@ -25,11 +25,12 @@ describe('staging smoke (read-only)', () => {
     expect(json.scopes_supported).toContain('tools');
   });
 
-  it('authorization server metadata points to auth server', async () => {
+  it('authorization server metadata is the facade on the MCP origin', async () => {
     const res = await fetch(`${BASE}/.well-known/oauth-authorization-server`);
     expect(res.status).toBe(200);
     const json = (await res.json()) as unknown as { issuer: string; authorization_endpoint: string };
-    expect(json.issuer).toContain('paxaver.dev/auth');
+    expect(json.issuer).toBe(new URL(BASE).origin);
+    expect(json.authorization_endpoint).toBe(`${new URL(BASE).origin}/oauth/authorize`);
   });
 
   it('unauthenticated MCP request returns 401 with WWW-Authenticate', async () => {

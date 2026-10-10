@@ -24,7 +24,7 @@ authorization policy, but contains no business logic and no direct data access.
                               PAXAVER_API_CA → paxaver-api-ca (CA users)
                               PAXAVER_API_US → paxaver-api-us (US users)
                               PAXAVER_API_MX → paxaver-api-mx (MX users)
-                              selected per-request from JWT tenant_id
+                              selected per-request from the JWT issuer
                               forwards user's RS256 JWT
                                                                 │
                                                                 ▼
@@ -87,13 +87,43 @@ MCP worker is a single deployment at `mcp.paxaver.com` that serves all regions:
 
 The MCP worker binds to the three regional backends (`PAXAVER_API_CA`,
 `PAXAVER_API_US`, `PAXAVER_API_MX`) and routes each request to the correct
-region based on the JWT `tenant_id` claim. This keeps user data within its region while exposing
-a single public MCP endpoint. Currency is determined by the user's school,
-not by the MCP endpoint.
+region. Each region has its own auth server and user database. The region of
+a request is the region of the verified JWT issuer (`iss`):
+
+| Issuer                     | Region |
+| -------------------------- | ------ |
+| `https://paxaver.ca/auth`  | `ca`   |
+| `https://paxaver.com/auth` | `us`   |
+| `https://paxaver.mx/auth`  | `mx`   |
+
+Each environment accepts only its own issuers (`src/lib/regions.ts`). This keeps
+user data within its region while exposing a single public MCP endpoint.
+Currency is determined by the user's school, not by the MCP endpoint.
 
 Staging (`mcp.paxaver.dev`) is a single Canadian deployment used for integration
 testing against `paxaver.dev/api`. All three staging bindings point to the same
 dev backend.
+
+## MCP OAuth routing
+
+MCP clients use one authorization server. The MCP worker is that server for
+the client: a facade on its own origin. The user picks the region at login,
+and the worker sends each OAuth call to that region's auth server. The worker
+stores no user data and no login state. Tokens come from the regional auth
+servers.
+
+| Route                  | Purpose                                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /oauth/authorize` | Region picker. Shows one link per regional auth server to `<issuer>/authorize` with the query unchanged (a composite `client_id` becomes the regional id). The page never redirects by itself. |
+| `POST /oauth/register` | Dynamic client registration. Registers the client in every region and returns one composite `client_id` (and `client_secret`, when issued). One failed region fails the registration.          |
+| `POST /oauth/token`    | Forwards the token request to the region that issued the grant. Adds the region tag (`ca.`, `us.`, `mx.`) to each refresh token it returns. An untagged grant is tried in each region in turn. |
+| `POST /oauth/revoke`   | Forwards the revocation to the token's region (from the refresh token tag or the access token issuer). A token of unknown region goes to every region.                                         |
+
+`/register`, `/token` and `/oauth2/v1/token` are aliases. The composite client
+value is `mreg.<base64url JSON>`, with one entry per region. It is not a
+credential: each region still authenticates the client. In staging and
+development, the environment has one issuer (`paxaver.dev/auth`), so the same
+code uses one region.
 
 ## Alexa routing
 

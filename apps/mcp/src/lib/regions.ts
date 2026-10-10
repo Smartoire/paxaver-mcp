@@ -1,7 +1,7 @@
 /**
- * Alexa region map. One skill serves CA, US and MX users. Each region has
- * its own auth issuer and user database, so the router picks the region
- * from the token issuer (skill calls) or from a region tag (token calls).
+ * Region map. MCP and Alexa serve CA, US and MX users. Each region has its
+ * own auth issuer and user database, so a router picks the region from the
+ * token issuer (MCP and skill calls) or from a region tag (token calls).
  */
 
 import type { Env, McpCountry } from '../env.js';
@@ -23,6 +23,20 @@ const ISSUERS: Record<Env['ENVIRONMENT'], Record<string, McpCountry>> = {
 export function regionFromIssuer(env: Env, issuer: string | undefined): McpCountry | null {
   if (!issuer) return null;
   return ISSUERS[env.ENVIRONMENT]?.[issuer] ?? null;
+}
+
+/** The auth issuers of this environment, one per region, in REGIONS order. */
+export function issuersFor(env: Env): { region: McpCountry; issuer: string }[] {
+  const entries = Object.entries(ISSUERS[env.ENVIRONMENT] ?? {});
+  return REGIONS.flatMap((region) => {
+    const entry = entries.find(([, r]) => r === region);
+    return entry ? [{ region, issuer: entry[0] }] : [];
+  });
+}
+
+/** Auth issuer of a region in this environment, or null when the region has none. */
+export function issuerForRegion(env: Env, region: McpCountry): string | null {
+  return issuersFor(env).find((i) => i.region === region)?.issuer ?? null;
 }
 
 /** Split a `<region>.<value>` tag. Returns null when the value has no region tag. */

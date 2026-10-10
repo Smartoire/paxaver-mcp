@@ -7,8 +7,7 @@
  *   - PAXAVER_API_MX        — Fetch interface to the MX Paxaver backend worker.
  *
  * The MCP server routes to the correct regional backend based on the
- * authenticated user's tenant country (extracted from the JWT tenant_id claim
- * and confirmed via /api/users/me/context).
+ * region of the verified JWT issuer (see lib/regions.ts).
  *
  * No D1 binding. The MCP server never touches the database directly.
  */

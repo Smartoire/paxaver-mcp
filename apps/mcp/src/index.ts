@@ -9,7 +9,7 @@
  */
 
 import type { Env, AppVariables } from './env.js';
-import { authenticateRequest, authUrl } from './auth/validate.js';
+import { authenticateRequest } from './auth/validate.js';
 import { transportApp } from './transport/streamable-http.js';
 import { originFrom } from './lib/url.js';
 import { wellKnownApp } from './discovery/well-known.js';
@@ -17,6 +17,9 @@ import { SERVER_VERSION } from './lib/version.js';
 import { alexaAuthorize } from './alexa/authorize.js';
 import { alexaToken } from './alexa/token.js';
 import { alexaSkill } from './alexa/skill.js';
+import { oauthAuthorize } from './oauth/authorize.js';
+import { oauthToken, oauthRevoke } from './oauth/token.js';
+import { oauthRegister } from './oauth/register.js';
 
 const ROBOTS_TXT = `User-agent: *
 Allow: /mcp
@@ -157,22 +160,13 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     } else if (url.pathname === '/oauth/authorize') {
-      // Per AGENTS.md: external systems (MCP) use paxaver.com/auth as the
-      // single trusted auth server. No region detection for OAuth.
-      const authServer = authUrl(env);
-      response = new Response(null, {
-        status: 302,
-        headers: { Location: `${authServer}/authorize${url.search}` },
-      });
+      // MCP OAuth facade: the user picks the region of their account, and
+      // the routers below send each call to that region's auth server.
+      response = oauthAuthorize(request, env);
     } else if (url.pathname === '/register' || url.pathname === '/oauth/register') {
-      if (request.method !== 'POST') {
-        response = new Response('Method not allowed', { status: 405 });
-      } else {
-        const authServer = authUrl(env);
-        const proxied = new Request(`${authServer}/register`, request);
-        proxied.headers.delete('Host');
-        response = await fetch(proxied);
-      }
+      response = await oauthRegister(request, env);
+    } else if (url.pathname === '/oauth/revoke') {
+      response = await oauthRevoke(request, env);
     } else if (
       url.pathname.startsWith('/.well-known') ||
       url.pathname.startsWith('/mcp/.well-known') ||
@@ -182,14 +176,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
     ) {
       response = await wellKnownApp.fetch(request, env);
     } else if (url.pathname === '/token' || url.pathname === '/oauth/token' || url.pathname === '/oauth2/v1/token') {
-      if (request.method !== 'POST') {
-        response = new Response('Method not allowed', { status: 405 });
-      } else {
-        const authServer = authUrl(env);
-        const proxied = new Request(`${authServer}/token`, request);
-        proxied.headers.delete('Host');
-        response = await fetch(proxied);
-      }
+      response = await oauthToken(request, env);
     } else if (url.pathname === '/alexa/authorize') {
       response = alexaAuthorize(request, env);
     } else if (url.pathname === '/alexa/token') {

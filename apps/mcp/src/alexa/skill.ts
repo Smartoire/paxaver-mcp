@@ -11,7 +11,7 @@
 import { decodeJwt } from 'jose';
 import type { Env } from '../env.js';
 import { forwardToRegion } from '../api/client.js';
-import { regionFromIssuer } from './regions.js';
+import { regionFromIssuer } from '../lib/regions.js';
 import { verifyAlexaRequest } from './verify-request.js';
 
 const SKILL_PATH = '/api/assistant/alexa';
