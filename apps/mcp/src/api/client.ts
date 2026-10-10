@@ -34,7 +34,7 @@ export interface ApiCallResult {
 /**
  * Resolve the service binding and API base URL for the user's region.
  */
-function resolveBackend(env: Env, country: McpCountry): { fetcher: Fetcher | undefined; baseUrl: string } {
+export function resolveBackend(env: Env, country: McpCountry): { fetcher: Fetcher | undefined; baseUrl: string } {
   if (country === 'us') return { fetcher: env.PAXAVER_API_US, baseUrl: env.API_BASE_URL_US };
   if (country === 'mx') return { fetcher: env.PAXAVER_API_MX, baseUrl: env.API_BASE_URL_MX };
   return { fetcher: env.PAXAVER_API_CA, baseUrl: env.API_BASE_URL_CA };
@@ -93,6 +93,16 @@ export async function callPaxaverApi(env: Env, ctx: AuthContext, opts: ApiCallOp
     }
   }
   return { ok: response.ok, status: response.status, data };
+}
+
+/**
+ * Forward a raw request to a regional backend path. Uses the service binding
+ * when configured; falls back to HTTPS. The caller sets every header.
+ */
+export function forwardToRegion(env: Env, country: McpCountry, path: string, init: RequestInit): Promise<Response> {
+  const { fetcher, baseUrl } = resolveBackend(env, country);
+  const url = new URL(path, baseUrl).toString();
+  return fetcher ? fetcher.fetch(url, init) : fetch(url, init);
 }
 
 /**

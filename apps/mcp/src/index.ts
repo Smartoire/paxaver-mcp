@@ -14,6 +14,9 @@ import { transportApp } from './transport/streamable-http.js';
 import { originFrom } from './lib/url.js';
 import { wellKnownApp } from './discovery/well-known.js';
 import { SERVER_VERSION } from './lib/version.js';
+import { alexaAuthorize } from './alexa/authorize.js';
+import { alexaToken } from './alexa/token.js';
+import { alexaSkill } from './alexa/skill.js';
 
 const ROBOTS_TXT = `User-agent: *
 Allow: /mcp
@@ -187,6 +190,12 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
         proxied.headers.delete('Host');
         response = await fetch(proxied);
       }
+    } else if (url.pathname === '/alexa/authorize') {
+      response = alexaAuthorize(request, env);
+    } else if (url.pathname === '/alexa/token') {
+      response = await alexaToken(request, env);
+    } else if (url.pathname === '/alexa') {
+      response = await alexaSkill(request, env);
     } else if (url.pathname === '/mcp') {
       const authResult = (await isPublicDiscoveryRequest(request)) ? null : await mcpAuth(request, ctx);
       if (authResult) {

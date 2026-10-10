@@ -86,6 +86,12 @@ required for production.
   bearer validation falls back to JWKS + live context. Set it per environment
   with `wrangler secret put --env <env> INTERNAL_SERVICE_SECRET`. For local
   development use a `.dev.vars` file (gitignored).
+- `ALEXA_SKILL_ID` — the Alexa skill id (`amzn1.ask.skill.…`). `POST /alexa`
+  accepts only requests for this skill. Required in staging and production:
+  when it is unset, every skill request gets `400` (a warning is logged once
+  per isolate). Set it per environment with
+  `wrangler secret put --env <env> ALEXA_SKILL_ID`. The skill also sends the
+  `INTERNAL_SERVICE_SECRET` to the backend.
 
 ## Deploy commands
 
@@ -93,7 +99,7 @@ required for production.
 # Staging
 npm run deploy:staging        # wrangler deploy --env staging
 
-# Production (single endpoint, routes to both regions)
+# Production (single endpoint, routes to the CA, US and MX regions)
 npm run deploy:prod
 
 # Dry-run build for all environments (CI uses this)

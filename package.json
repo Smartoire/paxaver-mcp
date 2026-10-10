@@ -78,6 +78,8 @@
     "prepublishOnly": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {
+    "@peculiar/asn1-schema": "^2.10.0",
+    "@peculiar/asn1-x509": "^2.10.0",
     "jose": "^6.2.12"
   },
   "devDependencies": {
