@@ -16,20 +16,10 @@
 
 import type { Env, McpCountry } from '../env.js';
 import { forwardToRegion } from '../api/client.js';
-import { REGIONS, regionFromTag } from './regions.js';
+import { REGIONS, regionFromTag } from '../lib/regions.js';
+import { isInvalidGrant, oauthError, relay, type RegionResult } from '../lib/oauth-relay.js';
 
 const TOKEN_PATH = '/api/assistant/alexa/token';
-const NO_STORE = { 'Cache-Control': 'no-store', Pragma: 'no-cache' };
-
-function oauthError(error: string, status = 400): Response {
-  return Response.json({ error }, { status, headers: NO_STORE });
-}
-
-interface RegionResult {
-  status: number;
-  body: string;
-  headers: Headers;
-}
 
 async function callRegion(env: Env, region: McpCountry, request: Request, body: string): Promise<RegionResult> {
   const headers: Record<string, string> = {
@@ -41,38 +31,6 @@ async function callRegion(env: Env, region: McpCountry, request: Request, body: 
 
   const response = await forwardToRegion(env, region, TOKEN_PATH, { method: 'POST', headers, body });
   return { status: response.status, body: await response.text(), headers: response.headers };
-}
-
-function isInvalidGrant(result: RegionResult): boolean {
-  if (result.status !== 400) return false;
-  try {
-    return (JSON.parse(result.body) as { error?: unknown }).error === 'invalid_grant';
-  } catch {
-    return false;
-  }
-}
-
-/** Relay a regional answer. Tag a refresh_token in a success response with its region. */
-function relay(result: RegionResult, region: McpCountry): Response {
-  const headers = new Headers(NO_STORE);
-  headers.set('Content-Type', result.headers.get('Content-Type') ?? 'application/json');
-  const wwwAuthenticate = result.headers.get('WWW-Authenticate');
-  if (wwwAuthenticate) headers.set('WWW-Authenticate', wwwAuthenticate);
-
-  let body = result.body;
-  if (result.status === 200) {
-    try {
-      const json = JSON.parse(body) as Record<string, unknown>;
-      if (typeof json.refresh_token === 'string' && json.refresh_token) {
-        json.refresh_token = `${region}.${json.refresh_token}`;
-        body = JSON.stringify(json);
-        headers.set('Content-Type', 'application/json');
-      }
-    } catch {
-      // Not JSON: pass it through unchanged.
-    }
-  }
-  return new Response(body, { status: result.status, headers });
 }
 
 export async function alexaToken(request: Request, env: Env): Promise<Response> {

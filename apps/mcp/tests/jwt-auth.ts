@@ -21,7 +21,9 @@ jwk.use = 'sig';
 const realFetch = globalThis.fetch;
 vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  if ([TEST_ISSUER, 'https://paxaver.com/auth'].some((issuer) => url === `${issuer}/.well-known/jwks.json`)) {
+  // Every region publishes the same key, as in production.
+  const issuers = [TEST_ISSUER, 'https://paxaver.ca/auth', 'https://paxaver.com/auth', 'https://paxaver.mx/auth'];
+  if (issuers.some((issuer) => url === `${issuer}/.well-known/jwks.json`)) {
     return new Response(JSON.stringify({ keys: [jwk] }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -131,10 +133,13 @@ export const mockBackend = {
 
 export const TEST_ENV = {
   JWT_SECRET: 'test-jwt-secret-for-vitest-only',
-  ENVIRONMENT: 'test' as const,
+  // 'development' accepts the paxaver.dev issuer (see lib/regions.ts).
+  ENVIRONMENT: 'development' as const,
   ALLOWED_ORIGINS: 'http://localhost:5173',
   API_BASE_URL_CA: 'http://localhost:8787',
   API_BASE_URL_US: 'http://localhost:8787',
+  API_BASE_URL_MX: 'http://localhost:8787',
   PAXAVER_API_CA: mockBackend,
   PAXAVER_API_US: mockBackend,
+  PAXAVER_API_MX: mockBackend,
 };

@@ -14,15 +14,16 @@ business logic. Its security responsibilities are:
 ## Authentication
 
 All MCP requests (`POST /mcp`, `GET /mcp`, `DELETE /mcp`) require a
-valid Bearer token. The token is an RS256 JWT issued by the centralized
-auth worker (`paxaver.com/auth`).
+valid Bearer token. The token is an RS256 JWT issued by a regional auth
+server (`paxaver.ca/auth`, `paxaver.com/auth` or `paxaver.mx/auth`).
+Each environment accepts only its own issuers.
 
 Validation flow:
 
 1. Extract Bearer token from `Authorization` header.
-2. Verify RS256 signature against the auth worker's JWKS.
-3. Check `iss`, `aud`, `exp`.
-4. Extract `tenant_id` from JWT claims to determine user region (CA/US).
+2. Reject a token whose `iss` is not an issuer of this environment.
+3. Verify RS256 signature against the issuer's JWKS, and check `iss`, `aud`, `exp`.
+4. The region of the issuer is the user region (CA/US/MX).
 5. Call the regional backend's `/api/users/me/context` to load the
    full `AuthContext` (permissions, schoolSlug, studentIds, country).
 6. Attach `AuthContext` to the request for downstream authorization.
@@ -88,11 +89,16 @@ appear in source code or configuration files.
 ## Regional routing
 
 The single MCP endpoint (`mcp.paxaver.com`) routes to the correct
-regional backend based on the authenticated user's tenant country:
+regional backend based on the verified token issuer:
 
-- `tenant_id` ending in `-us` → US backend (`PAXAVER_API_US`)
-- `tenant_id` ending in `-mx` → MX backend (`PAXAVER_API_MX`)
-- All others → CA backend (`PAXAVER_API_CA`)
+- `https://paxaver.ca/auth` → CA backend (`PAXAVER_API_CA`)
+- `https://paxaver.com/auth` → US backend (`PAXAVER_API_US`)
+- `https://paxaver.mx/auth` → MX backend (`PAXAVER_API_MX`)
+
+The OAuth facade routes (`/oauth/authorize`, `/oauth/register`,
+`/oauth/token`, `/oauth/revoke`) forward OAuth calls to the regional auth
+servers. They store nothing. The regional auth server does every OAuth check
+(client authentication, PKCE, `redirect_uri`, single use).
 
 This ensures user data never crosses regions. Service bindings are
 same-account, same-region Cloudflare internal calls — no public network

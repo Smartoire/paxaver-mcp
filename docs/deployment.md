@@ -61,13 +61,14 @@ Paxaver app origins. Production also allows browser-hosted MCP clients
 ## Service binding: `PAXAVER_API`
 
 The MCP worker calls the Paxaver backend via Cloudflare **service bindings**.
-The production worker has two bindings:
+The production worker has three bindings:
 
 - `PAXAVER_API_CA` → `paxaver-api-ca` (Canadian users)
 - `PAXAVER_API_US` → `paxaver-api-us` (US users)
+- `PAXAVER_API_MX` → `paxaver-api-mx` (Mexican users)
 
-The correct backend is selected per request based on the authenticated user's
-tenant country (derived from the JWT `tenant_id` claim).
+The correct backend is selected per request based on the region of the
+verified JWT issuer (`iss`).
 
 Service bindings are configured in `wrangler.jsonc` under each environment's
 `services` array.

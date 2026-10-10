@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- MCP OAuth for CA and MX users (#2061). Production accepts tokens from
+  `paxaver.ca/auth`, `paxaver.com/auth` and `paxaver.mx/auth`, and routes
+  each request to the region of the verified issuer (not the `tenant_id`
+  claim). The MCP origin is now the authorization server in the discovery
+  metadata: `GET /oauth/authorize` shows a region picker,
+  `POST /oauth/register` registers the client in every region and returns a
+  composite `client_id`, `POST /oauth/token` routes each grant to its region,
+  and the new `POST /oauth/revoke` routes revocations. Clients that
+  registered at `paxaver.com/auth` before this change keep working.
+
 - Allow Microsoft OAuth client origins during staging validation.
 
 ## [2.6.3] — 2026-10-05

@@ -1,20 +1,21 @@
 /**
  * OAuth access-token validation for incoming MCP requests.
  *
- * Validates RS256 JWTs from the environment's authorization server via JWKS.
- * Production uses paxaver.com/auth; development and staging use
- * paxaver.dev/auth. The issuer is extracted from the JWT `iss` claim and
- * must match the server for the current environment.
+ * Validates RS256 JWTs from the environment's regional authorization
+ * servers via JWKS. Production accepts paxaver.ca/auth, paxaver.com/auth and
+ * paxaver.mx/auth; development and staging accept paxaver.dev/auth. The JWT
+ * `iss` claim must be one of these issuers (see lib/regions.ts).
  *
  * User context (permissions, schoolSlug, studentIds, country) is loaded
  * from the backend via the service-binding API client. The user's region
- * is determined from the JWT tenant_id claim and used to route to the
+ * is the region of the verified issuer. It routes every call to the
  * correct regional backend.
  */
 
 import { jwtVerify, createRemoteJWKSet, decodeJwt } from 'jose';
-import type { Env, AuthContext, McpCountry } from '../env.js';
+import type { Env, AuthContext } from '../env.js';
 import { callPaxaverApi, verifyAccessToken } from '../api/client.js';
+import { regionFromIssuer } from '../lib/regions.js';
 
 export interface AuthResult {
   ok: boolean;
@@ -22,11 +23,6 @@ export interface AuthResult {
   context?: AuthContext;
   error?: { code: string; message: string };
   wwwAuthenticate?: string;
-}
-
-/** Get the auth issuer URL for the environment. Used for OAuth metadata endpoints. */
-export function authUrl(env: Env): string {
-  return env.ENVIRONMENT === 'production' ? 'https://paxaver.com/auth' : 'https://paxaver.dev/auth';
 }
 
 // Warn once per isolate when the revocation check is inactive due to a
@@ -52,12 +48,6 @@ function getJwks(issuer: string): ReturnType<typeof createRemoteJWKSet> {
   return jwks;
 }
 
-function countryFromTenantId(tenantId: string | undefined | null): McpCountry {
-  if (tenantId?.endsWith('-us')) return 'us';
-  if (tenantId?.endsWith('-mx')) return 'mx';
-  return 'ca';
-}
-
 export async function authenticateRequest(
   env: Env,
   authHeader: string | undefined,
@@ -74,9 +64,11 @@ export async function authenticateRequest(
     };
   }
 
-  // --- RS256 path (configured auth issuer via JWKS) ---
-  // Peek at the unverified payload to get the issuer, then verify with the
-  // JWKS for the issuer configured in this environment.
+  // --- RS256 path (regional auth issuers via JWKS) ---
+  // Peek at the unverified payload to get the issuer. Only an issuer of this
+  // environment passes; an unknown issuer gets a 401 before any backend call.
+  // All regions publish the same key, so the signed `iss` claim (not the
+  // key) identifies the token's region.
   let issuer: string | undefined;
   try {
     const unverified = decodeJwt(token);
@@ -85,7 +77,8 @@ export async function authenticateRequest(
     // Malformed JWT — fall through to the 401 below.
   }
 
-  if (issuer && issuer === authUrl(env)) {
+  const country = regionFromIssuer(env, issuer);
+  if (issuer && country) {
     const jwks = getJwks(issuer);
     try {
       const { payload } = await jwtVerify(token, jwks, {
@@ -95,8 +88,6 @@ export async function authenticateRequest(
       });
 
       if (payload.sub) {
-        const country = countryFromTenantId(payload.tenant_id as string | undefined);
-
         // Revocation check + context load run in parallel — the context hop
         // already exists per request, so the verify call adds ~no latency.
         // JWKS only proves signature+expiry; MCP tokens live 30 days, so a

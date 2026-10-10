@@ -31,10 +31,12 @@ network hop). The MCP server's only responsibilities are:
 - Per-tool capability policy and role gating
 - Sanitized, user-safe error mapping
 
-Authentication is handled by the Paxaver auth worker (`paxaver.com/auth`), which
-serves as the OAuth 2.0 / OIDC authorization server. The MCP server validates
-the resulting RS256 JWTs and forwards them to the backend. The MCP server itself
-is not an authorization server.
+Authentication is handled by the regional Paxaver auth servers
+(`paxaver.ca/auth`, `paxaver.com/auth`, `paxaver.mx/auth`), which issue the
+OAuth 2.0 / OIDC tokens. The MCP server shows one facade authorization server
+on its own origin: the user picks the country of their account at login, and
+the facade routes each OAuth call to that region. The MCP server validates the
+resulting RS256 JWTs and forwards them to the backend.
 
 ---
 
@@ -108,10 +110,10 @@ Two environments, each a separate Worker with its own custom domain:
 | `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev` |
 | `production` | `paxaver-mcp`         | `mcp.paxaver.com` |
 
-The production worker serves both CA and US users through a single endpoint
-(`mcp.paxaver.com`). User region is resolved from the JWT `tenant_id` claim,
+The production worker serves CA, US and MX users through a single endpoint
+(`mcp.paxaver.com`). User region is resolved from the JWT issuer (`iss`),
 and the worker routes to the correct regional backend via service bindings
-(`PAXAVER_API_CA`, `PAXAVER_API_US`). Currency is determined by the user's
+(`PAXAVER_API_CA`, `PAXAVER_API_US`, `PAXAVER_API_MX`). Currency is determined by the user's
 school, not by the MCP endpoint.
 
 ### Docker
@@ -196,7 +198,7 @@ read responses. The MCP server does not log user data.
 - **Framework:** [Hono](https://hono.dev) v4
 - **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
 - **Protocol:** MCP `2025-06-18`, Streamable HTTP
-- **Auth:** RS256 JWT validation via centralized auth worker (`paxaver.com/auth`)
+- **Auth:** RS256 JWT validation via the regional auth servers (`paxaver.{ca,com,mx}/auth`)
 - **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
 - **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)
 
