@@ -9,7 +9,7 @@
  */
 
 import type { Env, AppVariables } from './env.js';
-import { authenticateRequest } from './auth/validate.js';
+import { authenticateRequest, revocationCheckUnavailable } from './auth/validate.js';
 import { transportApp } from './transport/streamable-http.js';
 import { originFrom } from './lib/url.js';
 import { wellKnownApp } from './discovery/well-known.js';
@@ -152,11 +152,23 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       url.pathname === '/health' ||
       (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     ) {
+      // Self-check (#2134): without INTERNAL_SERVICE_SECRET outside
+      // development every authenticated call fails closed, so report it
+      // loudly to the deploy smoke check and monitors.
+      const degraded = revocationCheckUnavailable(env);
       const healthBody =
         request.method === 'HEAD'
           ? null
-          : JSON.stringify({ status: 'ok', version: SERVER_VERSION, commit: env.COMMIT_SHA ?? 'unknown' });
-      response = new Response(healthBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
+          : JSON.stringify({
+              status: degraded ? 'degraded' : 'ok',
+              version: SERVER_VERSION,
+              commit: env.COMMIT_SHA ?? 'unknown',
+              ...(degraded ? { error: 'INTERNAL_SERVICE_SECRET unset: auth verification unavailable' } : {}),
+            });
+      response = new Response(healthBody, {
+        status: degraded ? 503 : 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
       response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     } else if (url.pathname === '/oauth/authorize') {

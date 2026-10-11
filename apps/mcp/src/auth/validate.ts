@@ -13,7 +13,7 @@
  */
 
 import { jwtVerify, createRemoteJWKSet, decodeJwt } from 'jose';
-import type { Env, AuthContext } from '../env.js';
+import type { Env, AuthContext, McpCountry } from '../env.js';
 import { callPaxaverApi, verifyAccessToken } from '../api/client.js';
 import { regionFromIssuer } from '../lib/regions.js';
 
@@ -25,14 +25,51 @@ export interface AuthResult {
   wwwAuthenticate?: string;
 }
 
-// Warn once per isolate when the revocation check is inactive due to a
-// missing INTERNAL_SERVICE_SECRET — avoids per-request log spam.
+// Warn once per isolate when INTERNAL_SERVICE_SECRET is missing — avoids
+// per-request log spam.
 let warnedNoSecret = false;
-function warnNoSecret(): void {
+function warnNoSecret(env: Env): void {
   if (!warnedNoSecret) {
     warnedNoSecret = true;
-    console.warn('[auth] INTERNAL_SERVICE_SECRET unset — token revocation check inactive');
+    if (env.ENVIRONMENT === 'development') {
+      console.warn('[auth] INTERNAL_SERVICE_SECRET unset — token revocation check inactive (development only)');
+    } else {
+      console.error('[auth] INTERNAL_SERVICE_SECRET unset — authenticated requests fail closed with 503');
+    }
   }
+}
+
+/** True when the revocation check cannot run and the request must fail closed. */
+export function revocationCheckUnavailable(env: Env): boolean {
+  return !env.INTERNAL_SERVICE_SECRET && env.ENVIRONMENT !== 'development';
+}
+
+const AUTH_UNAVAILABLE: AuthResult = {
+  ok: false,
+  status: 503,
+  error: { code: 'AUTH_UNAVAILABLE', message: 'Auth verification unavailable' },
+};
+
+type VerifyOutcome = 'active' | 'revoked' | 'unavailable';
+
+// Calls /internal/auth/verify. 401/403 is a definitive "inactive" answer.
+// Any other non-2xx or a transport error is retried once, then reported as
+// unavailable so the caller fails closed with 503.
+async function checkRevocation(env: Env, country: McpCountry, token: string): Promise<VerifyOutcome> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await verifyAccessToken(env, country, token);
+      if (res.ok) return 'active';
+      if (res.status === 401 || res.status === 403) {
+        console.error(`[auth] token revocation check rejected (status ${res.status})`);
+        return 'revoked';
+      }
+      console.error(`[auth] internal token verify error (status ${res.status})`);
+    } catch (err) {
+      console.error('[auth] internal token verify failed:', err instanceof Error ? err.message : String(err));
+    }
+  }
+  return 'unavailable';
 }
 
 // ponytail: one JWKS per issuer, cached in a Map. Enough for 3 regional issuers.
@@ -92,21 +129,20 @@ export async function authenticateRequest(
         // already exists per request, so the verify call adds ~no latency.
         // JWKS only proves signature+expiry; MCP tokens live 30 days, so a
         // revoked token (deactivated client, revoked session) must be
-        // rejected here. Fail closed: any verify failure rejects.
+        // rejected here.
         //
-        // The check only runs when INTERNAL_SERVICE_SECRET is provisioned —
-        // the backend's internalServiceGuard fails closed on non-dev
-        // environments, so an unprovisioned worker would reject every
-        // request. Skipping preserves the JWKS + context posture until ops
-        // provisions the secret; enforcement then activates automatically.
-        const verifyResultPromise = env.INTERNAL_SERVICE_SECRET
-          ? verifyAccessToken(env, country, token).catch((err) => {
-              console.error('[auth] internal token verify failed:', err instanceof Error ? err.message : String(err));
-              return { ok: false, status: 0, data: null };
-            })
-          : (warnNoSecret(), Promise.resolve({ ok: true, status: 0, data: null }));
-        const [verifyResult, result] = await Promise.all([
-          verifyResultPromise,
+        // Fail closed (#2134): outside development a missing
+        // INTERNAL_SERVICE_SECRET or an unreachable verify endpoint gives
+        // 503. Only development skips the check when the secret is unset.
+        if (!env.INTERNAL_SERVICE_SECRET) {
+          warnNoSecret(env);
+          if (revocationCheckUnavailable(env)) return AUTH_UNAVAILABLE;
+        }
+        const verifyPromise: Promise<VerifyOutcome> = env.INTERNAL_SERVICE_SECRET
+          ? checkRevocation(env, country, token)
+          : Promise.resolve('active');
+        const [verifyOutcome, result] = await Promise.all([
+          verifyPromise,
           callPaxaverApi(
             env,
             {
@@ -123,8 +159,8 @@ export async function authenticateRequest(
           ),
         ]);
 
-        if (!verifyResult.ok) {
-          console.error(`[auth] token revocation check rejected (status ${verifyResult.status})`);
+        if (verifyOutcome === 'unavailable') return AUTH_UNAVAILABLE;
+        if (verifyOutcome === 'revoked') {
           return {
             ok: false,
             status: 401,

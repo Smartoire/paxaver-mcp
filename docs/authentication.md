@@ -115,14 +115,18 @@ In parallel with the context call, the server calls the backend's internal
 `x-internal-secret` shared secret) with the bearer token. The endpoint rejects
 tokens whose `access_tokens` row is revoked or whose OAuth client is
 deactivated — closing the gap where a 30-day MCP token would otherwise remain
-usable after revocation. The check fails closed: any non-2xx response or
-transport error rejects the request with `401`.
+usable after revocation. The check fails closed:
 
-The check runs only when `INTERNAL_SERVICE_SECRET` is provisioned on the
-worker — the backend guard fails closed on non-local environments, so an
-unprovisioned worker would otherwise reject every request. When the secret is
-unset the check is skipped (logged once per isolate) and validation falls back
-to JWKS + live context, today's baseline posture.
+- `401` or `403` from the endpoint (token not active) rejects the request with
+  `401`.
+- Any other non-2xx response or a transport error gets one retry. If the retry
+  also fails, the request is rejected with `503` (`AUTH_UNAVAILABLE`).
+
+The check needs `INTERNAL_SERVICE_SECRET`. In staging and production, a worker
+without the secret rejects every authenticated request with `503` and
+`GET /health` returns `503` with `status: "degraded"`. Only
+`ENVIRONMENT=development` skips the check when the secret is unset (a warning
+is logged once per isolate) and uses JWKS + live context.
 
 The user's JWT is forwarded to the backend as `Authorization: Bearer <token>`,
 so the backend performs its own authorization checks (defense-in-depth).

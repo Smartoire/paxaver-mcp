@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Token revocation check fails closed (#2134). In staging and production, a
+  missing `INTERNAL_SERVICE_SECRET` gives `503` on authenticated requests,
+  and `GET /health` returns `503` with `status: "degraded"`. A verify
+  endpoint error or outage gets one retry, then `503`. A revoked token still
+  gets `401`. Only `ENVIRONMENT=development` skips the check without the
+  secret.
+
 ## [2.7.1] — 2026-10-09
 
 Republishes the 2.7.0 changes with the declared version aligned to the

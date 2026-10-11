@@ -81,10 +81,11 @@ required for production.
 ## Secrets
 
 - `INTERNAL_SERVICE_SECRET` — shared secret sent as `x-internal-secret` on the
-  internal token-revocation check (`GET /internal/auth/verify`). Should be set
-  in staging and production to activate revocation enforcement; until it is
-  provisioned the check is skipped (a warning is logged once per isolate) and
-  bearer validation falls back to JWKS + live context. Set it per environment
+  internal token-revocation check (`GET /internal/auth/verify`). Required in
+  staging and production: when it is unset, every authenticated request gets
+  `503` (an error is logged once per isolate) and `GET /health` returns `503`
+  with `status: "degraded"`. Only `ENVIRONMENT=development` skips the check
+  when the secret is unset (a warning is logged once). Set it per environment
   with `wrangler secret put --env <env> INTERNAL_SERVICE_SECRET`. For local
   development use a `.dev.vars` file (gitignored).
 - `ALEXA_SKILL_ID` — the Alexa skill id (`amzn1.ask.skill.…`). `POST /alexa`

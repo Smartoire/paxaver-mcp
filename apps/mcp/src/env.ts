@@ -28,8 +28,8 @@ export interface Env {
   /**
    * Shared secret for internal service-binding endpoints
    * (GET /internal/auth/verify — token revocation check). Required in
-   * staging/production; unset is allowed in development/test where the
-   * backend guard skips enforcement.
+   * staging/production: unset fails closed (503). Unset is allowed only in
+   * development, where the check is skipped.
    */
   INTERNAL_SERVICE_SECRET?: string;
 
