@@ -1,0 +1,214 @@
+# Paxaver MCP Server
+
+> AI-facing adapter over the [Paxaver](https://paxaver.com) school community platform.
+> Implements the Model Context Protocol (MCP) on Cloudflare Workers with RS256 JWT
+> validation, capability-first authorization, and Streamable HTTP transport.
+
+[![npm version](https://img.shields.io/npm/v/@paxaver/mcp.svg)](https://www.npmjs.com/package/@paxaver/mcp)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
+[![MCP Badge](https://lobehub.com/badge/mcp/paxaver)](https://lobehub.com/mcp/paxaver)
+[![Paxaver MCP Server MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/Smartoire/paxaver-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Smartoire/paxaver-mcp)
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/smartoire/paxaver-mcp)
+[![Wellknown](https://wellknown.network/agents/paxaver-mcp/badge.svg)](https://wellknown.network/agents/paxaver-mcp)
+
+---
+
+## What this is
+
+The Paxaver MCP server lets AI assistants (ChatGPT, Claude, Perplexity, and any
+MCP-compatible client) act on behalf of a Paxaver user: check a lunch menu, order
+lunch, register for fundraising events, volunteer, and — for school administrators
+— manage restaurants, menu items,
+events, and daily orders.
+
+It is a **thin adapter**. It contains no business logic and never touches the
+database, Stripe, or email directly. Every action is delegated to the private
+Paxaver backend API over a Cloudflare **service binding** (same region, no public
+network hop). The MCP server's only responsibilities are:
+
+- MCP protocol handling (JSON-RPC 2.0, Streamable HTTP)
+- RS256 JWT validation via JWKS from the centralized Paxaver auth worker
+- Per-tool capability policy and role gating
+- Sanitized, user-safe error mapping
+
+Authentication is handled by the regional Paxaver auth servers
+(`paxaver.ca/auth`, `paxaver.com/auth`, `paxaver.mx/auth`), which issue the
+OAuth 2.0 / OIDC tokens. The MCP server shows one facade authorization server
+on its own origin: the user picks the country of their account at login, and
+the facade routes each OAuth call to that region. The MCP server validates the
+resulting RS256 JWTs and forwards them to the backend.
+
+---
+
+## Architecture
+
+```text
+┌───────────────┐     MCP (Streamable HTTP)      ┌──────────────────────┐
+│   AI Client   │ ─────────────────────────────▶ │   Paxaver MCP Worker │
+│ ChatGPT/Claude│ ◀───────────────────────────── │  (this repo)         │
+│  /Perplexity  │     RS256 JWT + JSON-RPC 2.0   │  Hono + jose         │
+└───────────────┘                                └──────────┬───────────┘
+                                                            │
+                                          Cloudflare service binding
+                                          (PAXAVER_API, same region)
+                                                            │
+                                                            ▼
+                                                 ┌──────────────────────┐
+                                                 │  Paxaver API Worker  │
+                                                 │  (private backend)   │
+                                                 │  D1 · Stripe · SES   │
+                                                 └──────────────────────┘
+```
+
+The MCP worker **never** binds D1, Stripe, or SES. The service binding carries a
+short-lived JWT (120s TTL, audience `paxaver-internal`) that the backend trusts as
+an internal call while still attributing the action to the authenticated Paxaver
+user. See [`docs/architecture.md`](./docs/architecture.md) for the full picture.
+
+---
+
+## Quick start
+
+### Install
+
+```bash
+npm install @paxaver/mcp
+```
+
+### Develop locally
+
+```bash
+# 1. Install dependencies (Node >= 26.8.2)
+npm install
+
+# 2. Run the worker locally (Miniflare)
+npm run dev
+
+# 3. Typecheck, lint, and test
+npm run typecheck
+npm run lint
+npm test
+```
+
+The local dev server starts on `http://localhost:8787`. Discovery endpoints live
+under `/.well-known/`; the MCP endpoint is `POST /mcp`.
+
+> **Note:** Local development without the `PAXAVER_API_*` service bindings falls
+> back to authenticated HTTPS against `API_BASE_URL_CA`, `API_BASE_URL_US`, and
+> `API_BASE_URL_MX` (default `http://localhost:8787`). For full integration
+> testing, run the Paxaver backend worker locally; the defaults already point at
+> it.
+
+---
+
+## Deployment
+
+Two environments, each a separate Worker with its own custom domain:
+
+| Environment  | Worker name           | Domain            |
+| ------------ | --------------------- | ----------------- |
+| `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev` |
+| `production` | `paxaver-mcp`         | `mcp.paxaver.com` |
+
+The production worker serves CA, US and MX users through a single endpoint
+(`mcp.paxaver.com`). User region is resolved from the JWT issuer (`iss`),
+and the worker routes to the correct regional backend via service bindings
+(`PAXAVER_API_CA`, `PAXAVER_API_US`, `PAXAVER_API_MX`). Currency is determined by the user's
+school, not by the MCP endpoint.
+
+### Docker
+
+The `Dockerfile` runs the worker locally via `wrangler dev`, proxying the
+production backends over HTTPS:
+
+```bash
+docker build -t paxaver-mcp .
+docker run -p 8787:8787 paxaver-mcp
+# MCP endpoint: http://localhost:8787/mcp
+```
+
+The image sets `REVOCATION_CHECK=skip`, because a self-hosted server does not
+have `INTERNAL_SERVICE_SECRET`. Tokens are still checked by signature, expiry
+and a live user-context load, but the internal token revocation check does not
+run. See [`docs/authentication.md`](./docs/authentication.md#token-revocation-check).
+
+```bash
+npm run deploy:staging   # wrangler deploy --env staging
+npm run deploy:prod      # wrangler deploy --env production
+```
+
+The worker reads two Worker secrets, `INTERNAL_SERVICE_SECRET` and
+`ALEXA_SKILL_ID`. See [`docs/deployment.md`](./docs/deployment.md#secrets).
+
+---
+
+## Tools
+
+The server exposes 26 tools grouped into five categories. Visibility in
+`tools/list` is filtered by the caller's roles; every call is re-authorized
+before dispatch, and the backend re-checks data-level access (defense-in-depth).
+
+| Category                | Tools                                                                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User / account          | `get_my_context`, `get_my_wallet_balance`                                                                                                                                                                     |
+| Lunch ordering          | `get_lunch_menu`, `list_my_lunch_orders`, `create_lunch_order_draft`, `update_lunch_order_draft`, `discard_lunch_order_draft`, `pay_lunch_order_draft`, `cancel_my_lunch_order`                               |
+| Events & volunteering   | `list_school_events`, `register_for_event`, `list_my_event_registrations`, `cancel_my_event_registration`, `list_my_volunteer_signups`, `sign_up_for_volunteer_shift`, `cancel_my_volunteer_signup`           |
+| Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`                                                                                                                                           |
+| Restaurant / menu admin | `list_school_restaurants`, `create_school_restaurant`, `list_restaurant_menu_items`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `archive_restaurant_menu_item`, `schedule_lunch_menu_item` |
+
+Ordering is draft → review → payment: `create_lunch_order_draft`, adjust
+with `update_lunch_order_draft`, then `pay_lunch_order_draft`.
+
+**Compatibility:** pre-2.5 tool names (`get_menu`, `register_event`,
+`create_menu_item`, …) still work — they resolve to the canonical tools —
+but are no longer advertised. `order_lunch` also remains callable for
+existing integrations. See [`docs/tools.md`](./docs/tools.md) for the full
+legacy-name mapping.
+
+Financial and destructive tools are labeled and require user confirmation. Full
+reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
+[`docs/authorization.md`](./docs/authorization.md).
+
+### Privacy
+
+No personal contact information (email, phone, address) is collected or
+returned through MCP tools. The `get_my_context` tool returns only the user's
+name, school, students, and roles. Student data is limited to IDs, names, and
+school slugs. Allergies, notes, birthday, and other PII are not exposed in
+read responses. The MCP server does not log user data.
+
+---
+
+## Documentation
+
+| Document                                           | Topic                                                             |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| [docs/architecture.md](./docs/architecture.md)     | System architecture, service binding boundary, regional isolation |
+| [docs/authentication.md](./docs/authentication.md) | JWT validation, JWKS, auth worker delegation, token format        |
+| [docs/authorization.md](./docs/authorization.md)   | Capability policy table, role gating, defense-in-depth            |
+| [docs/tools.md](./docs/tools.md)                   | Full tool reference with input schemas and classifications        |
+| [docs/deployment.md](./docs/deployment.md)         | Wrangler config, environments, secrets, custom domains            |
+| [docs/security.md](./docs/security.md)             | Security model, CORS, CSRF, error sanitization, headers           |
+| [docs/compatibility.md](./docs/compatibility.md)   | MCP protocol version, transports, supported AI clients            |
+| [docs/migration.md](./docs/migration.md)           | Migration from the legacy `mcp-server/` in the private monorepo   |
+| [CHANGELOG.md](./CHANGELOG.md)                     | Release history                                                   |
+| [SECURITY.md](./SECURITY.md)                       | Vulnerability reporting policy                                    |
+| [CONTRIBUTING.md](./CONTRIBUTING.md)               | Development setup and contribution process                        |
+
+---
+
+## Tech stack
+
+- **Runtime:** Cloudflare Workers (`compatibility_date: 2026-09-15`)
+- **Framework:** [Hono](https://hono.dev) v4
+- **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
+- **Protocol:** MCP `2025-06-18`, Streamable HTTP
+- **Auth:** RS256 JWT validation via the regional auth servers (`paxaver.{ca,com,mx}/auth`)
+- **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
+- **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)
+
+---
+
+## License
+
+Apache-2.0. Copyright (c) 2026 Smartoire. See [`LICENSE`](./LICENSE).

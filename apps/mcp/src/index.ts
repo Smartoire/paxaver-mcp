@@ -1,0 +1,251 @@
+/**
+ * Paxaver MCP server entry point.
+ *
+ * Architecture: AI clients → MCP server (this worker) → Paxaver API worker
+ * (via Cloudflare service binding, same region) → D1.
+ *
+ * The MCP server never touches D1, Stripe, or SES directly. It is a thin
+ * AI-facing adapter over the existing Paxaver platform.
+ */
+
+import type { Env, AppVariables } from './env.js';
+import { authenticateRequest, revocationCheckUnavailable } from './auth/validate.js';
+import { transportApp } from './transport/streamable-http.js';
+import { originFrom } from './lib/url.js';
+import { wellKnownApp } from './discovery/well-known.js';
+import { SERVER_VERSION } from './lib/version.js';
+import { alexaAuthorize } from './alexa/authorize.js';
+import { alexaToken } from './alexa/token.js';
+import { alexaSkill } from './alexa/skill.js';
+import { oauthAuthorize } from './oauth/authorize.js';
+import { oauthToken, oauthRevoke } from './oauth/token.js';
+import { oauthRegister } from './oauth/register.js';
+
+const ROBOTS_TXT = `User-agent: *
+Allow: /mcp
+Allow: /.well-known/
+Allow: /health
+Disallow: /
+`;
+
+const SECURITY_TXT = `# Paxaver security.txt (RFC 9116)
+# https://securitytxt.org/
+
+Contact: mailto:security@paxaver.com
+Expires: 2027-08-12T23:59:59Z
+Preferred-Languages: en, fr
+Canonical: https://paxaver.com/.well-known/security.txt
+Policy: https://paxaver.com/privacy/security
+`;
+
+export function isAllowedOrigin(origin: string, allowed: string): boolean {
+  const list = allowed.split(',').map((o) => o.trim());
+  return list.some((pattern) => {
+    if (pattern === origin) return true;
+    const wildcard = pattern.match(/^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)?\*\.([^/]+)$/);
+    if (!wildcard) return false;
+    const [, scheme, base] = wildcard;
+    if (!base) return false;
+    try {
+      const url = new URL(origin);
+      if (scheme && `${url.protocol}//` !== scheme) return false;
+      return url.hostname === base || url.hostname.endsWith('.' + base);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function corsHeaders(origin: string, allowed: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (origin && isAllowedOrigin(origin, allowed)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Vary'] = 'Origin';
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS';
+    headers['Access-Control-Allow-Headers'] =
+      'Content-Type, Authorization, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name';
+    headers['Access-Control-Expose-Headers'] = 'MCP-Session-Id';
+    headers['Access-Control-Max-Age'] = '86400';
+  }
+  return headers;
+}
+
+function mergeHeaders(response: Response, extra: Record<string, string>): Response {
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: new Headers([...response.headers, ...Object.entries(extra)]),
+  });
+}
+
+// Methods that a development server with ANONYMOUS_DISCOVERY=1 answers
+// without a token. They return public metadata only, never user data.
+const ANONYMOUS_DISCOVERY_METHODS = new Set([
+  'initialize',
+  'notifications/initialized',
+  'tools/list',
+  'prompts/list',
+  'resources/list',
+]);
+
+function anonymousDiscoveryEnabled(env: Env): boolean {
+  return env.ANONYMOUS_DISCOVERY === '1' && env.ENVIRONMENT === 'development';
+}
+
+/**
+ * Returns 'public' for server/discover (always unauthenticated), 'anonymous'
+ * for a discovery method allowed by anonymousDiscoveryEnabled(), else null.
+ * Only single (non-batch) messages qualify.
+ */
+async function publicDiscoveryKind(request: Request, env: Env): Promise<'public' | 'anonymous' | null> {
+  if (request.method !== 'POST') return null;
+  let method: unknown;
+  try {
+    const body: unknown = await request.clone().json();
+    if (Array.isArray(body) || body === null || typeof body !== 'object' || !('method' in body)) return null;
+    method = body.method;
+  } catch {
+    return null;
+  }
+  if (method === 'server/discover') return 'public';
+  if (typeof method === 'string' && ANONYMOUS_DISCOVERY_METHODS.has(method) && anonymousDiscoveryEnabled(env)) {
+    return 'anonymous';
+  }
+  return null;
+}
+
+async function mcpAuth(request: Request, ctx: { env: Env; var: Partial<AppVariables> }): Promise<Response | null> {
+  const origin = originFrom(request.url);
+  const result = await authenticateRequest(ctx.env, request.headers.get('Authorization') || undefined, origin);
+
+  if (!result.ok) {
+    const headers: Record<string, string> = {};
+    if (result.wwwAuthenticate) headers['WWW-Authenticate'] = result.wwwAuthenticate;
+    return Response.json(result.error, { status: result.status, headers });
+  }
+
+  if (result.context) {
+    ctx.var = {
+      ...ctx.var,
+      ...(result.context as Partial<AppVariables>),
+      subscription: result.context.subscription ?? null,
+    };
+  }
+
+  return null;
+}
+
+async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Promise<Response> {
+  const origin = request.headers.get('Origin') || '';
+  const cors = corsHeaders(origin, env.ALLOWED_ORIGINS);
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: cors });
+  }
+
+  const correlationId = request.headers.get('X-Correlation-Id') || crypto.randomUUID();
+  const securityHeaders: Record<string, string> = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'X-Robots-Tag': 'noindex, nofollow',
+    'X-Correlation-Id': correlationId,
+  };
+
+  // Some MCP clients (for example Glama) register the server by its bare
+  // origin and POST JSON-RPC to /. Treat POST / as /mcp. GET / and HEAD /
+  // remain the health check below.
+  if (request.method === 'POST' && new URL(request.url).pathname === '/') {
+    const mcpUrl = new URL(request.url);
+    mcpUrl.pathname = '/mcp';
+    request = new Request(mcpUrl, request);
+  }
+
+  const url = new URL(request.url);
+  let response: Response;
+  const ctx: { env: Env; var: Partial<AppVariables> } = { env, var: { correlationId } };
+
+  try {
+    if (url.pathname === '/robots.txt') {
+      response = new Response(ROBOTS_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    } else if (
+      url.pathname === '/health' ||
+      (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
+    ) {
+      // Self-check (#2134): without INTERNAL_SERVICE_SECRET outside
+      // development every authenticated call fails closed, so report it
+      // loudly to the deploy smoke check and monitors.
+      const degraded = revocationCheckUnavailable(env);
+      const healthBody =
+        request.method === 'HEAD'
+          ? null
+          : JSON.stringify({
+              status: degraded ? 'degraded' : 'ok',
+              version: SERVER_VERSION,
+              commit: env.COMMIT_SHA ?? 'unknown',
+              ...(degraded ? { error: 'INTERNAL_SERVICE_SECRET unset: auth verification unavailable' } : {}),
+            });
+      response = new Response(healthBody, {
+        status: degraded ? 503 : 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } else if (url.pathname === '/.well-known/security.txt' || url.pathname === '/security.txt') {
+      response = new Response(SECURITY_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    } else if (url.pathname === '/oauth/authorize') {
+      // MCP OAuth facade: the user picks the region of their account, and
+      // the routers below send each call to that region's auth server.
+      response = oauthAuthorize(request, env);
+    } else if (url.pathname === '/register' || url.pathname === '/oauth/register') {
+      response = await oauthRegister(request, env);
+    } else if (url.pathname === '/oauth/revoke') {
+      response = await oauthRevoke(request, env);
+    } else if (
+      url.pathname.startsWith('/.well-known') ||
+      url.pathname.startsWith('/mcp/.well-known') ||
+      url.pathname === '/oauth/callback' ||
+      url.pathname === '/oauth' ||
+      url.pathname === '/oauth/'
+    ) {
+      response = await wellKnownApp.fetch(request, env);
+    } else if (url.pathname === '/token' || url.pathname === '/oauth/token' || url.pathname === '/oauth2/v1/token') {
+      response = await oauthToken(request, env);
+    } else if (url.pathname === '/alexa/authorize') {
+      response = alexaAuthorize(request, env);
+    } else if (url.pathname === '/alexa/token') {
+      response = await alexaToken(request, env);
+    } else if (url.pathname === '/alexa') {
+      response = await alexaSkill(request, env);
+    } else if (url.pathname === '/mcp') {
+      // Anonymous discovery applies only without a token, so a request with
+      // a token still authenticates and gets the per-user tool list.
+      const discovery = await publicDiscoveryKind(request, env);
+      const anonymous = discovery === 'anonymous' && !request.headers.get('Authorization');
+      if (anonymous) ctx.var.anonymousDiscovery = true;
+      const authResult = discovery === 'public' || anonymous ? null : await mcpAuth(request, ctx);
+      if (authResult) {
+        response = authResult;
+      } else if (request.method === 'GET' && !ctx.var.isPlatformAdmin && ctx.var.subscription?.status !== 'active') {
+        response = Response.json(
+          {
+            error:
+              'An active Parent AI or PAC AI subscription is required to use Paxaver MCP. Please visit your Paxaver portal to subscribe.',
+          },
+          { status: 403 },
+        );
+      } else {
+        response = await transportApp.fetch(request, { env, var: ctx.var as AppVariables });
+      }
+    } else {
+      response = Response.json({ error: 'Not found' }, { status: 404 });
+    }
+  } catch (err) {
+    console.error(`[unhandled] ${request.method} ${url.pathname}:`, err instanceof Error ? err.message : String(err));
+    response = Response.json({ error: 'Internal error' }, { status: 500 });
+  }
+
+  return mergeHeaders(response, { ...cors, ...securityHeaders });
+}
+
+const app = { fetch: mcpFetch };
+
+export default app;
