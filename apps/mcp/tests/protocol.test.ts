@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
 import { request } from './request.js';
-import { TEST_TOKEN, ACTIVE_TOKEN, FULL_TOKEN, EXPIRED_TOKEN, TEST_ENV } from './jwt-auth.js';
+import { TEST_TOKEN, ACTIVE_TOKEN, FULL_TOKEN, EXPIRED_TOKEN, TEST_ENV, backendCalls, makeToken } from './jwt-auth.js';
 
 async function mcpPost(body: unknown, token?: string, mcpMethod?: string) {
   const headers: Record<string, string> = {
@@ -218,7 +218,8 @@ describe('MCP protocol', () => {
     expect(json.result).toBeTruthy();
   });
 
-  it('legacy order_lunch stays callable but unlisted', async () => {
+  it('removed order_lunch returns -32601 and never reaches the backend (#2241)', async () => {
+    backendCalls.length = 0;
     const res = await mcpPost(
       {
         jsonrpc: '2.0',
@@ -228,9 +229,10 @@ describe('MCP protocol', () => {
       },
       ACTIVE_TOKEN,
     );
-    const json = (await res.json()) as unknown as { error?: { code: number; message: string }; result?: unknown };
-    expect(json.error?.code).not.toBe(-32601);
-    expect(json.result).toBeTruthy();
+    const json = (await res.json()) as unknown as { error?: { code: number }; result?: unknown };
+    expect(json.error?.code).toBe(-32601);
+    expect(json.result).toBeUndefined();
+    expect(backendCalls.filter((c) => c.includes('/api/lunch/orders'))).toEqual([]);
   });
 
   it('truly unknown tool names return -32601', async () => {
@@ -262,34 +264,68 @@ describe('MCP protocol', () => {
     expect(json.error.code).toBe(-32700);
   });
 
-  it('GET /mcp denies free users before opening an SSE stream', async () => {
-    const res = await request(
-      app,
-      'https://mcp.paxaver.test/mcp',
-      { method: 'GET', headers: { Authorization: `Bearer ${TEST_TOKEN}` } },
-      TEST_ENV,
-    );
-    expect(res.status).toBe(403);
-    const json = (await res.json()) as unknown as { error: string };
-    expect(json.error).toContain('subscription');
-    expect(json.error).toContain('portal');
-    expect(json.error).not.toContain('https://');
-  });
-
-  it('GET /mcp opens an SSE stream with an endpoint event', async () => {
+  it('GET /mcp returns 405: the server opens no SSE stream', async () => {
     const res = await request(
       app,
       'https://mcp.paxaver.test/mcp',
       { method: 'GET', headers: { Authorization: `Bearer ${ACTIVE_TOKEN}` } },
       TEST_ENV,
     );
+    expect(res.status).toBe(405);
+    expect(res.headers.get('Allow')).toBe('POST');
+  });
+
+  it('a token without exp is rejected (#2241)', async () => {
+    const token = await makeToken('user-active', undefined, { withExp: false });
+    const res = await mcpPost({ jsonrpc: '2.0', id: 30, method: 'ping' }, token);
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('JSON-RPC batch (#2241)', () => {
+  it('returns one result per request and drops notifications', async () => {
+    const res = await mcpPost(
+      [
+        { jsonrpc: '2.0', id: 1, method: 'ping' },
+        { jsonrpc: '2.0', method: 'notifications/initialized' },
+        { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'get_my_wallet_balance', arguments: {} } },
+      ],
+      ACTIVE_TOKEN,
+    );
     expect(res.status).toBe(200);
-    expect(res.headers.get('Content-Type')).toContain('text/event-stream');
-    const reader = res.body!.getReader();
-    const { value } = await reader.read();
-    const text = typeof value === 'string' ? value : new TextDecoder().decode(value);
-    expect(text).toContain('event: endpoint');
-    expect(text).toContain('data: https://mcp.paxaver.test/mcp');
-    await reader.cancel();
+    const json = (await res.json()) as { id: number; result?: { structuredContent?: unknown } }[];
+    expect(json.map((r) => r.id)).toEqual([1, 2]);
+    expect(json[0]?.result).toEqual({});
+    expect(json[1]?.result?.structuredContent).toEqual({ ok: true });
+  });
+
+  it('a batch of notifications only gets 202 with no body', async () => {
+    const res = await mcpPost([{ jsonrpc: '2.0', method: 'notifications/initialized' }], ACTIVE_TOKEN);
+    expect(res.status).toBe(202);
+    expect(await res.text()).toBe('');
+  });
+
+  it('rejects an oversized batch without running any message', async () => {
+    backendCalls.length = 0;
+    const batch = Array.from({ length: 21 }, (_, i) => ({
+      jsonrpc: '2.0',
+      id: i,
+      method: 'tools/call',
+      params: { name: 'get_my_wallet_balance', arguments: {} },
+    }));
+    const res = await mcpPost(batch, ACTIVE_TOKEN);
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: { code: number } };
+    expect(json.error.code).toBe(-32600);
+    expect(backendCalls.filter((c) => c.includes('/api/wallet'))).toEqual([]);
+  });
+
+  it('rejects an empty batch and invalid members', async () => {
+    const empty = await mcpPost([], ACTIVE_TOKEN);
+    expect(empty.status).toBe(400);
+    const res = await mcpPost([42, { jsonrpc: '2.0', id: 3, method: 'ping' }], ACTIVE_TOKEN);
+    const json = (await res.json()) as { id: number | null; error?: { code: number } }[];
+    expect(json[0]?.error?.code).toBe(-32600);
+    expect(json[1]?.id).toBe(3);
   });
 });

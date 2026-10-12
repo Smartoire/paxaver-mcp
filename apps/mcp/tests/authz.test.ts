@@ -35,12 +35,11 @@ describe('Authorization policy', () => {
       expect(canonical, `alias ${legacy} has no target`).toBeDefined();
       expect(TOOL_POLICIES[canonical!], `alias ${legacy} targets a tool without a policy`).toBeDefined();
     }
-    // order_lunch is retired from discovery but stays callable (hidden
-    // handler + policy) because nothing canonical preserves its
-    // immediate-purchase semantics.
+    // order_lunch skipped the wallet-only draft review flow and is removed
+    // (#2241): no catalog entry, alias or policy.
     expect(catalog.has('order_lunch')).toBe(false);
     expect(TOOL_ALIASES['order_lunch']).toBeUndefined();
-    expect(TOOL_POLICIES['order_lunch']).toBeDefined();
+    expect(TOOL_POLICIES['order_lunch']).toBeUndefined();
   });
 
   it('aliases resolve to canonical names', () => {
@@ -85,14 +84,14 @@ describe('Authorization policy', () => {
     expect(checkToolAuthorization('create_school_restaurant', ctx)).toBe('ok');
   });
 
-  it('financial tools are marked financial + require confirmation', () => {
-    expect(getToolPolicy('order_lunch')?.financial).toBe(true);
-    expect(getToolPolicy('order_lunch')?.requiresConfirmation).toBe(true);
+  it('financial tools are classified FINANCIAL + require confirmation', () => {
+    expect(getToolPolicy('pay_lunch_order_draft')?.classifications).toContain('FINANCIAL');
+    expect(getToolPolicy('pay_lunch_order_draft')?.requiresConfirmation).toBe(true);
   });
 
-  it('destructive tools are marked destructive', () => {
-    expect(getToolPolicy('archive_restaurant_menu_item')?.destructive).toBe(true);
-    expect(getToolPolicy('cancel_school_event')?.destructive).toBe(true);
+  it('destructive tools are classified DESTRUCTIVE', () => {
+    expect(getToolPolicy('archive_restaurant_menu_item')?.classifications).toContain('DESTRUCTIVE');
+    expect(getToolPolicy('cancel_school_event')?.classifications).toContain('DESTRUCTIVE');
   });
 
   it('read tools are not mutating', () => {
@@ -101,8 +100,8 @@ describe('Authorization policy', () => {
     expect(getToolPolicy('get_lunch_menu')?.mutates).toBe(false);
   });
 
-  it('unknown tool returns "unknown_tool"', () => {
+  it('a tool without a policy is "forbidden"', () => {
     const ctx = { isPlatformAdmin: false, permissions: [] };
-    expect(checkToolAuthorization('nonexistent_tool', ctx)).toBe('unknown_tool');
+    expect(checkToolAuthorization('nonexistent_tool', ctx)).toBe('forbidden');
   });
 });

@@ -160,7 +160,9 @@ each region in turn (`ca`, `us`, `mx`). The first answer that is not
    role policy. If denied, returns `-32603` without calling the backend.
 5. **`dispatchTool`** (`src/tools/dispatch.ts`) maps the tool to a backend API
    path and calls `PAXAVER_API.fetch(...)` with the user's JWT forwarded.
-   Mutating calls include an `Idempotency-Key` header.
+   Mutating calls include an `Idempotency-Key` header: a SHA-256 hash of the
+   user, the tool, the canonical arguments, and the `Mcp-Session-Id` plus the
+   JSON-RPC `id`. A resent call in the same session gets the same key.
 6. The **backend** re-checks data-level authorization (school membership, student
    ownership, entitlement) and performs the action against D1/Stripe/SES.
 7. The result is unwrapped from the backend's `{ data: ... }` envelope and
@@ -214,5 +216,5 @@ src/
 ├── tools/
 │   └── dispatch.ts              Tool → backend API path mapping + ownership validation
 └── transport/
-    └── streamable-http.ts       POST /mcp, GET /mcp (SSE), DELETE /mcp
+    └── streamable-http.ts       POST /mcp (single and batch); GET/DELETE /mcp return 405
 ```

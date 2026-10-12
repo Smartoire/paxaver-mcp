@@ -4,8 +4,9 @@
  * business logic — it is a thin adapter.
  *
  * Idempotency: mutating tools receive an idempotency key derived from the
- * tool name + key arguments + a per-request nonce. The backend is expected
- * to honor the Idempotency-Key header for duplicate suppression.
+ * user, the tool name, the canonical arguments and a per-call nonce (see
+ * makeIdempotencyKey). The backend is expected to honor the Idempotency-Key
+ * header for duplicate suppression.
  *
  * The tool → backend route mapping lives in `tools.ts` as a declarative
  * spec table (`TOOL_SPECS`). This module is the orchestrator: it resolves
@@ -41,13 +42,37 @@ function toolError(id: RpcId, code: number, message: string): Response {
 const WALLET_TOP_UP_MESSAGE =
   'Insufficient wallet balance. Open the Paxaver panel, top up the wallet balance, then retry this tool.';
 
-function makeIdempotencyKey(toolName: string, args: Record<string, unknown>, correlationId: string): string {
-  // Derive a stable key from tool + critical args + correlation id.
-  // The correlation id is unique per MCP request, so retries of the SAME
-  // request (same correlation id) are idempotent, but distinct user
-  // intents are not.
-  const criticalArgs = JSON.stringify(args);
-  return `mcp-${toolName}-${correlationId}-${criticalArgs}`.slice(0, 200);
+// JSON with sorted object keys, so equal arguments give equal text.
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+/**
+ * Idempotency key: `mcp-<tool>-<sha256 hex>`. The hash covers the user, a
+ * per-call nonce and the canonical arguments. The nonce is the session id
+ * plus the JSON-RPC id, so a client that resends the same call in the same
+ * session gets the same key. Without a session id the nonce is the
+ * per-request correlation id, so two calls never share a key by accident.
+ * The key is ASCII only, so it is always a valid header value.
+ */
+export async function makeIdempotencyKey(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: Pick<AppVariables, 'userId' | 'sessionId' | 'correlationId'>,
+  id: RpcId,
+): Promise<string> {
+  const nonce = ctx.sessionId ? `session:${ctx.sessionId}:${JSON.stringify(id)}` : `request:${ctx.correlationId}`;
+  const material = JSON.stringify([ctx.userId, toolName, nonce, canonicalJson(args)]);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));
+  const hex = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  return `mcp-${toolName}-${hex}`;
 }
 
 /**
@@ -92,7 +117,7 @@ export async function dispatchTool(
   const policy = getToolPolicy(name);
 
   try {
-    const idempotencyKey = policy?.mutates ? makeIdempotencyKey(name, args, ctx.correlationId) : undefined;
+    const idempotencyKey = policy?.mutates ? await makeIdempotencyKey(name, args, ctx, id) : undefined;
 
     // Verify that user-supplied student_id and school_slug arguments are
     // owned by the authenticated user before dispatching to the backend.

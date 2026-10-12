@@ -9,12 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- JSON-RPC batches return one result per request (#2241). Before, every
+  message ran but each result was returned as `{}`, so a client could retry
+  writes it did not see. Notifications get no entry, and a batch holds at most
+  20 messages.
+- The `Idempotency-Key` is now a SHA-256 hash of the user, the tool, the
+  canonical arguments, the `Mcp-Session-Id` and the JSON-RPC `id` (#2241). A
+  resent call in the same session gets the same key. Non-Latin-1 arguments no
+  longer break the header.
+- The legacy `order_lunch` tool is removed (#2241). It skipped the draft
+  review and the wallet-only payment. It now returns `Unknown tool` (-32601).
+- `update_school_event` sends only its schema fields to the backend (#2241).
+- Access tokens must carry `exp` (#2241).
+- The `Dockerfile` runs as the `node` user, and no longer sets the
+  `ALLOWED_ORIGINS:*` value, which matched no origin (#2241).
 - Token revocation check fails closed (#2134). In staging and production, a
   missing `INTERNAL_SERVICE_SECRET` gives `503` on authenticated requests,
   and `GET /health` returns `503` with `status: "degraded"`. A verify
   endpoint error or outage gets one retry, then `503`. A revoked token still
   gets `401`. Only the new `REVOCATION_CHECK=skip` var skips the check without
   the secret. Local development and the `Dockerfile` (self-host) set it.
+
+### Changed
+
+- `GET /mcp` returns `405` (#2241). The server sends no server-to-client
+  notifications, so it no longer holds an idle SSE stream.
+- The `POST /mcp` body is parsed once per request. The unused policy fields
+  `financial` and `destructive` are removed; the `classifications` list
+  carries the same information (#2241).
 
 ### Fixed
 

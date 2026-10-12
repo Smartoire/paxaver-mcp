@@ -4,11 +4,12 @@
  * Primary endpoint: POST /mcp
  *   - initialize returns a correlation Mcp-Session-Id
  *   - Accept: application/json, text/event-stream
- *   - GET /mcp opens an SSE stream for server-to-client notifications
+ *   - GET /mcp returns 405: this stateless server sends no server-to-client
+ *     notifications, and the spec allows 405 in place of an SSE stream
  */
 
 import type { Env, AppVariables } from '../env.js';
-import { originFrom } from '../lib/url.js';
+import { mcpError } from '../lib/errors.js';
 import { handleJsonRpc } from '../server/json-rpc.js';
 
 type JsonRpcMessage = Parameters<typeof handleJsonRpc>[1];
@@ -18,27 +19,55 @@ interface TransportContext {
   var: AppVariables;
 }
 
+/** The POST body, parsed once in index.ts. null = the body is not JSON. */
+export type ParsedBody = { value: unknown } | null;
+
+/** Maximum number of messages in one JSON-RPC batch. */
+export const MAX_BATCH_SIZE = 20;
+
+function isMessage(m: unknown): m is JsonRpcMessage {
+  return (
+    typeof m === 'object' && m !== null && !Array.isArray(m) && typeof (m as { method?: unknown }).method === 'string'
+  );
+}
+
+// A batch runs every message and replies with one result per request, in
+// order. Notifications (no `id`) get no entry. A batch of notifications
+// only gets 202 with no body.
+async function handleBatch(batch: unknown[], c: TransportContext): Promise<Response> {
+  if (batch.length === 0 || batch.length > MAX_BATCH_SIZE) {
+    const message =
+      batch.length === 0 ? 'Invalid Request: empty batch' : `Invalid Request: batch exceeds ${MAX_BATCH_SIZE} messages`;
+    return Response.json(mcpError(null, -32600, message), { status: 400 });
+  }
+  const results = await Promise.all(
+    batch.map(async (m) => {
+      if (!isMessage(m)) return mcpError(null, -32600, 'Invalid Request');
+      const reply: unknown = await (await handleJsonRpc(c, m)).json();
+      return 'id' in m ? reply : undefined;
+    }),
+  );
+  const replies = results.filter((r) => r !== undefined);
+  return replies.length ? Response.json(replies) : new Response(null, { status: 202 });
+}
+
 // --- Streamable HTTP: POST /mcp ---
-async function handlePost(request: Request, ctx: TransportContext): Promise<Response> {
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return Response.json(
-      {
-        jsonrpc: '2.0',
-        error: { code: -32700, message: 'Parse error' },
-        id: null,
-      },
-      { status: 400 },
-    );
+async function handlePost(parsed: ParsedBody, ctx: TransportContext): Promise<Response> {
+  if (!parsed) {
+    return Response.json(mcpError(null, -32700, 'Parse error'), { status: 400 });
   }
 
-  const body = raw as JsonRpcMessage | JsonRpcMessage[];
+  const body = parsed.value;
+  const c = { env: ctx.env, var: ctx.var };
+
+  if (Array.isArray(body)) return handleBatch(body, c);
+
+  if (!isMessage(body)) {
+    return Response.json(mcpError(null, -32600, 'Invalid Request'), { status: 400 });
+  }
 
   // initialize returns a correlation session id but does not store state
-  if (!Array.isArray(body) && body.method === 'initialize') {
-    const c = { env: ctx.env, var: ctx.var };
+  if (body.method === 'initialize') {
     const response = await handleJsonRpc(c, body);
     if (!response.ok) return response;
     const sessionId = crypto.randomUUID();
@@ -46,54 +75,14 @@ async function handlePost(request: Request, ctx: TransportContext): Promise<Resp
     return Response.json(json, { status: 200, headers: { 'Mcp-Session-Id': sessionId } });
   }
 
-  if (Array.isArray(body)) {
-    const c = { env: ctx.env, var: ctx.var };
-    const results = await Promise.all(body.map((r) => handleJsonRpc(c, r)));
-    return Response.json(results);
-  }
-
-  const c = { env: ctx.env, var: ctx.var };
   return handleJsonRpc(c, body);
 }
 
-// --- Streamable HTTP: GET /mcp (SSE stream for server→client) ---
-function handleGet(request: Request): Response {
-  // Per spec, GET opens an SSE stream. We send a single endpoint event
-  // pointing back to /mcp, then keep-alive. Server-initiated notifications
-  // are not generated in this stateless deployment.
-  let heartbeat: ReturnType<typeof setInterval>;
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(`event: endpoint\ndata: ${originFrom(request.url)}/mcp\n\n`);
-      heartbeat = setInterval(() => {
-        try {
-          controller.enqueue(': heartbeat\n\n');
-        } catch {
-          clearInterval(heartbeat);
-        }
-      }, 15000);
-    },
-    // The runtime cancels the stream when the client disconnects.
-    cancel: () => clearInterval(heartbeat),
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
-}
-
-async function transportFetch(request: Request, ctx: TransportContext): Promise<Response> {
+async function transportFetch(request: Request, ctx: TransportContext, parsed: ParsedBody): Promise<Response> {
   if (request.method === 'POST') {
-    return handlePost(request, ctx);
+    return handlePost(parsed, ctx);
   }
-  if (request.method === 'GET') {
-    return handleGet(request);
-  }
-  return new Response('Method not allowed', { status: 405 });
+  return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } });
 }
 
 export const transportApp = { fetch: transportFetch };

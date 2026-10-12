@@ -32,15 +32,15 @@ vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
   return realFetch(input, init);
 });
 
-export async function makeToken(userId: string, issuer = TEST_ISSUER): Promise<string> {
-  return new SignJWT({ tenant_id: 'user-ca' })
+export async function makeToken(userId: string, issuer = TEST_ISSUER, { withExp = true } = {}): Promise<string> {
+  const jwt = new SignJWT({ tenant_id: 'user-ca' })
     .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
     .setSubject(userId)
     .setIssuer(issuer)
     .setAudience('paxaver-api')
-    .setIssuedAt()
-    .setExpirationTime('1h')
-    .sign(privateKey);
+    .setIssuedAt();
+  if (withExp) jwt.setExpirationTime('1h');
+  return jwt.sign(privateKey);
 }
 
 const BASE_CONTEXT = {
