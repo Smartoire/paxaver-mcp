@@ -27,10 +27,10 @@ The only transport, per the `2025-06-18` spec:
 
 ## OAuth client types
 
-| Type       | `client_id` form              | Auth method                           | Use case                                  |
-| ---------- | ----------------------------- | ------------------------------------- | ----------------------------------------- |
-| CIMD       | HTTPS URL (metadata document) | `none` (PKCE)                         | ChatGPT, Claude, Perplexity               |
-| Registered | opaque string                 | `client_secret_post` or `none` (PKCE) | Custom integrations via `/oauth/register` |
+| Type       | `client_id` form              | Auth method                                                   | Use case                                  |
+| ---------- | ----------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| CIMD       | HTTPS URL (metadata document) | `none` (PKCE)                                                 | ChatGPT, Claude, Perplexity               |
+| Registered | opaque string                 | `client_secret_basic`, `client_secret_post`, or `none` (PKCE) | Custom integrations via `/oauth/register` |
 
 CIMD is advertised via `client_id_metadata_document_supported: true` in the
 RFC 8414 metadata. See [authentication.md](./authentication.md).

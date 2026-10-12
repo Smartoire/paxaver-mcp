@@ -56,6 +56,7 @@ describe('well-known endpoints', () => {
     expect(body.token_endpoint).toBe('https://localhost/oauth/token');
     expect(body.registration_endpoint).toBe('https://localhost/oauth/register');
     expect(body.revocation_endpoint).toBe('https://localhost/oauth/revoke');
+    expect(body.token_endpoint_auth_methods_supported).toEqual(['none', 'client_secret_basic', 'client_secret_post']);
     expect(body.code_challenge_methods_supported).toEqual(['S256']);
     expect(body.jwks_uri).toBe(`${jwksIssuer}/.well-known/jwks.json`);
   });
@@ -65,6 +66,7 @@ describe('well-known endpoints', () => {
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.issuer).toBe('https://localhost');
     expect(body.token_endpoint).toBe('https://localhost/oauth/token');
+    expect(body.token_endpoint_auth_methods_supported).toEqual(['none', 'client_secret_basic', 'client_secret_post']);
     expect(body.id_token_signing_alg_values_supported).toEqual(['RS256']);
     expect(body.userinfo_endpoint).toBeUndefined();
     expect(body.end_session_endpoint).toBeUndefined();

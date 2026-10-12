@@ -178,7 +178,7 @@ server, because every region publishes the same key:
   "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
   "scopes_supported": ["openid", "profile", "email", "tools", "offline_access"],
-  "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
+  "token_endpoint_auth_methods_supported": ["none", "client_secret_basic", "client_secret_post"],
   "jwks_uri": "https://paxaver.ca/auth/.well-known/jwks.json"
 }
 ```
