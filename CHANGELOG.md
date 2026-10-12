@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Authorization-server discovery metadata now advertises `client_secret_basic`,
+  which the token endpoint already accepts.
 - Mutation tools that create records, register attendees, schedule menu items,
   or charge/refund wallets no longer advertise idempotency when repeated
   calls may cause another effect.
