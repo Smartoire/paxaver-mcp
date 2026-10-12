@@ -1,5 +1,5 @@
 /**
- * Tool → backend contract tests (#916/#921): asserts the exact path AND the
+ * Tool → backend contract tests: asserts the exact path AND the
  * JSON body/query keys each tool sends to the Paxaver backend. The
  * backend mounts menu/daily and restaurant-item routes under /api —
  * not /api/lunch — and its validators take camelCase fields; passing
@@ -81,7 +81,7 @@ async function callTool(name: string, args: Record<string, unknown>, options = {
 
 const draftItem = { menu_item_id: 'item-1', menu_item_name: 'Pizza', price_cents: 550, quantity: 2 };
 // The backend prices draft items from the menu — a client-sent
-// price_cents must never be forwarded (#1951).
+// price_cents must never be forwarded.
 const draftItemCamel = { menuItemId: 'item-1', menuItemName: 'Pizza', quantity: 2 };
 
 describe('tool → backend contract', () => {
@@ -223,7 +223,7 @@ describe('tool → backend contract', () => {
     expect(c?.body?.items).toEqual([draftItemCamel]);
   });
 
-  it('draft tools never forward a client-supplied price, even a negative one (#1951)', async () => {
+  it('draft tools never forward a client-supplied price, even a negative one', async () => {
     const c = await callTool('create_lunch_order_draft', {
       menu_date: '2026-10-01',
       items: [{ menu_item_id: 'item-1', menu_item_name: 'Pizza', price_cents: -5000, quantity: 1 }],
@@ -390,7 +390,7 @@ describe('tool → backend contract', () => {
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/lunch/orders');
   });
 
-  it('pay_lunch_order_draft requests wallet-only finalize and never advertises paymentUrl (#988)', async () => {
+  it('pay_lunch_order_draft requests wallet-only finalize and never advertises paymentUrl', async () => {
     const c = await callTool('pay_lunch_order_draft', { order_id: 'o1', tip_cents: 100 });
     expect(c?.body).toEqual({ tipCents: 100, walletOnly: true });
 
@@ -402,7 +402,7 @@ describe('tool → backend contract', () => {
     expect(JSON.stringify(tool)).not.toContain('paymentUrl');
   });
 
-  it('insufficient wallet balance returns top-up guidance, not a payment link (#988)', async () => {
+  it('insufficient wallet balance returns top-up guidance, not a payment link', async () => {
     const insufficientBackend = {
       async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
         const req = typeof request === 'string' ? new Request(request, init) : request;
@@ -437,7 +437,7 @@ describe('tool → backend contract', () => {
     expect(json.error.message).not.toContain('paymentUrl');
   });
 
-  it('a 200 awaiting_payment split response never relays paymentUrl (#988)', async () => {
+  it('a 200 awaiting_payment split response never relays paymentUrl', async () => {
     const splitBackend = {
       async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
         const req = typeof request === 'string' ? new Request(request, init) : request;
@@ -481,7 +481,7 @@ describe('tool → backend contract', () => {
   });
 });
 
-describe('idempotency key (#2241)', () => {
+describe('idempotency key', () => {
   const args = { order_id: 'o1', tip_cents: 100 };
 
   it('a resent call in the same session gets the same key', async () => {

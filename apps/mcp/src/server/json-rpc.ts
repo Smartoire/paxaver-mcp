@@ -7,7 +7,7 @@
  */
 
 import { canSeeTool, checkToolAuthorization, getToolPolicy, resolveToolName, TOOL_POLICIES } from '../lib/policies.js';
-import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
+import { ALL_TOOLS, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';
 import { SERVER_VERSION } from '../lib/version.js';
@@ -62,7 +62,6 @@ export async function handleJsonRpc(
         supportedVersions: SUPPORTED_VERSIONS,
         capabilities: {
           tools: {},
-          resources: {},
           prompts: {},
         },
         _meta: {
@@ -106,7 +105,6 @@ export async function handleJsonRpc(
         protocolVersion: PROTOCOL_VERSION,
         capabilities: {
           tools: { listChanged: false },
-          resources: { listChanged: false },
           prompts: { listChanged: false },
         },
         serverInfo: {
@@ -157,9 +155,12 @@ export async function handleJsonRpc(
     });
   }
 
+  // The server exposes no MCP resources: user data is reachable only
+  // through tools. The list methods stay implemented (returning empty
+  // lists) so generic clients do not see a method-not-found error.
   if (method === 'resources/list') {
     if (!hasMcpSubscription(c.var)) return subscriptionRequired(id);
-    return Response.json({ jsonrpc: '2.0', id, result: { resources: ALL_RESOURCES } });
+    return Response.json({ jsonrpc: '2.0', id, result: { resources: [] } });
   }
 
   if (method === 'resources/templates/list') {
@@ -222,26 +223,7 @@ export async function handleJsonRpc(
 
   if (method === 'resources/read') {
     const uri = params?.uri ?? '';
-    const resource = ALL_RESOURCES.find((r) => r.uri === uri);
-    if (!resource) {
-      return Response.json(mcpError(id, -32602, `Unknown resource: ${uri}`));
-    }
-    return Response.json({
-      jsonrpc: '2.0',
-      id,
-      result: {
-        contents: [
-          {
-            uri: resource.uri,
-            name: resource.name,
-            mimeType: resource.mimeType ?? 'application/json',
-            text: JSON.stringify({
-              message: `Resource '${resource.name}' — use the corresponding MCP tool for live data.`,
-            }),
-          },
-        ],
-      },
-    });
+    return Response.json(mcpError(id, -32602, `Unknown resource: ${uri}`));
   }
 
   if (method === 'prompts/get') {
@@ -260,7 +242,7 @@ export async function handleJsonRpc(
             role: 'user',
             content: {
               type: 'text',
-              text: prompt.description,
+              text: prompt.message(params?.arguments ?? {}),
             },
           },
         ],

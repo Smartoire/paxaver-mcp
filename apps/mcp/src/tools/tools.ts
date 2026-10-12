@@ -36,7 +36,7 @@ interface ToolSpec {
 }
 
 // The backend prices every draft item from the daily menu and ignores a
-// client-sent priceCents — never forward one (#1951). Items still need
+// client-sent priceCents — never forward one. Items still need
 // camelCase keys: menuItemId / menuItemName / quantity.
 function mapDraftItems(items: unknown): unknown {
   if (!Array.isArray(items)) return items;

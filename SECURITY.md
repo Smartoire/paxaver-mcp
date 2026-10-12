@@ -53,12 +53,16 @@ The Paxaver MCP server is designed with defense-in-depth. Key measures:
 - **No direct data access.** The MCP worker does not bind D1, Stripe, or SES.
   All data access flows through the Paxaver backend via a same-region Cloudflare
   service binding. See [docs/architecture.md](./docs/architecture.md).
-- **Service binding auth.** Backend calls carry a short-lived (120s) HS256 JWT
-  with audience `paxaver-internal`; the user's OAuth token is never forwarded.
+- **Service binding auth.** Backend calls go over a same-region Cloudflare
+  service binding and carry the caller's OAuth access token (RS256) as
+  `Authorization: Bearer`. The backend validates the token via JWKS and
+  applies its own authorization pipeline; there is no separate service
+  token. See [docs/architecture.md](./docs/architecture.md).
 - **OAuth 2.1 + PKCE S256.** Authorization Code flow with PKCE; `S256` is the
   only accepted challenge method. See [docs/authentication.md](./docs/authentication.md).
-- **CSRF state tokens.** OAuth `state` is HMAC-signed and verified with
-  timing-safe comparison.
+- **OAuth `state` pass-through.** The authorization facade forwards the
+  client's `state` value unchanged to the regional auth server, which
+  validates it on the redirect back to the client.
 - **CORS allowlist.** Origins are allowlisted; no reflect-any-origin.
 - **Error sanitization.** Backend errors are mapped to generic MCP error
   messages; stack traces and internal details are never leaked.

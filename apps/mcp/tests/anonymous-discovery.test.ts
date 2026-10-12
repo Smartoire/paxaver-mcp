@@ -1,5 +1,5 @@
 /**
- * Anonymous discovery (#2202): with ANONYMOUS_DISCOVERY=1 in development, a
+ * Anonymous discovery: with ANONYMOUS_DISCOVERY=1 in development, a
  * client without a token can run initialize and the list methods. Every
  * other method, and every other environment, still requires a token.
  */

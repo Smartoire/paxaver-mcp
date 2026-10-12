@@ -60,10 +60,11 @@ resulting RS256 JWTs and forwards them to the backend.
                                                  └──────────────────────┘
 ```
 
-The MCP worker **never** binds D1, Stripe, or SES. The service binding carries a
-short-lived JWT (120s TTL, audience `paxaver-internal`) that the backend trusts as
-an internal call while still attributing the action to the authenticated Paxaver
-user. See [`docs/architecture.md`](./docs/architecture.md) for the full picture.
+The MCP worker **never** binds D1, Stripe, or SES. The service binding forwards
+the caller's OAuth access token (RS256 JWT) as `Authorization: Bearer`; the
+backend validates it via JWKS and runs its own authorization pipeline, so every
+action is attributed to the authenticated Paxaver user. See
+[`docs/architecture.md`](./docs/architecture.md) for the full picture.
 
 ---
 

@@ -22,17 +22,21 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: "26"
-      # The registry publish job requires the tag, package.json and
-      # server.json versions to agree — catch drift before the tag.
-      - name: Assert package.json and server.json versions agree
+          node-version: '26'
+      # The registry publish job requires the tag and every version-bearing
+      # release manifest to agree on the package version — catch drift
+      # before the tag.
+      - name: Assert release manifest versions agree with package.json
         run: |
           PKG=$(node -p "require('./package.json').version")
-          SRV=$(node -p "require('./server.json').version")
-          if [ "$PKG" != "$SRV" ]; then
-            echo "::error::version mismatch — package.json=$PKG server.json=$SRV"
-            exit 1
-          fi
+          for f in server.json lhm.plugin.json .codex-plugin/plugin.json certification/microsoft/manifest.json; do
+            V=$(node -p "require('./$f').version")
+            if [ "$PKG" != "$V" ]; then
+              echo "::error::version mismatch — package.json=$PKG $f=$V"
+              exit 1
+            fi
+          done
+          echo "all release manifest versions agree: $PKG"
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck

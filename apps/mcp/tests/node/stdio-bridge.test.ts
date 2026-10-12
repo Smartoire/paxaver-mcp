@@ -1,5 +1,5 @@
 /**
- * Integration test (#2202): run scripts/stdio-bridge.mjs over stdio, as a
+ * Integration test: run scripts/stdio-bridge.mjs over stdio, as a
  * registry inspector does, and check that initialize and tools/list work
  * without a token.
  */

@@ -142,7 +142,7 @@ export async function authenticateRequest(
         // revoked token (deactivated client, revoked session) must be
         // rejected here.
         //
-        // Fail closed (#2134): a missing INTERNAL_SERVICE_SECRET or an
+        // Fail closed: a missing INTERNAL_SERVICE_SECRET or an
         // unreachable verify endpoint gives 503. Only REVOCATION_CHECK=skip
         // skips the check when the secret is unset.
         if (!env.INTERNAL_SERVICE_SECRET) {

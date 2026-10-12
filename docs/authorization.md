@@ -133,7 +133,7 @@ re-checks on every call:
 
 | Check                                              | Enforced by                                         |
 | -------------------------------------------------- | --------------------------------------------------- |
-| Authentication (valid user)                        | MCP (JWT) + backend (service JWT `sub`)             |
+| Authentication (valid user)                        | MCP (JWT) + backend (forwarded JWT `sub`)           |
 | School membership                                  | Backend (user ↔ school)                             |
 | Student guardianship                               | Backend (user ↔ student)                            |
 | Active entitlement (`requiresEntitlement`)         | Backend (entitlement record)                        |

@@ -35,8 +35,8 @@ describe('Authorization policy', () => {
       expect(canonical, `alias ${legacy} has no target`).toBeDefined();
       expect(TOOL_POLICIES[canonical!], `alias ${legacy} targets a tool without a policy`).toBeDefined();
     }
-    // order_lunch skipped the wallet-only draft review flow and is removed
-    // (#2241): no catalog entry, alias or policy.
+    // order_lunch skipped the wallet-only draft review flow and is removed:
+    // no catalog entry, alias or policy.
     expect(catalog.has('order_lunch')).toBe(false);
     expect(TOOL_ALIASES['order_lunch']).toBeUndefined();
     expect(TOOL_POLICIES['order_lunch']).toBeUndefined();

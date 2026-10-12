@@ -31,7 +31,7 @@ Disallow: /
 const SECURITY_TXT = `# Paxaver security.txt (RFC 9116)
 # https://securitytxt.org/
 
-Contact: mailto:security@paxaver.com
+Contact: mailto:security@smartoire.com
 Expires: 2027-08-12T23:59:59Z
 Preferred-Languages: en, fr
 Canonical: https://paxaver.com/.well-known/security.txt
@@ -177,7 +177,7 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
       url.pathname === '/health' ||
       (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     ) {
-      // Self-check (#2134): without INTERNAL_SERVICE_SECRET outside
+      // Self-check: without INTERNAL_SERVICE_SECRET outside
       // development every authenticated call fails closed, so report it
       // loudly to the deploy smoke check and monitors.
       const degraded = revocationCheckUnavailable(env);

@@ -80,7 +80,7 @@ describe('well-known endpoints', () => {
     expect(res.status).toBe(404);
   });
 
-  // Regression (#1972): the /oauth/callback helper page embedded query values
+  // Regression: the /oauth/callback helper page embedded query values
   // in an inline <script> via JSON.stringify, which does not escape '<' — a
   // crafted </script> value produced reflected XSS on the MCP origin. The page
   // was a convenience for MCP Inspector and has been removed.

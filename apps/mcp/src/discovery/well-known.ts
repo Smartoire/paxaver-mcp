@@ -10,7 +10,7 @@
  */
 
 import type { Env } from '../env.js';
-import { ALL_TOOLS, ALL_RESOURCES, ALL_PROMPTS } from '../schemas.js';
+import { ALL_TOOLS, ALL_PROMPTS } from '../schemas.js';
 import { issuersFor } from '../lib/regions.js';
 import { originFrom } from '../lib/url.js';
 import { SERVER_VERSION } from '../lib/version.js';
@@ -82,12 +82,6 @@ function serverCardHandler(request: Request): Response {
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema,
-    })),
-    resources: ALL_RESOURCES.map((r) => ({
-      uri: r.uri,
-      name: r.name,
-      description: r.description,
-      mimeType: r.mimeType,
     })),
     prompts: ALL_PROMPTS.map((p) => ({
       name: p.name,
