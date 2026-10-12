@@ -343,7 +343,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create Lunch Order Draft"
     }
@@ -394,7 +394,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Pay Lunch Order Draft"
     }
@@ -527,7 +527,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Cancel My Lunch Order"
     }
@@ -682,7 +682,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create School Event (Admin)"
     }
@@ -807,7 +807,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Cancel School Event (Admin)"
     }
@@ -859,7 +859,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Register for Event"
     }
@@ -923,7 +923,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Cancel My Event Registration"
     }
@@ -1029,7 +1029,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Sign Up for Volunteer Shift"
     }
@@ -1144,7 +1144,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create School Restaurant (Admin)"
     }
@@ -1304,7 +1304,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create Restaurant Menu Item (Admin)"
     }
@@ -1445,6 +1445,10 @@
     "inputSchema": {
       "type": "object",
       "properties": {
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to active school)"
+        },
         "restaurant_id": {
           "type": "string",
           "description": "Restaurant ID - from list_school_restaurants"
@@ -1496,7 +1500,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Schedule Lunch Menu Item (Admin)"
     }

@@ -328,7 +328,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Create Lunch Order Draft',
     },
@@ -375,7 +375,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Pay Lunch Order Draft',
     },
@@ -489,7 +489,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Cancel My Lunch Order',
     },
@@ -604,7 +604,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Create School Event (Admin)',
     },
@@ -696,7 +696,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Cancel School Event (Admin)',
     },
@@ -742,7 +742,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Register for Event',
     },
@@ -807,7 +807,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Cancel My Event Registration',
     },
@@ -912,7 +912,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Sign Up for Volunteer Shift',
     },
@@ -1006,7 +1006,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Create School Restaurant (Admin)',
     },
@@ -1121,7 +1121,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Create Restaurant Menu Item (Admin)',
     },
@@ -1226,6 +1226,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
+        school_slug: { type: 'string', description: 'School slug (defaults to active school)' },
         restaurant_id: { type: 'string', description: 'Restaurant ID - from list_school_restaurants' },
         menu_item_id: { type: 'string', description: 'Menu item ID - from list_restaurant_menu_items' },
         menu_date: { type: 'string', description: 'Date the item is orderable, YYYY-MM-DD' },
@@ -1258,7 +1259,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
       title: 'Schedule Lunch Menu Item (Admin)',
     },

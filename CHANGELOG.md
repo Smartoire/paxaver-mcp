@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Mutation tools that create records, register attendees, schedule menu items,
+  or charge/refund wallets no longer advertise idempotency when repeated
+  calls may cause another effect (#2282).
+- Ownership failures return JSON-RPC `-32602`; admin restaurant creation
+  and menu scheduling use the selected school consistently, and volunteer
+  signup no longer forwards an undocumented `notes` field (#2282).
 - `GET /mcp` returns `405` (#2241). The server sends no server-to-client
   notifications, so it no longer holds an idle SSE stream.
 - The `POST /mcp` body is parsed once per request. The unused policy fields

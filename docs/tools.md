@@ -411,7 +411,7 @@ Lists restaurants for the active school.
 
 ### `create_school_restaurant` _(admin)_
 
-Creates a restaurant for the active school.
+Creates a restaurant for the active school. Platform admins may select another school with `school_slug`.
 
 |                     |                       |
 | ------------------- | --------------------- |
@@ -422,12 +422,12 @@ Creates a restaurant for the active school.
 
 **Input schema**
 
-| Property      | Type   | Required | Description |
-| ------------- | ------ | -------- | ----------- |
-| `name`        | string | yes      |             |
-| `school_slug` | string | no       |             |
-| `description` | string | no       |             |
-| `tax_percent` | number | no       |             |
+| Property      | Type   | Required | Description                                                          |
+| ------------- | ------ | -------- | -------------------------------------------------------------------- |
+| `name`        | string | yes      |                                                                      |
+| `school_slug` | string | no       | Defaults to active school; platform admins may select another school |
+| `description` | string | no       |                                                                      |
+| `tax_percent` | number | no       |                                                                      |
 
 **Backend:** `POST /api/schools/{school_slug}/restaurants`
 
@@ -546,12 +546,13 @@ Adds or schedules a single menu item on a date (with an optional
 
 **Input schema**
 
-| Property        | Type    | Required | Description |
-| --------------- | ------- | -------- | ----------- |
-| `restaurant_id` | string  | yes      |             |
-| `menu_item_id`  | string  | yes      |             |
-| `menu_date`     | string  | yes      | YYYY-MM-DD  |
-| `available_qty` | integer | no       |             |
+| Property        | Type    | Required | Description               |
+| --------------- | ------- | -------- | ------------------------- |
+| `school_slug`   | string  | no       | Defaults to active school |
+| `restaurant_id` | string  | yes      |                           |
+| `menu_item_id`  | string  | yes      |                           |
+| `menu_date`     | string  | yes      | YYYY-MM-DD                |
+| `available_qty` | integer | no       |                           |
 
 **Backend:** `POST /api/schools/{school_slug}/menu/daily`
 

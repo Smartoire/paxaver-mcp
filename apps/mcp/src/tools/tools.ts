@@ -243,7 +243,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     method: 'POST',
     path: '/api/volunteers/signups',
     required: ['shift_id'],
-    body: (args) => ({ shiftId: args.shift_id, notes: args.notes }),
+    body: (args) => ({ shiftId: args.shift_id }),
   },
   list_my_event_registrations: {
     method: 'GET',
@@ -273,7 +273,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   // restaurantCreateSchema is camelCase and requires schoolSlug.
   create_school_restaurant: {
     method: 'POST',
-    path: (_args, ctx) => `/api/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/restaurants`,
+    path: (args, ctx) => `/api/schools/${validatePathId(args.school_slug ?? ctx.schoolSlug, 'schoolSlug')}/restaurants`,
     required: ['name'],
     body: (args, ctx) => ({
       schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
@@ -327,7 +327,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   // dailyMenuAssignSchema is camelCase.
   schedule_lunch_menu_item: {
     method: 'POST',
-    path: (_args, ctx) => `/api/schools/${validatePathId(ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
+    path: (args, ctx) => `/api/schools/${validatePathId(args.school_slug ?? ctx.schoolSlug, 'schoolSlug')}/menu/daily`,
     required: ['restaurant_id', 'menu_item_id', 'menu_date'],
     body: (args) => ({
       restaurantId: args.restaurant_id,
