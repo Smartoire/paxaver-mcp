@@ -188,6 +188,15 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
       }
     },
   },
+  // The detail route returns the event plus its volunteer shifts and the
+  // caller's signups. The path carries no school segment, so the selected
+  // school goes to the backend as the schoolSlug query parameter.
+  get_school_event: {
+    method: 'GET',
+    path: '/api/events/:event_id/detail',
+    required: ['event_id'],
+    query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
+  },
   // eventCreateSchema is camelCase; schoolSlug defaults to the
   // active school and must match the authenticated school context.
   create_school_event: {

@@ -113,6 +113,14 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     mutates: false,
     requiresConfirmation: false,
   },
+  get_school_event: {
+    capability: 'view_events',
+    requiresEntitlement: false,
+    classifications: ['READ'],
+    requiredRoles: [],
+    mutates: false,
+    requiresConfirmation: false,
+  },
   create_school_event: {
     capability: 'ai_write',
     requiresEntitlement: true,

@@ -97,6 +97,7 @@ describe('tool → backend contract', () => {
       discard_lunch_order_draft: true,
       cancel_my_lunch_order: false,
       list_school_events: undefined,
+      get_school_event: true,
       create_school_event: false,
       update_school_event: true,
       cancel_school_event: false,
@@ -123,6 +124,12 @@ describe('tool → backend contract', () => {
     ['student_id is not permitted for this user', 'list_school_restaurants', { student_id: 'other-student' }, ENV],
     ['school_slug does not match the user school', 'list_school_restaurants', { school_slug: 'other-school' }, ENV],
     ['school_slug does not match the user school', 'schedule_lunch_menu_item', { school_slug: 'other-school' }, ENV],
+    [
+      'school_slug does not match the user school',
+      'get_school_event',
+      { event_id: 'e1', school_slug: 'other-school' },
+      ENV,
+    ],
     [
       'school_slug cannot be verified for this user',
       'list_school_restaurants',
@@ -258,6 +265,75 @@ describe('tool → backend contract', () => {
     });
     expect(`${c?.method} ${c?.path}`).toBe('PATCH /api/events/e1');
     expect(c?.body).toEqual({ ticket_price_cents: 750, status: 'completed' });
+  });
+
+  it('get_school_event hits /api/events/:id/detail with the active school query', async () => {
+    const c = await callTool('get_school_event', { event_id: 'e1' });
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/events/e1/detail');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+  });
+
+  it('get_school_event forwards the selected school for platform admins', async () => {
+    const backend = contextOverrideBackend({ isPlatformAdmin: true });
+    const env = { ...TEST_ENV, PAXAVER_API_CA: backend, PAXAVER_API_US: backend };
+    const c = await callTool('get_school_event', { event_id: 'e1', school_slug: 'other-school' }, {}, env);
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/events/e1/detail');
+    expect(c?.query.get('schoolSlug')).toBe('other-school');
+  });
+
+  it('get_school_event declares the shift contract sign_up_for_volunteer_shift consumes', () => {
+    const event = ALL_TOOLS.find((t) => t.name === 'get_school_event');
+    const props = event?.outputSchema?.properties as Record<
+      string,
+      { items?: { properties?: Record<string, { type?: unknown }> } }
+    >;
+    expect(props?.shifts?.items?.properties?.id).toMatchObject({ type: 'string' });
+    expect(props?.mySignups?.items?.properties?.signupId).toMatchObject({ type: 'string' });
+    const signup = ALL_TOOLS.find((t) => t.name === 'sign_up_for_volunteer_shift');
+    expect(signup?.description).toContain('get_school_event');
+    expect(JSON.stringify(signup?.inputSchema)).not.toContain('notes');
+  });
+
+  it('a shift id returned by get_school_event feeds sign_up_for_volunteer_shift', async () => {
+    const detail = {
+      id: 'e1',
+      schoolSlug: 'test-school',
+      name: 'Fun Fair',
+      eventDate: '2026-10-15',
+      shifts: [
+        {
+          id: 'shift-7',
+          title: 'Setup crew',
+          description: null,
+          shiftDate: '2026-10-15',
+          startTime: '17:00',
+          endTime: '19:00',
+          slots: 4,
+          filled: 1,
+          status: 'open',
+        },
+      ],
+      mySignups: [],
+    };
+    const detailBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        if (new URL(req.url).pathname === '/api/events/e1/detail') {
+          return Response.json({ data: detail });
+        }
+        return recordingBackend.fetch(req);
+      },
+    };
+    const env = { ...TEST_ENV, PAXAVER_API_CA: detailBackend, PAXAVER_API_US: detailBackend };
+
+    const res = await postTool('get_school_event', { event_id: 'e1' }, env);
+    const json = (await res.json()) as { result: { structuredContent: { shifts: { id: string }[] } } };
+    const shiftId = json.result.structuredContent.shifts[0]?.id;
+    expect(shiftId).toBe('shift-7');
+
+    const c = await callTool('sign_up_for_volunteer_shift', { shift_id: shiftId }, {}, env);
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/volunteers/signups');
+    expect(c?.body).toEqual({ shiftId: 'shift-7' });
   });
 
   it('sign_up_for_volunteer_shift sends shiftId', async () => {

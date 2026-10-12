@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `get_school_event` returns one event's detail: date, times, location,
+  capacity, ticket price, status, and its volunteer shifts with the caller's
+  own signups on them (#2282). `shifts[].id` is the `shift_id` for
+  `sign_up_for_volunteer_shift` — `list_school_events` never returned
+  shifts. The optional `school_slug` selects the school for platform admins.
+
 ### Security
 
 - JSON-RPC batches return one result per request (#2241). Before, every
