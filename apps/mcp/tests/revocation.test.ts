@@ -1,9 +1,9 @@
 /**
- * Token revocation enforcement (#1156): bearer validation must consult the
+ * Token revocation enforcement: bearer validation must consult the
  * backend's internal /internal/auth/verify endpoint in parallel with the
  * context load, and fail closed — revoked tokens and inactive clients reject
  * with 401; verify-endpoint outages and a missing INTERNAL_SERVICE_SECRET
- * without the REVOCATION_CHECK=skip opt-in reject with 503 (#2134).
+ * without the REVOCATION_CHECK=skip opt-in reject with 503.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -171,7 +171,7 @@ describe('token revocation check', () => {
   );
 });
 
-describe('health self-check (#2134)', () => {
+describe('health self-check', () => {
   it('reports degraded with 503 when INTERNAL_SERVICE_SECRET is unset in production', async () => {
     const res = await request(
       app,

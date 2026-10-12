@@ -9,6 +9,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { format } from 'prettier';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { ALL_TOOLS } = await import('../apps/mcp/src/schemas.ts');
@@ -23,5 +24,6 @@ if (nonAscii.length) {
 }
 
 const out = join(here, '../certification/microsoft/mcptools.json');
-writeFileSync(out, JSON.stringify(ALL_TOOLS, null, 2) + '\n');
+// Format through prettier so the committed artifact passes format:check.
+writeFileSync(out, await format(JSON.stringify(ALL_TOOLS, null, 2) + '\n', { filepath: out }));
 console.log(`Wrote ${ALL_TOOLS.length} tools to ${out}`);

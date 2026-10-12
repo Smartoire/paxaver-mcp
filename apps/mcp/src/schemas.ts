@@ -1,7 +1,7 @@
 /**
- * Tool, resource, and prompt schema registry. Each tool has name,
- * description, inputSchema, outputSchema, and annotations. The
- * authorization policy lives in lib/policies.ts.
+ * Tool and prompt schema registry. Each tool has name, description,
+ * inputSchema, outputSchema, and annotations. The authorization policy
+ * lives in lib/policies.ts.
  */
 
 export interface ToolDefinition {
@@ -28,13 +28,6 @@ export interface ToolDefinition {
   };
 }
 
-export interface ResourceDefinition {
-  uri: string;
-  name: string;
-  description: string;
-  mimeType?: string;
-}
-
 export interface PromptArgument {
   name: string;
   description: string;
@@ -44,6 +37,8 @@ export interface PromptArgument {
 export interface PromptDefinition {
   name: string;
   description: string;
+  /** Builds the user message returned by prompts/get. */
+  message: (args: Record<string, unknown>) => string;
   arguments?: PromptArgument[];
 }
 
@@ -86,7 +81,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get User Info' },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get My Context' },
   },
   // --- Wallet ---
   {
@@ -112,7 +107,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Wallet Balance' },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get My Wallet Balance' },
   },
   // --- Orders ---
 
@@ -251,7 +246,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Menu' },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Lunch Menu' },
   },
   {
     name: 'create_lunch_order_draft',
@@ -557,7 +552,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'Get Upcoming Events' },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'List School Events' },
   },
   {
     name: 'create_school_event',
@@ -1076,7 +1071,12 @@ export const ALL_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, title: 'List Menu Items (Admin)' },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+      title: 'List Restaurant Menu Items (Admin)',
+    },
   },
   {
     name: 'create_restaurant_menu_item',
@@ -1265,52 +1265,40 @@ export const ALL_TOOLS: ToolDefinition[] = [
   },
 ];
 
-// --- Resources (read-only data sources) ---
-export const ALL_RESOURCES: ResourceDefinition[] = [
-  {
-    uri: 'paxaver://user/context',
-    name: 'User Context',
-    description: 'The authenticated user context: name, active school, students, and roles.',
-    mimeType: 'application/json',
-  },
-  {
-    uri: 'paxaver://menu/today',
-    name: 'Today Lunch Menu',
-    description: 'Today lunch menu for the user school, including available items and quantities.',
-    mimeType: 'application/json',
-  },
-  {
-    uri: 'paxaver://wallet/balance',
-    name: 'Wallet Balance',
-    description: 'Current wallet balance for the authenticated user.',
-    mimeType: 'application/json',
-  },
-  {
-    uri: 'paxaver://events/upcoming',
-    name: 'Upcoming Events',
-    description: 'Upcoming events at the user school.',
-    mimeType: 'application/json',
-  },
-];
-
 // --- Prompts (predefined templates) ---
 export const ALL_PROMPTS: PromptDefinition[] = [
   {
     name: 'daily_lunch_menu',
     description: 'Show today lunch menu for the school.',
+    message: () =>
+      "Show me today's lunch menu for my school on Paxaver. Call get_lunch_menu and summarize the orderable items with their menu_item_id values. If I ask for another day, pass 'date' (YYYY-MM-DD) or 'month' (YYYY-MM).",
   },
   {
     name: 'wallet_balance',
     description: 'Check the current wallet balance.',
+    message: () =>
+      'Check my Paxaver wallet balance. Call get_my_wallet_balance and report the spendable balance and currency. If the balance is low, remind me that top-up happens in the Paxaver panel.',
   },
   {
     name: 'upcoming_events',
     description: 'List upcoming events at the school.',
+    message: () =>
+      'List the upcoming events at my school on Paxaver. Call list_school_events and summarize the name, date and signup or volunteer options of each. Offer to register me with register_for_event or sign me up for a shift with sign_up_for_volunteer_shift.',
   },
   {
     name: 'lunch_order_helper',
     description:
       'Guide the user through ordering lunch for a student: get_lunch_menu, then create_lunch_order_draft, review, then pay_lunch_order_draft.',
+    message: (args) => {
+      const name = typeof args.student_name === 'string' ? args.student_name.trim() : '';
+      const forWhom = name ? ` for ${name}` : ' for my student';
+      return (
+        `Help me order lunch${forWhom} on Paxaver. Call get_my_context to find the right student_id, ` +
+        'then get_lunch_menu and show me the orderable items with their menu_item_id values. ' +
+        'After I pick, call create_lunch_order_draft with the chosen items and menu_date, show me the ' +
+        'draft and its total for review, and call pay_lunch_order_draft only after I confirm.'
+      );
+    },
     arguments: [
       {
         name: 'student_name',
