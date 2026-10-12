@@ -103,20 +103,6 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   },
 
   // Order
-  // order_lunch is legacy-only: not in the canonical catalog (#921) —
-  // callable via tools/call for existing integrations, same safeguards.
-  // Backend orderCreateSchema takes camelCase keys.
-  order_lunch: {
-    method: 'POST',
-    path: '/api/lunch/orders',
-    required: ['menu_item_id', 'menu_date'],
-    body: (args, ctx) => ({
-      studentId: defaultStudentId(args, ctx),
-      menuItemId: args.menu_item_id,
-      menuDate: args.menu_date,
-      quantity: args.quantity,
-    }),
-  },
   list_my_lunch_orders: {
     method: 'GET',
     path: '/api/lunch/orders',
@@ -221,12 +207,22 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     }),
   },
   // Unlike the create route, PATCH /api/events/:id reads snake_case
-  // keys via an explicit allowedFields map — pass fields through.
+  // keys via an explicit allowedFields map. Send only the schema fields.
   update_school_event: {
     method: 'PATCH',
     path: '/api/events/:event_id',
     required: ['event_id'],
-    body: (args) => args,
+    body: (args) => ({
+      name: args.name,
+      description: args.description,
+      event_date: args.event_date,
+      starts_at: args.starts_at,
+      ends_at: args.ends_at,
+      location: args.location,
+      max_capacity: args.max_capacity,
+      ticket_price_cents: args.ticket_price_cents,
+      status: args.status,
+    }),
   },
   cancel_school_event: {
     method: 'POST',

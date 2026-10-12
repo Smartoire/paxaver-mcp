@@ -93,9 +93,8 @@ school. Use this to check funds before ordering lunch.
 ## Orders & menu
 
 Ordering is **draft → review → payment**. Nothing is charged until
-`pay_lunch_order_draft` runs. The retired `order_lunch` name still resolves
-for existing integrations but is not advertised (see
-[Legacy tool names](#legacy-tool-names)).
+`pay_lunch_order_draft` runs. The retired `order_lunch` tool is removed and
+returns `Unknown tool` (-32601).
 
 ### `create_lunch_order_draft`
 
@@ -593,12 +592,11 @@ There are no argument or response differences — only the name.
 | `delete_menu_item`           | `archive_restaurant_menu_item` |
 | `set_daily_menu`             | `schedule_lunch_menu_item`     |
 
-`order_lunch` is also still callable but unlisted: it has no canonical
-equivalent (the advertised flow is draft → review → payment), so it keeps
-its own hidden policy and handler. Integrations should migrate to
-`create_lunch_order_draft` + `pay_lunch_order_draft`.
+`order_lunch` is removed: it bought lunch at once and skipped the draft
+review and the wallet-only payment. It returns `Unknown tool` (-32601).
+Integrations must use `create_lunch_order_draft` + `pay_lunch_order_draft`.
 
-**Disabling compatibility:** remove the entry from `TOOL_ALIASES` (and the
-`order_lunch` policy/handler case) to make a legacy name return
+**Disabling compatibility:** remove the entry from `TOOL_ALIASES` to make a
+legacy name return
 `Method not found` (-32601). Aliases are candidates for removal once usage
 metrics show no calls for a deprecation window.

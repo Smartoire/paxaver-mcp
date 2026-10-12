@@ -173,9 +173,9 @@ export async function handleJsonRpc(
   }
 
   // --- Everything below touches user data and requires authentication.
-  // Unauthenticated requests can only reach here via the Mcp-Method
-  // header bypass in index.ts, so re-check the identity claim itself:
-  // a forged header on a batch body cannot smuggle in tools/call.
+  // index.ts lets only server/discover and (development only) anonymous
+  // discovery methods through without a token. Re-check the identity claim
+  // here as a second guard.
   if (!c.var?.userId) {
     return Response.json(mcpError(id, -32600, 'Authorization required'), { status: 401 });
   }
@@ -198,27 +198,23 @@ export async function handleJsonRpc(
       return Response.json(mcpError(id, -32603, 'You do not have permission to use this tool.'));
     }
 
-    // Subscription gate: read-only tools are free for all authenticated
-    // users. Tools marked requiresEntitlement (add/edit/update and admin
-    // writes) need an active subscription. Role-gated admin tools are the
-    // PAC AI product and require the 'full' tool level. Platform admins
-    // bypass this check.
+    // The gate above already requires an active subscription (or a platform
+    // admin). Role-gated admin write tools are the PAC AI product and also
+    // need the 'full' tool level.
     const policy = TOOL_POLICIES[toolName];
-    const subStatus = c.var.subscription?.status ?? 'none';
-    const toolLevel = c.var.subscription?.toolLevel ?? null;
-    const isPlatformAdmin = c.var.isPlatformAdmin ?? false;
-    if (!isPlatformAdmin && policy.requiresEntitlement) {
-      const needsFull = policy.requiredRoles.length > 0;
-      const blocked = subStatus !== 'active' || (needsFull && toolLevel !== 'full');
-      if (blocked) {
-        const message =
-          subStatus === 'expired'
-            ? 'Your Paxaver AI subscription has expired. Please renew your subscription at https://paxaver.com/settings/mcp to continue using Paxaver tools.'
-            : needsFull && subStatus === 'active'
-              ? 'This tool requires a Paxaver PAC AI subscription. Upgrade at https://paxaver.com/settings/mcp.'
-              : 'This action requires an active Paxaver AI subscription. Enable a free trial or purchase a subscription at https://paxaver.com/settings/mcp.';
-        return Response.json(mcpError(id, -32603, message));
-      }
+    if (
+      !c.var.isPlatformAdmin &&
+      policy.requiresEntitlement &&
+      policy.requiredRoles.length > 0 &&
+      c.var.subscription?.toolLevel !== 'full'
+    ) {
+      return Response.json(
+        mcpError(
+          id,
+          -32603,
+          'This tool requires a Paxaver PAC AI subscription. Upgrade at https://paxaver.com/settings/mcp.',
+        ),
+      );
     }
 
     return dispatchTool(c, toolName, toolArgs, id);

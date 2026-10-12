@@ -122,10 +122,17 @@ export async function authenticateRequest(
   if (issuer && country) {
     const jwks = getJwks(issuer);
     try {
+      // The auth server always sets aud 'paxaver-api' and adds the MCP URL
+      // only when the client sends an RFC 8707 `resource` parameter; the
+      // `tools` scope is optional. Removing 'paxaver-api' or requiring
+      // `tools` would reject connectors that send neither.
+      // Upgrade path: accept only MCP audiences and require `tools` once the
+      // auth server always sets them for MCP clients.
       const { payload } = await jwtVerify(token, jwks, {
         algorithms: ['RS256'],
         issuer,
         audience: ['paxaver-api', 'mcp', origin, `${origin}/mcp`],
+        requiredClaims: ['exp'],
       });
 
       if (payload.sub) {

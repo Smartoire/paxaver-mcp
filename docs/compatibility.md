@@ -12,11 +12,11 @@ The server implements MCP protocol version **`2025-06-18`**, returned in the
 
 The only transport, per the `2025-06-18` spec:
 
-| Method   | Path   | Purpose                                                                           |
-| -------- | ------ | --------------------------------------------------------------------------------- |
-| `POST`   | `/mcp` | JSON-RPC requests/responses. `initialize` returns `Mcp-Session-Id`.               |
-| `GET`    | `/mcp` | Opens an SSE stream for server→client notifications (endpoint event + heartbeat). |
-| `DELETE` | `/mcp` | Terminates a session.                                                             |
+| Method   | Path   | Purpose                                                               |
+| -------- | ------ | --------------------------------------------------------------------- |
+| `POST`   | `/mcp` | JSON-RPC requests/responses. `initialize` returns `Mcp-Session-Id`.   |
+| `GET`    | `/mcp` | Returns `405`. The server sends no server→client notifications.       |
+| `DELETE` | `/mcp` | Returns `405`. Sessions are stateless; there is nothing to terminate. |
 
 - `Accept: application/json, text/event-stream` is supported on `POST /mcp`.
 - `Mcp-Session-Id` is returned on `initialize` and expected on subsequent

@@ -16,6 +16,7 @@ interface BackendCall {
   path: string;
   query: URLSearchParams;
   body: Record<string, unknown> | undefined;
+  idempotencyKey: string | null;
 }
 
 const calls: BackendCall[] = [];
@@ -29,22 +30,30 @@ const recordingBackend = {
     } catch {
       body = undefined;
     }
-    calls.push({ method: req.method, path: url.pathname, query: url.searchParams, body });
+    calls.push({
+      method: req.method,
+      path: url.pathname,
+      query: url.searchParams,
+      body,
+      idempotencyKey: req.headers.get('Idempotency-Key'),
+    });
     return mockBackend.fetch(req);
   },
 };
 
 const ENV = { ...TEST_ENV, PAXAVER_API_CA: recordingBackend, PAXAVER_API_US: recordingBackend };
 
-async function callTool(name: string, args: Record<string, unknown>) {
+async function callTool(name: string, args: Record<string, unknown>, { id = 1, sessionId = '' } = {}) {
   calls.length = 0;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` };
+  if (sessionId) headers['Mcp-Session-Id'] = sessionId;
   const res = await request(
     app,
     'https://mcp.paxaver.test/mcp',
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
+      headers,
+      body: JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } }),
     },
     ENV,
   );
@@ -164,10 +173,16 @@ describe('tool → backend contract', () => {
     });
   });
 
-  it('update_school_event passes snake_case args through (backend allowedFields)', async () => {
-    const c = await callTool('update_school_event', { event_id: 'e1', ticket_price_cents: 750 });
+  it('update_school_event sends only schema fields, snake_case (backend allowedFields)', async () => {
+    const c = await callTool('update_school_event', {
+      event_id: 'e1',
+      ticket_price_cents: 750,
+      status: 'completed',
+      school_slug: 'test-school',
+      created_by: 'someone-else',
+    });
     expect(`${c?.method} ${c?.path}`).toBe('PATCH /api/events/e1');
-    expect(c?.body).toMatchObject({ ticket_price_cents: 750 });
+    expect(c?.body).toEqual({ ticket_price_cents: 750, status: 'completed' });
   });
 
   it('sign_up_for_volunteer_shift sends shiftId', async () => {
@@ -283,5 +298,48 @@ describe('tool → backend contract', () => {
     const json = await res.json();
     expect((json as { error?: { message: string } }).error?.message).toContain('top up');
     expect(JSON.stringify(json)).not.toContain('checkout.stripe.com');
+  });
+});
+
+describe('idempotency key (#2241)', () => {
+  const args = { order_id: 'o1', tip_cents: 100 };
+
+  it('a resent call in the same session gets the same key', async () => {
+    const a = await callTool('pay_lunch_order_draft', args, { id: 7, sessionId: 's-1' });
+    const b = await callTool('pay_lunch_order_draft', { tip_cents: 100, order_id: 'o1' }, { id: 7, sessionId: 's-1' });
+    expect(a?.idempotencyKey).toMatch(/^mcp-pay_lunch_order_draft-[0-9a-f]{64}$/);
+    expect(b?.idempotencyKey).toBe(a?.idempotencyKey);
+  });
+
+  it('a new JSON-RPC id, session or argument gives a new key', async () => {
+    const base = (await callTool('pay_lunch_order_draft', args, { id: 7, sessionId: 's-1' }))?.idempotencyKey;
+    const otherId = (await callTool('pay_lunch_order_draft', args, { id: 8, sessionId: 's-1' }))?.idempotencyKey;
+    const otherSession = (await callTool('pay_lunch_order_draft', args, { id: 7, sessionId: 's-2' }))?.idempotencyKey;
+    const otherArgs = (
+      await callTool('pay_lunch_order_draft', { ...args, tip_cents: 101 }, { id: 7, sessionId: 's-1' })
+    )?.idempotencyKey;
+    expect(new Set([base, otherId, otherSession, otherArgs]).size).toBe(4);
+  });
+
+  it('without a session id, two requests never share a key', async () => {
+    const a = (await callTool('pay_lunch_order_draft', args))?.idempotencyKey;
+    const b = (await callTool('pay_lunch_order_draft', args))?.idempotencyKey;
+    expect(a).toBeTruthy();
+    expect(a).not.toBe(b);
+  });
+
+  it('non-Latin-1 arguments give a valid header value', async () => {
+    const c = await callTool(
+      'create_school_event',
+      { name: 'Fête 🎉 '.repeat(40), event_date: '2026-10-15' },
+      { sessionId: 's-1' },
+    );
+    expect(c?.path).toBe('/api/events');
+    expect(c?.idempotencyKey).toMatch(/^mcp-create_school_event-[0-9a-f]{64}$/);
+  });
+
+  it('read-only tools send no key', async () => {
+    const c = await callTool('get_my_wallet_balance', {}, { sessionId: 's-1' });
+    expect(c?.idempotencyKey).toBeNull();
   });
 });

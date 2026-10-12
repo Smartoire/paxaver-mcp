@@ -22,10 +22,6 @@ export interface ToolPolicy {
   requiredRoles: string[];
   /** Whether the tool mutates persistent state. */
   mutates: boolean;
-  /** Whether the tool has financial impact. */
-  financial: boolean;
-  /** Whether the tool is irreversible / destructive. */
-  destructive: boolean;
   /** Whether the AI client should prompt the user for explicit confirmation. */
   requiresConfirmation: boolean;
 }
@@ -38,8 +34,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   // --- Wallet ---
@@ -49,32 +43,16 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ', 'PRIVACY_SENSITIVE'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
 
   // --- Orders ---
-  // Legacy-only: retired from the canonical catalog (#921) but still
-  // callable via tools/call for existing integrations.
-  order_lunch: {
-    capability: 'ai_write',
-    requiresEntitlement: true,
-    classifications: ['FINANCIAL', 'WRITE'],
-    requiredRoles: [],
-    mutates: true,
-    financial: true,
-    destructive: false,
-    requiresConfirmation: true,
-  },
   list_my_lunch_orders: {
     capability: 'view_orders',
     requiresEntitlement: false,
     classifications: ['READ'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   get_lunch_menu: {
@@ -83,8 +61,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   create_lunch_order_draft: {
@@ -93,8 +69,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['FINANCIAL', 'WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: true,
-    destructive: false,
     requiresConfirmation: true,
   },
   pay_lunch_order_draft: {
@@ -103,8 +77,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['FINANCIAL', 'WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: true,
-    destructive: false,
     requiresConfirmation: true,
   },
   update_lunch_order_draft: {
@@ -113,8 +85,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
   discard_lunch_order_draft: {
@@ -123,8 +93,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['DESTRUCTIVE', 'WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: true,
     requiresConfirmation: true,
   },
   cancel_my_lunch_order: {
@@ -133,8 +101,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['DESTRUCTIVE', 'WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: true,
     requiresConfirmation: true,
   },
 
@@ -145,8 +111,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   create_school_event: {
@@ -155,8 +119,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'event_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
   update_school_event: {
@@ -165,8 +127,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'event_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
   cancel_school_event: {
@@ -175,8 +135,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['DESTRUCTIVE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'event_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: true,
     requiresConfirmation: true,
   },
   register_for_event: {
@@ -185,8 +143,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
   sign_up_for_volunteer_shift: {
@@ -195,8 +151,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
   list_my_event_registrations: {
@@ -205,8 +159,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   cancel_my_event_registration: {
@@ -215,8 +167,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['DESTRUCTIVE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: true,
     requiresConfirmation: true,
   },
   list_my_volunteer_signups: {
@@ -225,8 +175,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ'],
     requiredRoles: [],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   cancel_my_volunteer_signup: {
@@ -235,8 +183,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['DESTRUCTIVE'],
     requiredRoles: [],
     mutates: true,
-    financial: false,
-    destructive: true,
     requiresConfirmation: true,
   },
 
@@ -247,8 +193,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'pac_member', 'lunch_cordinator'],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   create_school_restaurant: {
@@ -257,8 +201,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
 
@@ -269,8 +211,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['READ', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: false,
-    financial: false,
-    destructive: false,
     requiresConfirmation: false,
   },
   create_restaurant_menu_item: {
@@ -279,8 +219,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
   update_restaurant_menu_item: {
@@ -289,8 +227,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE', 'ADMIN', 'FINANCIAL'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
-    financial: true,
-    destructive: false,
     requiresConfirmation: true,
   },
   archive_restaurant_menu_item: {
@@ -299,8 +235,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['DESTRUCTIVE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: true,
     requiresConfirmation: true,
   },
   schedule_lunch_menu_item: {
@@ -309,8 +243,6 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     classifications: ['WRITE', 'ADMIN'],
     requiredRoles: ['pac_cordinator', 'lunch_cordinator'],
     mutates: true,
-    financial: false,
-    destructive: false,
     requiresConfirmation: true,
   },
 };
@@ -320,9 +252,9 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
  * callable via tools/call but are never advertised in tools/list. Aliases
  * resolve to the canonical handler with identical arguments and semantics —
  * they reuse the canonical policy, so authorization and entitlement checks
- * are unchanged. `order_lunch` is deliberately not an alias: its
- * immediate-purchase semantics have no canonical equivalent (the catalog is
- * draft → review → pay); it keeps its own hidden handler + policy entry.
+ * are unchanged. The retired `order_lunch` tool is not an alias: it skipped
+ * the draft → review → pay flow, so it was removed and now returns
+ * `Unknown tool`.
  *
  * Removal criteria: delete entries once directory catalogs and saved
  * integrations have migrated; disable the whole path by emptying this map.
@@ -374,14 +306,15 @@ export function canSeeTool(toolName: string, ctx: { isPlatformAdmin: boolean; pe
 
 /**
  * Check whether the authenticated context is allowed to *call* a tool.
- * Returns null if allowed, or an error code string if denied.
+ * The caller rejects unknown tools first; a tool without a policy is
+ * 'forbidden' (fail closed).
  */
 export function checkToolAuthorization(
   toolName: string,
   ctx: { isPlatformAdmin: boolean; permissions: string[] },
-): 'ok' | 'forbidden' | 'unknown_tool' {
+): 'ok' | 'forbidden' {
   const policy = TOOL_POLICIES[toolName];
-  if (!policy) return 'unknown_tool';
+  if (!policy) return 'forbidden';
   if (ctx.isPlatformAdmin) return 'ok';
   if (policy.requiredRoles.length > 0 && !policy.requiredRoles.some((r) => ctx.permissions.includes(r))) {
     return 'forbidden';

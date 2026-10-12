@@ -10,7 +10,8 @@ the entitlement is active) on every service-binding call.
 ```
 tools/list   →  canSeeTool(toolName, ctx)        filters visible tools
 tools/call   →  resolveToolName(name)            legacy alias → canonical (see below)
-             →  checkToolAuthorization(name, ctx)  →  "ok" | "forbidden" | "unknown_tool"
+             →  unknown name                     →  -32601 "Unknown tool"
+             →  checkToolAuthorization(name, ctx)  →  "ok" | "forbidden"
                   ↓ (if ok)
                dispatchTool → backend re-checks school membership, student ownership, entitlement
 ```
@@ -24,10 +25,10 @@ gating in both functions.
 `tools/list` advertises only the 26 canonical names. `tools/call` first runs
 `resolveToolName`, which maps pre-2.5 names through `TOOL_ALIASES`
 (`apps/mcp/src/lib/policies.ts`) onto the canonical policy and handler — same
-capability, roles, entitlement, and confirmation checks. `order_lunch` has no
-canonical equivalent, so it keeps its own hidden policy entry and handler.
-Unknown names (including aliases that have been removed) return `unknown_tool`
-→ JSON-RPC `-32601`.
+capability, roles, entitlement, and confirmation checks. The retired
+`order_lunch` tool is removed: it skipped the draft → review → wallet-only
+payment flow. Unknown names (including `order_lunch` and aliases that have been
+removed) return JSON-RPC `-32601` before any authorization check.
 
 ## Capability policy table
 
@@ -41,41 +42,38 @@ Fields:
 | `classifications`      | Safety labels: `READ`, `WRITE`, `FINANCIAL`, `DESTRUCTIVE`, `ADMIN`, `PRIVACY_SENSITIVE` |
 | `requiredRoles`        | Roles that may invoke at the active school. Empty = any member                           |
 | `mutates`              | Whether the tool mutates persistent state                                                |
-| `financial`            | Whether the tool has financial impact                                                    |
-| `destructive`          | Whether the tool is irreversible                                                         |
 | `requiresConfirmation` | Whether the AI client should prompt the user before calling                              |
 
 ### Full table
 
-| Tool                           | Capability     | Entitlement | Classifications         | Required roles                               | Mutates | Financial | Destructive | Confirm |
-| ------------------------------ | -------------- | ----------- | ----------------------- | -------------------------------------------- | ------- | --------- | ----------- | ------- |
-| `get_my_context`               | `view_account` | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `get_my_wallet_balance`        | `view_balance` | no          | READ, PRIVACY_SENSITIVE | _(any)_                                      | no      | no        | no          | no      |
-| `order_lunch` (legacy)         | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | yes       | no          | **yes** |
-| `list_my_lunch_orders`         | `view_orders`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `get_lunch_menu`               | `view_menu`    | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `create_lunch_order_draft`     | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | yes       | no          | **yes** |
-| `pay_lunch_order_draft`        | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | yes       | no          | **yes** |
-| `update_lunch_order_draft`     | `ai_write`     | yes         | WRITE                   | _(any)_                                      | yes     | no        | no          | **yes** |
-| `discard_lunch_order_draft`    | `ai_write`     | yes         | DESTRUCTIVE, WRITE      | _(any)_                                      | yes     | no        | yes         | **yes** |
-| `cancel_my_lunch_order`        | `ai_write`     | yes         | DESTRUCTIVE, WRITE      | _(any)_                                      | yes     | no        | yes         | **yes** |
-| `list_school_events`           | `view_events`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `create_school_event`          | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
-| `update_school_event`          | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | no        | no          | **yes** |
-| `cancel_school_event`          | `ai_write`     | yes         | DESTRUCTIVE, ADMIN      | pac_cordinator, event_cordinator             | yes     | no        | yes         | **yes** |
-| `register_for_event`           | `ai_write`     | yes         | WRITE                   | _(any)_                                      | yes     | no        | no          | **yes** |
-| `sign_up_for_volunteer_shift`  | `ai_write`     | yes         | WRITE                   | _(any)_                                      | yes     | no        | no          | **yes** |
-| `list_my_event_registrations`  | `view_events`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `cancel_my_event_registration` | `ai_write`     | yes         | DESTRUCTIVE             | _(any)_                                      | yes     | no        | yes         | **yes** |
-| `list_my_volunteer_signups`    | `view_events`  | no          | READ                    | _(any)_                                      | no      | no        | no          | no      |
-| `cancel_my_volunteer_signup`   | `ai_write`     | yes         | DESTRUCTIVE             | _(any)_                                      | yes     | no        | yes         | **yes** |
-| `list_school_restaurants`      | _(null)_       | no          | READ, ADMIN             | pac_cordinator, pac_member, lunch_cordinator | no      | no        | no          | no      |
-| `create_school_restaurant`     | _(null)_       | yes         | WRITE, ADMIN            | pac_cordinator                               | yes     | no        | no          | **yes** |
-| `list_restaurant_menu_items`   | _(null)_       | no          | READ, ADMIN             | pac_cordinator, lunch_cordinator             | no      | no        | no          | no      |
-| `create_restaurant_menu_item`  | _(null)_       | yes         | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
-| `update_restaurant_menu_item`  | _(null)_       | yes         | WRITE, ADMIN, FINANCIAL | pac_cordinator, lunch_cordinator             | yes     | yes       | no          | **yes** |
-| `archive_restaurant_menu_item` | _(null)_       | yes         | DESTRUCTIVE, ADMIN      | pac_cordinator, lunch_cordinator             | yes     | no        | yes         | **yes** |
-| `schedule_lunch_menu_item`     | _(null)_       | yes         | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | no        | no          | **yes** |
+| Tool                           | Capability     | Entitlement | Classifications         | Required roles                               | Mutates | Confirm |
+| ------------------------------ | -------------- | ----------- | ----------------------- | -------------------------------------------- | ------- | ------- |
+| `get_my_context`               | `view_account` | no          | READ                    | _(any)_                                      | no      | no      |
+| `get_my_wallet_balance`        | `view_balance` | no          | READ, PRIVACY_SENSITIVE | _(any)_                                      | no      | no      |
+| `list_my_lunch_orders`         | `view_orders`  | no          | READ                    | _(any)_                                      | no      | no      |
+| `get_lunch_menu`               | `view_menu`    | no          | READ                    | _(any)_                                      | no      | no      |
+| `create_lunch_order_draft`     | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | **yes** |
+| `pay_lunch_order_draft`        | `ai_write`     | yes         | FINANCIAL, WRITE        | _(any)_                                      | yes     | **yes** |
+| `update_lunch_order_draft`     | `ai_write`     | yes         | WRITE                   | _(any)_                                      | yes     | **yes** |
+| `discard_lunch_order_draft`    | `ai_write`     | yes         | DESTRUCTIVE, WRITE      | _(any)_                                      | yes     | **yes** |
+| `cancel_my_lunch_order`        | `ai_write`     | yes         | DESTRUCTIVE, WRITE      | _(any)_                                      | yes     | **yes** |
+| `list_school_events`           | `view_events`  | no          | READ                    | _(any)_                                      | no      | no      |
+| `create_school_event`          | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | **yes** |
+| `update_school_event`          | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | **yes** |
+| `cancel_school_event`          | `ai_write`     | yes         | DESTRUCTIVE, ADMIN      | pac_cordinator, event_cordinator             | yes     | **yes** |
+| `register_for_event`           | `ai_write`     | yes         | WRITE                   | _(any)_                                      | yes     | **yes** |
+| `sign_up_for_volunteer_shift`  | `ai_write`     | yes         | WRITE                   | _(any)_                                      | yes     | **yes** |
+| `list_my_event_registrations`  | `view_events`  | no          | READ                    | _(any)_                                      | no      | no      |
+| `cancel_my_event_registration` | `ai_write`     | yes         | DESTRUCTIVE             | _(any)_                                      | yes     | **yes** |
+| `list_my_volunteer_signups`    | `view_events`  | no          | READ                    | _(any)_                                      | no      | no      |
+| `cancel_my_volunteer_signup`   | `ai_write`     | yes         | DESTRUCTIVE             | _(any)_                                      | yes     | **yes** |
+| `list_school_restaurants`      | _(null)_       | no          | READ, ADMIN             | pac_cordinator, pac_member, lunch_cordinator | no      | no      |
+| `create_school_restaurant`     | _(null)_       | yes         | WRITE, ADMIN            | pac_cordinator                               | yes     | **yes** |
+| `list_restaurant_menu_items`   | _(null)_       | no          | READ, ADMIN             | pac_cordinator, lunch_cordinator             | no      | no      |
+| `create_restaurant_menu_item`  | _(null)_       | yes         | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | **yes** |
+| `update_restaurant_menu_item`  | _(null)_       | yes         | WRITE, ADMIN, FINANCIAL | pac_cordinator, lunch_cordinator             | yes     | **yes** |
+| `archive_restaurant_menu_item` | _(null)_       | yes         | DESTRUCTIVE, ADMIN      | pac_cordinator, lunch_cordinator             | yes     | **yes** |
+| `schedule_lunch_menu_item`     | _(null)_       | yes         | WRITE, ADMIN            | pac_cordinator, lunch_cordinator             | yes     | **yes** |
 
 ## Role gating
 
@@ -120,7 +118,8 @@ Used by `tools/call` **before** dispatch. Returns:
 - `"ok"` — proceed to dispatch.
 - `"forbidden"` — return MCP error `-32603` ("You do not have permission to use
   this tool.") without calling the backend.
-- `"unknown_tool"` — return `-32601` ("Unknown tool: ...").
+- A tool without a policy entry is `"forbidden"` (fail closed). `tools/call`
+  rejects unknown names with `-32601` before this check.
 
 Even when this returns `"ok"`, the backend performs its own authorization
 checks (see below). The MCP check is a fast-fail that avoids a service-binding
@@ -163,7 +162,7 @@ surfaces these to the AI client:
 
 `pay_lunch_order_draft` (charges the wallet), `create_lunch_order_draft`
 (creates a payable draft), `update_restaurant_menu_item` (when setting
-`price_cents`), and the legacy `order_lunch`. These move or commit money.
+`price_cents`). These move or commit money.
 They are always `requiresConfirmation: true`.
 
 ### Destructive tools
@@ -180,5 +179,6 @@ confirmation is a client-side UX concern — but the tool descriptions and
 `_meta` both signal it. Tool descriptions for these tools include language like
 "confirm with the user before calling".
 
-In practice, every tool with `mutates: true` or `financial: true` or
-`destructive: true` has `requiresConfirmation: true`. Read-only tools never do.
+In practice, every tool with `mutates: true` (which includes every `FINANCIAL`
+and `DESTRUCTIVE` tool) has `requiresConfirmation: true`. Read-only tools never
+do.

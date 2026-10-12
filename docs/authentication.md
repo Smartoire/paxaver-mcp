@@ -53,7 +53,8 @@ The MCP server validates RS256 JWTs using the auth worker's JWKS endpoint
 const { payload } = await jwtVerify(token, jwks, {
   algorithms: ['RS256'],
   issuer, // a regional issuer of this environment (see below)
-  audience: ['paxaver-api', 'mcp', origin],
+  audience: ['paxaver-api', 'mcp', origin, `${origin}/mcp`],
+  requiredClaims: ['exp'],
 });
 ```
 
@@ -67,8 +68,8 @@ effectively per-request.
 | ----- | ------------------------------------------------------------ |
 | `sub` | Paxaver user ID                                              |
 | `iss` | Regional auth server (for example `https://paxaver.ca/auth`) |
-| `aud` | `paxaver-api`, `mcp`, or the request origin                  |
-| `exp` | Token expiration                                             |
+| `aud` | `paxaver-api`, `mcp`, the request origin, or `<origin>/mcp`  |
+| `exp` | Token expiration. Required: a token without `exp` gets `401` |
 
 ### Regional routing
 

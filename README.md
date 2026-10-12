@@ -130,7 +130,9 @@ docker run -p 8787:8787 paxaver-mcp
 The image sets `REVOCATION_CHECK=skip`, because a self-hosted server does not
 have `INTERNAL_SERVICE_SECRET`. Tokens are still checked by signature, expiry
 and a live user-context load, but the internal token revocation check does not
-run. See [`docs/authentication.md`](./docs/authentication.md#token-revocation-check).
+run: a revoked token stays valid until it expires. The container runs as the
+unprivileged `node` user. `ALLOWED_ORIGINS` keeps the localhost defaults; add
+`--var ALLOWED_ORIGINS:<origin>` for a browser client. See [`docs/authentication.md`](./docs/authentication.md#token-revocation-check).
 
 ```bash
 npm run deploy:staging   # wrangler deploy --env staging
@@ -161,9 +163,8 @@ with `update_lunch_order_draft`, then `pay_lunch_order_draft`.
 
 **Compatibility:** pre-2.5 tool names (`get_menu`, `register_event`,
 `create_menu_item`, …) still work — they resolve to the canonical tools —
-but are no longer advertised. `order_lunch` also remains callable for
-existing integrations. See [`docs/tools.md`](./docs/tools.md) for the full
-legacy-name mapping.
+but are no longer advertised. The retired `order_lunch` tool is removed.
+See [`docs/tools.md`](./docs/tools.md) for the full legacy-name mapping.
 
 Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:

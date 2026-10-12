@@ -10,7 +10,7 @@
 
 import type { Env, AppVariables } from './env.js';
 import { authenticateRequest, revocationCheckUnavailable } from './auth/validate.js';
-import { transportApp } from './transport/streamable-http.js';
+import { transportApp, type ParsedBody } from './transport/streamable-http.js';
 import { originFrom } from './lib/url.js';
 import { wellKnownApp } from './discovery/well-known.js';
 import { SERVER_VERSION } from './lib/version.js';
@@ -97,21 +97,25 @@ function anonymousDiscoveryEnabled(env: Env): boolean {
  * for a discovery method allowed by anonymousDiscoveryEnabled(), else null.
  * Only single (non-batch) messages qualify.
  */
-async function publicDiscoveryKind(request: Request, env: Env): Promise<'public' | 'anonymous' | null> {
-  if (request.method !== 'POST') return null;
-  let method: unknown;
-  try {
-    const body: unknown = await request.clone().json();
-    if (Array.isArray(body) || body === null || typeof body !== 'object' || !('method' in body)) return null;
-    method = body.method;
-  } catch {
-    return null;
-  }
+function publicDiscoveryKind(parsed: ParsedBody, env: Env): 'public' | 'anonymous' | null {
+  const body = parsed?.value;
+  if (Array.isArray(body) || body === null || typeof body !== 'object' || !('method' in body)) return null;
+  const method = body.method;
   if (method === 'server/discover') return 'public';
   if (typeof method === 'string' && ANONYMOUS_DISCOVERY_METHODS.has(method) && anonymousDiscoveryEnabled(env)) {
     return 'anonymous';
   }
   return null;
+}
+
+// Parse the POST /mcp body once; the transport reuses the result.
+async function parseBody(request: Request): Promise<ParsedBody> {
+  if (request.method !== 'POST') return { value: undefined };
+  try {
+    return { value: await request.json() };
+  } catch {
+    return null;
+  }
 }
 
 async function mcpAuth(request: Request, ctx: { env: Env; var: Partial<AppVariables> }): Promise<Response | null> {
@@ -163,7 +167,8 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
 
   const url = new URL(request.url);
   let response: Response;
-  const ctx: { env: Env; var: Partial<AppVariables> } = { env, var: { correlationId } };
+  const sessionId = request.headers.get('Mcp-Session-Id') || undefined;
+  const ctx: { env: Env; var: Partial<AppVariables> } = { env, var: { correlationId, sessionId } };
 
   try {
     if (url.pathname === '/robots.txt') {
@@ -218,23 +223,12 @@ async function mcpFetch(request: Request, env: Env, _executionCtx?: unknown): Pr
     } else if (url.pathname === '/mcp') {
       // Anonymous discovery applies only without a token, so a request with
       // a token still authenticates and gets the per-user tool list.
-      const discovery = await publicDiscoveryKind(request, env);
+      const parsed = await parseBody(request);
+      const discovery = publicDiscoveryKind(parsed, env);
       const anonymous = discovery === 'anonymous' && !request.headers.get('Authorization');
       if (anonymous) ctx.var.anonymousDiscovery = true;
       const authResult = discovery === 'public' || anonymous ? null : await mcpAuth(request, ctx);
-      if (authResult) {
-        response = authResult;
-      } else if (request.method === 'GET' && !ctx.var.isPlatformAdmin && ctx.var.subscription?.status !== 'active') {
-        response = Response.json(
-          {
-            error:
-              'An active Parent AI or PAC AI subscription is required to use Paxaver MCP. Please visit your Paxaver portal to subscribe.',
-          },
-          { status: 403 },
-        );
-      } else {
-        response = await transportApp.fetch(request, { env, var: ctx.var as AppVariables });
-      }
+      response = authResult ?? (await transportApp.fetch(request, { env, var: ctx.var as AppVariables }, parsed));
     } else {
       response = Response.json({ error: 'Not found' }, { status: 404 });
     }

@@ -65,7 +65,10 @@ The Paxaver MCP server is designed with defense-in-depth. Key measures:
 - **Security headers.** `X-Content-Type-Options: nosniff`,
   `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.
 - **Idempotency.** Mutating tool calls include an `Idempotency-Key` to suppress
-  duplicate side effects from retries.
+  duplicate side effects from retries. The key is a hash of the user, the tool,
+  the canonical arguments, the `Mcp-Session-Id` and the JSON-RPC `id`.
+- **Batches.** A JSON-RPC batch holds at most 20 messages and returns one
+  result per request.
 - **Stateless auth.** User context is reloaded from the backend on every
   request; revocation is immediate.
 - **Defense-in-depth authorization.** Tool authorization is checked at the MCP
