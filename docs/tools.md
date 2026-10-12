@@ -243,6 +243,32 @@ range.
 
 ---
 
+### `get_school_event`
+
+Returns one event's detail: date, times, location, capacity, ticket price,
+status, and visibility — plus its volunteer shifts (cancelled shifts are
+excluded) and the caller's own active signups on those shifts. `shifts[].id`
+is the `shift_id` for `sign_up_for_volunteer_shift`; `mySignups[].signupId`
+feeds `cancel_my_volunteer_signup`. Get `event_id` from `list_school_events`.
+
+|                     |                |
+| ------------------- | -------------- |
+| **Capability**      | `view_events`  |
+| **Required roles**  | _(any member)_ |
+| **Classifications** | READ           |
+| **Confirmation**    | no             |
+
+**Input schema**
+
+| Property      | Type   | Required | Description               |
+| ------------- | ------ | -------- | ------------------------- |
+| `event_id`    | string | yes      | From `list_school_events` |
+| `school_slug` | string | no       | Defaults to active school |
+
+**Backend:** `GET /api/events/{event_id}/detail`
+
+---
+
 ### `create_school_event` _(admin)_
 
 Creates a school event. Do not create events without explicit user request.
@@ -357,7 +383,7 @@ semantics are enforced by the backend. **DESTRUCTIVE** — confirm.
 ## Volunteering
 
 Volunteer signups are separate from ticket registration: a `shift_id`
-(from `list_school_events`) identifies the volunteer shift; the signup
+(from `get_school_event`) identifies the volunteer shift; the signup
 itself returns a `signup_id`.
 
 ### `list_my_volunteer_signups`
@@ -411,7 +437,7 @@ Lists restaurants for the active school.
 
 ### `create_school_restaurant` _(admin)_
 
-Creates a restaurant for the active school.
+Creates a restaurant for the active school. Platform admins may select another school with `school_slug`.
 
 |                     |                       |
 | ------------------- | --------------------- |
@@ -422,12 +448,12 @@ Creates a restaurant for the active school.
 
 **Input schema**
 
-| Property      | Type   | Required | Description |
-| ------------- | ------ | -------- | ----------- |
-| `name`        | string | yes      |             |
-| `school_slug` | string | no       |             |
-| `description` | string | no       |             |
-| `tax_percent` | number | no       |             |
+| Property      | Type   | Required | Description                                                          |
+| ------------- | ------ | -------- | -------------------------------------------------------------------- |
+| `name`        | string | yes      |                                                                      |
+| `school_slug` | string | no       | Defaults to active school; platform admins may select another school |
+| `description` | string | no       |                                                                      |
+| `tax_percent` | number | no       |                                                                      |
 
 **Backend:** `POST /api/schools/{school_slug}/restaurants`
 
@@ -546,12 +572,13 @@ Adds or schedules a single menu item on a date (with an optional
 
 **Input schema**
 
-| Property        | Type    | Required | Description |
-| --------------- | ------- | -------- | ----------- |
-| `restaurant_id` | string  | yes      |             |
-| `menu_item_id`  | string  | yes      |             |
-| `menu_date`     | string  | yes      | YYYY-MM-DD  |
-| `available_qty` | integer | no       |             |
+| Property        | Type    | Required | Description               |
+| --------------- | ------- | -------- | ------------------------- |
+| `school_slug`   | string  | no       | Defaults to active school |
+| `restaurant_id` | string  | yes      |                           |
+| `menu_item_id`  | string  | yes      |                           |
+| `menu_date`     | string  | yes      | YYYY-MM-DD                |
+| `available_qty` | integer | no       |                           |
 
 **Backend:** `POST /api/schools/{school_slug}/menu/daily`
 

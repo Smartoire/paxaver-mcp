@@ -54,9 +54,10 @@ describe('MCP protocol', () => {
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
     const names = json.result.tools.map((t) => t.name);
     // TEST_TOKEN's context carries pac_cordinator -> full catalog.
-    expect(names.length).toBe(26);
+    expect(names.length).toBe(27);
     expect(names).toContain('get_my_context');
     expect(names).toContain('create_lunch_order_draft');
+    expect(names).toContain('get_school_event');
     // Retired/legacy names are never advertised.
     for (const legacy of ['order_lunch', 'get_menu', 'register_event', 'create_menu_item', 'delete_menu_item']) {
       expect(names).not.toContain(legacy);

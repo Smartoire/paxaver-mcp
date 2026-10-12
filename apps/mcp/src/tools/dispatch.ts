@@ -88,7 +88,7 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
   if (args.student_id !== undefined && ctx.studentIds?.length) {
     const sid = String(args.student_id);
     if (!ctx.studentIds.includes(sid)) {
-      throw new Error('student_id is not permitted for this user');
+      throw new InvalidParamsError('student_id is not permitted for this user');
     }
   }
   // school_slug: if the caller supplies one, it must match the user's own
@@ -98,10 +98,10 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
   if (args.school_slug !== undefined && !ctx.isPlatformAdmin) {
     const slug = String(args.school_slug);
     if (!ctx.schoolSlug) {
-      throw new Error('school_slug cannot be verified for this user');
+      throw new InvalidParamsError('school_slug cannot be verified for this user');
     }
     if (slug !== ctx.schoolSlug) {
-      throw new Error('school_slug does not match the user school');
+      throw new InvalidParamsError('school_slug does not match the user school');
     }
   }
 }

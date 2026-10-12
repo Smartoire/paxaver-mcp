@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
 import { request } from './request.js';
 import { FULL_TOKEN, TEST_ENV, mockBackend } from './jwt-auth.js';
+import { ALL_TOOLS } from '../src/schemas.js';
 
 interface BackendCall {
   method: string;
@@ -43,7 +44,19 @@ const recordingBackend = {
 
 const ENV = { ...TEST_ENV, PAXAVER_API_CA: recordingBackend, PAXAVER_API_US: recordingBackend };
 
-async function callTool(name: string, args: Record<string, unknown>, { id = 1, sessionId = '' } = {}) {
+function contextOverrideBackend(overrides: Record<string, unknown>) {
+  return {
+    async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+      const req = typeof request === 'string' ? new Request(request, init) : request;
+      const response = await recordingBackend.fetch(req);
+      if (new URL(req.url).pathname !== '/api/users/me/context') return response;
+      const payload = (await response.json()) as { data: Record<string, unknown> };
+      return Response.json({ ...payload, data: { ...payload.data, ...overrides } });
+    },
+  };
+}
+
+async function postTool(name: string, args: Record<string, unknown>, env = ENV, { id = 1, sessionId = '' } = {}) {
   calls.length = 0;
   const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` };
   if (sessionId) headers['Mcp-Session-Id'] = sessionId;
@@ -55,9 +68,14 @@ async function callTool(name: string, args: Record<string, unknown>, { id = 1, s
       headers,
       body: JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } }),
     },
-    ENV,
+    env,
   );
   expect(res.status).toBe(200);
+  return res;
+}
+
+async function callTool(name: string, args: Record<string, unknown>, options = {}, env = ENV) {
+  await postTool(name, args, env, options);
   return calls.filter((c) => c.path !== '/api/users/me/context').at(-1);
 }
 
@@ -67,6 +85,70 @@ const draftItem = { menu_item_id: 'item-1', menu_item_name: 'Pizza', price_cents
 const draftItemCamel = { menuItemId: 'item-1', menuItemName: 'Pizza', quantity: 2 };
 
 describe('tool → backend contract', () => {
+  it('pins idempotentHint for every advertised tool', () => {
+    const expected: Record<string, boolean | undefined> = {
+      get_my_context: undefined,
+      get_my_wallet_balance: undefined,
+      list_my_lunch_orders: undefined,
+      get_lunch_menu: undefined,
+      create_lunch_order_draft: false,
+      pay_lunch_order_draft: false,
+      update_lunch_order_draft: true,
+      discard_lunch_order_draft: true,
+      cancel_my_lunch_order: false,
+      list_school_events: undefined,
+      get_school_event: true,
+      create_school_event: false,
+      update_school_event: true,
+      cancel_school_event: false,
+      register_for_event: false,
+      list_my_event_registrations: true,
+      cancel_my_event_registration: false,
+      list_my_volunteer_signups: true,
+      cancel_my_volunteer_signup: true,
+      sign_up_for_volunteer_shift: false,
+      list_school_restaurants: undefined,
+      create_school_restaurant: false,
+      list_restaurant_menu_items: undefined,
+      create_restaurant_menu_item: false,
+      update_restaurant_menu_item: true,
+      archive_restaurant_menu_item: true,
+      schedule_lunch_menu_item: false,
+    };
+    expect(Object.fromEntries(ALL_TOOLS.map((tool) => [tool.name, tool.annotations?.idempotentHint]))).toEqual(
+      expected,
+    );
+  });
+
+  it.each([
+    ['student_id is not permitted for this user', 'list_school_restaurants', { student_id: 'other-student' }, ENV],
+    ['school_slug does not match the user school', 'list_school_restaurants', { school_slug: 'other-school' }, ENV],
+    ['school_slug does not match the user school', 'schedule_lunch_menu_item', { school_slug: 'other-school' }, ENV],
+    [
+      'school_slug does not match the user school',
+      'get_school_event',
+      { event_id: 'e1', school_slug: 'other-school' },
+      ENV,
+    ],
+    [
+      'school_slug cannot be verified for this user',
+      'list_school_restaurants',
+      { school_slug: 'other-school' },
+      {
+        ...TEST_ENV,
+        PAXAVER_API_CA: contextOverrideBackend({ schoolSlug: '' }),
+        PAXAVER_API_US: contextOverrideBackend({ schoolSlug: '' }),
+      },
+    ],
+  ])(
+    'ownership rejection %s returns invalid params without calling the tool endpoint',
+    async (message, name, args, env) => {
+      const res = await postTool(name, args, env);
+      const json = (await res.json()) as { error: { code: number; message: string } };
+      expect(json.error).toEqual({ code: -32602, message });
+      expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+    },
+  );
   it('get_lunch_menu hits /api/schools/:slug/menu/daily', async () => {
     const c = await callTool('get_lunch_menu', {});
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/schools/test-school/menu/daily');
@@ -79,7 +161,7 @@ describe('tool → backend contract', () => {
     expect(c?.query.get('month')).toBe('10');
   });
 
-  it('schedule_lunch_menu_item posts camelCase to /api/schools/:slug/menu/daily', async () => {
+  it('schedule_lunch_menu_item posts camelCase to the active school by default', async () => {
     const c = await callTool('schedule_lunch_menu_item', {
       restaurant_id: 'r1',
       menu_item_id: 'm1',
@@ -185,16 +267,114 @@ describe('tool → backend contract', () => {
     expect(c?.body).toEqual({ ticket_price_cents: 750, status: 'completed' });
   });
 
-  it('sign_up_for_volunteer_shift sends shiftId', async () => {
-    const c = await callTool('sign_up_for_volunteer_shift', { shift_id: 's1' });
-    expect(`${c?.method} ${c?.path}`).toBe('POST /api/volunteers/signups');
-    expect(c?.body).toMatchObject({ shiftId: 's1' });
+  it('get_school_event hits /api/events/:id/detail with the active school query', async () => {
+    const c = await callTool('get_school_event', { event_id: 'e1' });
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/events/e1/detail');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
   });
 
-  it('create_school_restaurant sends schoolSlug and taxPercent', async () => {
+  it('get_school_event forwards the selected school for platform admins', async () => {
+    const backend = contextOverrideBackend({ isPlatformAdmin: true });
+    const env = { ...TEST_ENV, PAXAVER_API_CA: backend, PAXAVER_API_US: backend };
+    const c = await callTool('get_school_event', { event_id: 'e1', school_slug: 'other-school' }, {}, env);
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/events/e1/detail');
+    expect(c?.query.get('schoolSlug')).toBe('other-school');
+  });
+
+  it('get_school_event declares the shift contract sign_up_for_volunteer_shift consumes', () => {
+    const event = ALL_TOOLS.find((t) => t.name === 'get_school_event');
+    const props = event?.outputSchema?.properties as Record<
+      string,
+      { items?: { properties?: Record<string, { type?: unknown }> } }
+    >;
+    expect(props?.shifts?.items?.properties?.id).toMatchObject({ type: 'string' });
+    expect(props?.mySignups?.items?.properties?.signupId).toMatchObject({ type: 'string' });
+    const signup = ALL_TOOLS.find((t) => t.name === 'sign_up_for_volunteer_shift');
+    expect(signup?.description).toContain('get_school_event');
+    expect(JSON.stringify(signup?.inputSchema)).not.toContain('notes');
+  });
+
+  it('a shift id returned by get_school_event feeds sign_up_for_volunteer_shift', async () => {
+    const detail = {
+      id: 'e1',
+      schoolSlug: 'test-school',
+      name: 'Fun Fair',
+      eventDate: '2026-10-15',
+      shifts: [
+        {
+          id: 'shift-7',
+          title: 'Setup crew',
+          description: null,
+          shiftDate: '2026-10-15',
+          startTime: '17:00',
+          endTime: '19:00',
+          slots: 4,
+          filled: 1,
+          status: 'open',
+        },
+      ],
+      mySignups: [],
+    };
+    const detailBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        if (new URL(req.url).pathname === '/api/events/e1/detail') {
+          return Response.json({ data: detail });
+        }
+        return recordingBackend.fetch(req);
+      },
+    };
+    const env = { ...TEST_ENV, PAXAVER_API_CA: detailBackend, PAXAVER_API_US: detailBackend };
+
+    const res = await postTool('get_school_event', { event_id: 'e1' }, env);
+    const json = (await res.json()) as { result: { structuredContent: { shifts: { id: string }[] } } };
+    const shiftId = json.result.structuredContent.shifts[0]?.id;
+    expect(shiftId).toBe('shift-7');
+
+    const c = await callTool('sign_up_for_volunteer_shift', { shift_id: shiftId }, {}, env);
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/volunteers/signups');
+    expect(c?.body).toEqual({ shiftId: 'shift-7' });
+  });
+
+  it('sign_up_for_volunteer_shift sends shiftId', async () => {
+    const c = await callTool('sign_up_for_volunteer_shift', { shift_id: 's1', notes: 'not a declared input' });
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/volunteers/signups');
+    expect(c?.body).toEqual({ shiftId: 's1' });
+  });
+
+  it('create_school_restaurant uses the active school in path and body by default', async () => {
     const c = await callTool('create_school_restaurant', { name: 'Cafe', tax_percent: 5 });
     expect(`${c?.method} ${c?.path}`).toBe('POST /api/schools/test-school/restaurants');
     expect(c?.body).toMatchObject({ schoolSlug: 'test-school', name: 'Cafe', taxPercent: 5 });
+  });
+
+  it('platform admins use the selected school consistently for restaurant creation and menu scheduling', async () => {
+    expect(
+      ALL_TOOLS.find((tool) => tool.name === 'schedule_lunch_menu_item')?.inputSchema.properties.school_slug,
+    ).toEqual({
+      type: 'string',
+      description: 'School slug (defaults to active school)',
+    });
+    const backend = contextOverrideBackend({ isPlatformAdmin: true });
+    const env = { ...TEST_ENV, PAXAVER_API_CA: backend, PAXAVER_API_US: backend };
+
+    const restaurant = await callTool(
+      'create_school_restaurant',
+      { school_slug: 'other-school', name: 'Cafe' },
+      {},
+      env,
+    );
+    expect(restaurant?.path).toBe('/api/schools/other-school/restaurants');
+    expect(restaurant?.body?.schoolSlug).toBe('other-school');
+
+    const menu = await callTool(
+      'schedule_lunch_menu_item',
+      { school_slug: 'other-school', restaurant_id: 'r1', menu_item_id: 'm1', menu_date: '2026-10-01' },
+      {},
+      env,
+    );
+    expect(menu?.path).toBe('/api/schools/other-school/menu/daily');
+    expect(menu?.body).toEqual({ restaurantId: 'r1', menuItemId: 'm1', menuDate: '2026-10-01' });
   });
 
   it('list_my_lunch_orders sends studentId and date range', async () => {

@@ -147,17 +147,17 @@ The worker reads two Worker secrets, `INTERNAL_SERVICE_SECRET` and
 
 ## Tools
 
-The server exposes 26 tools grouped into five categories. Visibility in
+The server exposes 27 tools grouped into five categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
-| Category                | Tools                                                                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User / account          | `get_my_context`, `get_my_wallet_balance`                                                                                                                                                                     |
-| Lunch ordering          | `get_lunch_menu`, `list_my_lunch_orders`, `create_lunch_order_draft`, `update_lunch_order_draft`, `discard_lunch_order_draft`, `pay_lunch_order_draft`, `cancel_my_lunch_order`                               |
-| Events & volunteering   | `list_school_events`, `register_for_event`, `list_my_event_registrations`, `cancel_my_event_registration`, `list_my_volunteer_signups`, `sign_up_for_volunteer_shift`, `cancel_my_volunteer_signup`           |
-| Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`                                                                                                                                           |
-| Restaurant / menu admin | `list_school_restaurants`, `create_school_restaurant`, `list_restaurant_menu_items`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `archive_restaurant_menu_item`, `schedule_lunch_menu_item` |
+| Category                | Tools                                                                                                                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User / account          | `get_my_context`, `get_my_wallet_balance`                                                                                                                                                                               |
+| Lunch ordering          | `get_lunch_menu`, `list_my_lunch_orders`, `create_lunch_order_draft`, `update_lunch_order_draft`, `discard_lunch_order_draft`, `pay_lunch_order_draft`, `cancel_my_lunch_order`                                         |
+| Events & volunteering   | `list_school_events`, `get_school_event`, `register_for_event`, `list_my_event_registrations`, `cancel_my_event_registration`, `list_my_volunteer_signups`, `sign_up_for_volunteer_shift`, `cancel_my_volunteer_signup` |
+| Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`                                                                                                                                                     |
+| Restaurant / menu admin | `list_school_restaurants`, `create_school_restaurant`, `list_restaurant_menu_items`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `archive_restaurant_menu_item`, `schedule_lunch_menu_item`           |
 
 Ordering is draft → review → payment: `create_lunch_order_draft`, adjust
 with `update_lunch_order_draft`, then `pay_lunch_order_draft`.

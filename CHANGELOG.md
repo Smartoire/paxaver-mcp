@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `get_school_event` returns one event's detail: date, times, location,
+  capacity, ticket price, status, and its volunteer shifts with the caller's
+  own signups on them. `shifts[].id` is the `shift_id` for
+  `sign_up_for_volunteer_shift` — `list_school_events` never returned
+  shifts. The optional `school_slug` selects the school for platform admins.
+
 ### Security
 
 - The public security documentation no longer describes a service JWT or an
@@ -40,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Mutation tools that create records, register attendees, schedule menu items,
+  or charge/refund wallets no longer advertise idempotency when repeated
+  calls may cause another effect.
+- Ownership failures return JSON-RPC `-32602`; admin restaurant creation
+  and menu scheduling use the selected school consistently, and volunteer
+  signup no longer forwards an undocumented `notes` field.
 - The server no longer advertises MCP resources. `resources/list` returns an
   empty list, `resources/read` rejects every URI with `-32602`, and
   `initialize`, `server/discover` and `/.well-known/mcp/server-card.json` no

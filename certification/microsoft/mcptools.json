@@ -312,7 +312,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create Lunch Order Draft"
     }
@@ -361,7 +361,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Pay Lunch Order Draft"
     }
@@ -485,7 +485,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Cancel My Lunch Order"
     }
@@ -493,7 +493,7 @@
   {
     "name": "list_school_events",
     "title": "List School Events",
-    "description": "Returns upcoming events for the user's active school: date, times, location, volunteer shifts, and whether registration is closed. The event IDs returned feed register_for_event; shift IDs feed sign_up_for_volunteer_shift. To review or undo your own registrations and signups, use list_my_event_registrations / cancel_my_event_registration and list_my_volunteer_signups / cancel_my_volunteer_signup. Optionally filter by date range.",
+    "description": "Returns upcoming events for the user's active school: date, times, location, and whether registration is closed. The event IDs returned feed register_for_event and get_school_event - call get_school_event on an event for its volunteer shifts (whose IDs feed sign_up_for_volunteer_shift). To review or undo your own registrations and signups, use list_my_event_registrations / cancel_my_event_registration and list_my_volunteer_signups / cancel_my_volunteer_signup. Optionally filter by date range.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -518,7 +518,7 @@
             "properties": {
               "id": {
                 "type": "string",
-                "description": "Event ID - input to register_for_event, update_school_event, cancel_school_event"
+                "description": "Event ID - input to get_school_event, register_for_event, update_school_event, cancel_school_event"
               },
               "name": {
                 "type": "string",
@@ -555,6 +555,160 @@
       "destructiveHint": false,
       "openWorldHint": false,
       "title": "List School Events"
+    }
+  },
+  {
+    "name": "get_school_event",
+    "title": "Get School Event",
+    "description": "Read-only lookup with no side effects - safe to call repeatedly. Returns one event's full detail for the selected school: date, times, location, capacity, ticket price, status, its volunteer shifts with remaining slots (cancelled shifts excluded), and the caller's own signups on those shifts. Get event_id from list_school_events. The shifts' id values are the shift_id input to sign_up_for_volunteer_shift; the mySignups entries' signupId feeds cancel_my_volunteer_signup.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": "Event ID - from list_school_events"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        }
+      },
+      "required": ["event_id"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Event ID"
+        },
+        "schoolSlug": {
+          "type": "string",
+          "description": "School hosting the event"
+        },
+        "name": {
+          "type": "string",
+          "description": "Event name"
+        },
+        "description": {
+          "type": ["string", "null"],
+          "description": "Event description"
+        },
+        "eventDate": {
+          "type": "string",
+          "description": "Event date, YYYY-MM-DD"
+        },
+        "startsAt": {
+          "type": ["string", "null"],
+          "description": "Start time"
+        },
+        "endsAt": {
+          "type": ["string", "null"],
+          "description": "End time"
+        },
+        "location": {
+          "type": ["string", "null"],
+          "description": "Event location"
+        },
+        "maxCapacity": {
+          "type": ["integer", "null"],
+          "description": "Maximum attendees/tickets; null means unlimited"
+        },
+        "ticketPriceCents": {
+          "type": "integer",
+          "description": "Ticket price in cents (0 = free)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Event status (e.g. active, paused, cancelled)"
+        },
+        "sold": {
+          "type": "integer",
+          "description": "Tickets sold"
+        },
+        "isClosed": {
+          "type": "boolean",
+          "description": "Whether registration is closed"
+        },
+        "visibility": {
+          "type": "string",
+          "description": "Event visibility (public or private)"
+        },
+        "shifts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Volunteer shift ID - input to sign_up_for_volunteer_shift"
+              },
+              "title": {
+                "type": "string",
+                "description": "Shift title"
+              },
+              "description": {
+                "type": ["string", "null"],
+                "description": "Shift description"
+              },
+              "shiftDate": {
+                "type": "string",
+                "description": "Shift date, YYYY-MM-DD"
+              },
+              "startTime": {
+                "type": "string",
+                "description": "Shift start time"
+              },
+              "endTime": {
+                "type": "string",
+                "description": "Shift end time"
+              },
+              "slots": {
+                "type": "integer",
+                "description": "Total volunteer slots"
+              },
+              "filled": {
+                "type": "integer",
+                "description": "Slots already taken"
+              },
+              "status": {
+                "type": "string",
+                "description": "Shift status (open, filled, closed)"
+              }
+            }
+          },
+          "description": "Volunteer shifts attached to the event; cancelled shifts are excluded"
+        },
+        "mySignups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "shiftId": {
+                "type": "string",
+                "description": "Shift the signup is for"
+              },
+              "signupId": {
+                "type": "string",
+                "description": "Signup ID - input to cancel_my_volunteer_signup"
+              },
+              "status": {
+                "type": "string",
+                "description": "Signup status"
+              }
+            }
+          },
+          "description": "Caller's active signups on this event's shifts; cancelled signups are excluded"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "title": "Get School Event"
     }
   },
   {
@@ -628,7 +782,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create School Event (Admin)"
     }
@@ -745,7 +899,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Cancel School Event (Admin)"
     }
@@ -795,7 +949,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Register for Event"
     }
@@ -857,7 +1011,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Cancel My Event Registration"
     }
@@ -927,13 +1081,13 @@
   {
     "name": "sign_up_for_volunteer_shift",
     "title": "Sign Up for Volunteer Shift",
-    "description": "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in list_school_events. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_for_event. WRITE - confirm with the user before signing up.",
+    "description": "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in get_school_event. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_for_event. WRITE - confirm with the user before signing up.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "shift_id": {
           "type": "string",
-          "description": "Volunteer shift ID - from the event's volunteer shifts (list_school_events)"
+          "description": "Volunteer shift ID - from the event's shifts in get_school_event"
         }
       },
       "required": ["shift_id"],
@@ -959,7 +1113,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Sign Up for Volunteer Shift"
     }
@@ -1066,7 +1220,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create School Restaurant (Admin)"
     }
@@ -1209,7 +1363,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Create Restaurant Menu Item (Admin)"
     }
@@ -1344,6 +1498,10 @@
     "inputSchema": {
       "type": "object",
       "properties": {
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to active school)"
+        },
         "restaurant_id": {
           "type": "string",
           "description": "Restaurant ID - from list_school_restaurants"
@@ -1388,7 +1546,7 @@
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false,
       "title": "Schedule Lunch Menu Item (Admin)"
     }

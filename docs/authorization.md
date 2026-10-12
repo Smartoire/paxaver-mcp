@@ -22,7 +22,7 @@ gating in both functions.
 
 ### Legacy name resolution
 
-`tools/list` advertises only the 26 canonical names. `tools/call` first runs
+`tools/list` advertises only the 27 canonical names. `tools/call` first runs
 `resolveToolName`, which maps pre-2.5 names through `TOOL_ALIASES`
 (`apps/mcp/src/lib/policies.ts`) onto the canonical policy and handler — same
 capability, roles, entitlement, and confirmation checks. The retired
@@ -58,6 +58,7 @@ Fields:
 | `discard_lunch_order_draft`    | `ai_write`     | yes         | DESTRUCTIVE, WRITE      | _(any)_                                      | yes     | **yes** |
 | `cancel_my_lunch_order`        | `ai_write`     | yes         | DESTRUCTIVE, WRITE      | _(any)_                                      | yes     | **yes** |
 | `list_school_events`           | `view_events`  | no          | READ                    | _(any)_                                      | no      | no      |
+| `get_school_event`             | `view_events`  | no          | READ                    | _(any)_                                      | no      | no      |
 | `create_school_event`          | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | **yes** |
 | `update_school_event`          | `ai_write`     | yes         | WRITE, ADMIN            | pac_cordinator, event_cordinator             | yes     | **yes** |
 | `cancel_school_event`          | `ai_write`     | yes         | DESTRUCTIVE, ADMIN      | pac_cordinator, event_cordinator             | yes     | **yes** |
