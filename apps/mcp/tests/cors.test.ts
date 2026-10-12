@@ -1,5 +1,5 @@
 /**
- * CORS origin allowlist tests (#1808).
+ * CORS origin allowlist tests.
  *
  * Regression: ALLOWED_ORIGINS wildcard entries are written in
  * 'https://*.domain' form, but the matcher only expanded patterns that

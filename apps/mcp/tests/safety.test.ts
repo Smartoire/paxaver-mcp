@@ -105,7 +105,7 @@ describe('Safety', () => {
     expect(res.headers.get('Referrer-Policy')).toBe('no-referrer');
   });
 
-  // #1523: the MCP host has no indexable content — robots.txt must tell
+  // The MCP host has no indexable content — robots.txt must tell
   // crawlers to skip it entirely (a 404 reads as "allow all").
   it('/robots.txt disallows all crawlers', async () => {
     const res = await request(app, 'https://mcp.paxaver.test/robots.txt', {}, TEST_ENV);

@@ -9,21 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- JSON-RPC batches return one result per request (#2241). Before, every
+- The public security documentation no longer describes a service JWT or an
+  HMAC-signed OAuth `state`. `SECURITY.md`, `README.md`,
+  `docs/authorization.md` and this changelog now describe the real design:
+  the service binding forwards the caller's OAuth access token to the
+  backend, and the OAuth facade passes the client's `state` through to the
+  regional auth server unchanged.
+- `security.txt` now publishes `security@smartoire.com`, matching
+  `SECURITY.md` and the privacy compliance page.
+- JSON-RPC batches return one result per request. Before, every
   message ran but each result was returned as `{}`, so a client could retry
   writes it did not see. Notifications get no entry, and a batch holds at most
   20 messages.
 - The `Idempotency-Key` is now a SHA-256 hash of the user, the tool, the
-  canonical arguments, the `Mcp-Session-Id` and the JSON-RPC `id` (#2241). A
+  canonical arguments, the `Mcp-Session-Id` and the JSON-RPC `id`. A
   resent call in the same session gets the same key. Non-Latin-1 arguments no
   longer break the header.
-- The legacy `order_lunch` tool is removed (#2241). It skipped the draft
+- The legacy `order_lunch` tool is removed. It skipped the draft
   review and the wallet-only payment. It now returns `Unknown tool` (-32601).
-- `update_school_event` sends only its schema fields to the backend (#2241).
-- Access tokens must carry `exp` (#2241).
+- `update_school_event` sends only its schema fields to the backend.
+- Access tokens must carry `exp`.
 - The `Dockerfile` runs as the `node` user, and no longer sets the
-  `ALLOWED_ORIGINS:*` value, which matched no origin (#2241).
-- Token revocation check fails closed (#2134). In staging and production, a
+  `ALLOWED_ORIGINS:*` value, which matched no origin.
+- Token revocation check fails closed. In staging and production, a
   missing `INTERNAL_SERVICE_SECRET` gives `503` on authenticated requests,
   and `GET /health` returns `503` with `status: "degraded"`. A verify
   endpoint error or outage gets one retry, then `503`. A revoked token still
@@ -32,16 +40,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `GET /mcp` returns `405` (#2241). The server sends no server-to-client
+- The server no longer advertises MCP resources. `resources/list` returns an
+  empty list, `resources/read` rejects every URI with `-32602`, and
+  `initialize`, `server/discover` and `/.well-known/mcp/server-card.json` no
+  longer declare a `resources` capability. The four placeholder resources
+  only ever returned a "use the corresponding MCP tool" message.
+- CI now fails when `server.json`, `lhm.plugin.json`,
+  `.codex-plugin/plugin.json` or `certification/microsoft/manifest.json`
+  disagrees with the `package.json` version. The two stale manifests are
+  aligned at 2.7.1.
+- `GET /mcp` returns `405`. The server sends no server-to-client
   notifications, so it no longer holds an idle SSE stream.
 - The `POST /mcp` body is parsed once per request. The unused policy fields
   `financial` and `destructive` are removed; the `classifications` list
-  carries the same information (#2241).
+  carries the same information.
 
 ### Fixed
 
+- `prompts/get` returns a real instruction message for each advertised
+  prompt instead of echoing its description. `lunch_order_helper` uses the
+  optional `student_name` argument.
+- Five tool `annotations.title` values now match their canonical tool
+  titles: `get_my_context`, `get_my_wallet_balance`, `get_lunch_menu`,
+  `list_school_events` and `list_restaurant_menu_items`.
+- Private tracker issue numbers removed from the public changelog, source
+  comments and test names.
 - The stdio bridge (`scripts/stdio-bridge.mjs`) now answers `initialize` and
-  `tools/list` without a token (#2202). The bridge sets the new
+  `tools/list` without a token. The bridge sets the new
   `ANONYMOUS_DISCOVERY=1` var. The server accepts it only when
   `ENVIRONMENT` is `development`. `tools/call` and all other data methods
   still need a token. The bridge now also stops its `wrangler dev` process
@@ -55,7 +80,7 @@ failed.
 
 ### Added
 
-- Alexa routing on `mcp.paxaver.com` for CA, US and MX users (#2056):
+- Alexa routing on `mcp.paxaver.com` for CA, US and MX users:
   `GET /alexa/authorize` (region picker), `POST /alexa/token` (routes by
   the region tag on the code or refresh token) and `POST /alexa` (skill
   endpoint, routes by the token issuer). The skill endpoint verifies the
@@ -70,14 +95,13 @@ failed.
   or forward `price_cents`: draft items carry only `menu_item_id`,
   `menu_item_name`, and `quantity`, and the backend prices each item from
   the daily menu. Requires the backend release that prices drafts
-  server-side — deployed against an older backend, draft creation fails
-  (#1951).
+  server-side — deployed against an older backend, draft creation fails.
 - Removed the `/oauth/callback` helper page. It embedded the `code`,
   `state`, `error`, and `error_description` query values in an inline
   `<script>` through `JSON.stringify`, which does not escape `<`: a
   crafted `</script>` value ran injected JavaScript on the MCP origin and
-  could steal authorization codes (#1972). The endpoint now returns 404.
-- Development dependencies updated (#2073): `wrangler` 4.149.0 brings
+  could steal authorization codes. The endpoint now returns 404.
+- Development dependencies updated: `wrangler` 4.149.0 brings
   `undici` 7.29.1 and `sharp` 0.35.5, which fixes the `undici` advisories
   that `pnpm audit` reported. Patch and minor updates to
   `@cloudflare/workers-types`, `vitest`, `@types/node`, `eslint`,
@@ -85,7 +109,7 @@ failed.
 
 ### Fixed
 
-- MCP OAuth for CA and MX users (#2061). Production accepts tokens from
+- MCP OAuth for CA and MX users. Production accepts tokens from
   `paxaver.ca/auth`, `paxaver.com/auth` and `paxaver.mx/auth`, and routes
   each request to the region of the verified issuer (not the `tenant_id`
   claim). The MCP origin is now the authorization server in the discovery
@@ -132,7 +156,7 @@ failed.
   parallel with the context load. Tokens revoked server-side — e.g. a
   deactivated OAuth client — are rejected with 401 instead of remaining
   valid for the 30-day token lifetime. The check fails closed and runs
-  only when `INTERNAL_SERVICE_SECRET` is provisioned (#1156).
+  only when `INTERNAL_SERVICE_SECRET` is provisioned.
 
 ## [2.5.1] — 2026-09-21
 
@@ -141,7 +165,7 @@ failed.
 - `pay_lunch_order_draft` never relays payment links: wallet-only
   finalize returns top-up guidance for both the 422 insufficient-balance
   path and any split-shaped 200 response carrying `paymentUrl` or
-  `awaiting_payment` (#988).
+  `awaiting_payment`.
 
 ## [2.5.0] — 2026-09-19
 
@@ -235,7 +259,7 @@ Extraction of the MCP server from the private Paxaver monorepo into a standalone
 - Client ID Metadata Document (CIMD) support. ChatGPT, Claude, and Perplexity can authenticate via published metadata documents with PKCE (no client secret).
 - ChatGPT marketplace domain verification. `/.well-known/openai-apps-challenge` endpoint for `CHATGPT_VERIFY_TOKEN`.
 - Streamable HTTP transport. `POST /mcp` as the primary MCP endpoint per protocol version `2025-06-18`, with `GET /mcp` (SSE stream) and `DELETE /mcp` (session termination).
-- Service binding architecture. The MCP worker calls the Paxaver backend via a same-region Cloudflare service binding (`PAXAVER_API`) carrying a short-lived (120s) HS256 service JWT. No D1 binding.
+- Service binding architecture. The MCP worker calls the Paxaver backend via a same-region Cloudflare service binding (`PAXAVER_API`), forwarding the user's OAuth access token. No D1 binding.
 - Two deployment environments. `staging` (`mcp.paxaver.dev`) and `production` (`mcp.paxaver.com`) with dual-region service bindings (`PAXAVER_API_CA`, `PAXAVER_API_US`) routed by JWT `tenant_id`.
 - 31 MCP tools across 6 categories: user and account, wallet, orders and menu, events, admin and restaurant management.
 - Per-tool capability policy table. Every tool has an explicit `TOOL_POLICIES` entry with capability, entitlement requirement, classifications, required roles, mutation/financial/destructive flags, and confirmation requirement.
@@ -243,7 +267,7 @@ Extraction of the MCP server from the private Paxaver monorepo into a standalone
 - Defense-in-depth authorization. `checkToolAuthorization` at the MCP layer plus backend re-checks for school membership, student ownership, and entitlement.
 - Idempotency keys. Mutating tool calls include an `Idempotency-Key` header derived from tool, correlation ID, and critical args.
 - CORS allowlist. Origin-based allowlist with wildcard subdomain support. No reflect-any-origin.
-- CSRF-protected OAuth state. HMAC-signed state tokens with timing-safe verification.
+- OAuth state pass-through. The authorization facade forwards the client's `state` to the regional auth server unchanged.
 - Security headers. `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` on all responses.
 - Error sanitization. Backend errors mapped to generic MCP error codes. No internal detail leakage.
 - Correlation IDs. `X-Correlation-Id` on every request and response for tracing.
@@ -275,9 +299,8 @@ Extraction of the MCP server from the private Paxaver monorepo into a standalone
 ### Security
 
 - No D1, Stripe, or SES credentials in the MCP worker.
-- Service JWTs with 120s TTL and `paxaver-internal` audience.
+- User-token forwarding to the backend over service bindings; no separate service credential.
 - PKCE S256-only enforcement.
-- Timing-safe comparisons for state tokens and secrets.
 - Allowlisted CORS with `Vary: Origin`.
 - Sanitized error responses. No stack traces leaked.
 - Security headers on all responses.

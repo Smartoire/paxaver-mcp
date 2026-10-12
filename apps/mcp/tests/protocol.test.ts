@@ -218,7 +218,7 @@ describe('MCP protocol', () => {
     expect(json.result).toBeTruthy();
   });
 
-  it('removed order_lunch returns -32601 and never reaches the backend (#2241)', async () => {
+  it('removed order_lunch returns -32601 and never reaches the backend', async () => {
     backendCalls.length = 0;
     const res = await mcpPost(
       {
@@ -275,14 +275,118 @@ describe('MCP protocol', () => {
     expect(res.headers.get('Allow')).toBe('POST');
   });
 
-  it('a token without exp is rejected (#2241)', async () => {
+  it('a token without exp is rejected', async () => {
     const token = await makeToken('user-active', undefined, { withExp: false });
     const res = await mcpPost({ jsonrpc: '2.0', id: 30, method: 'ping' }, token);
     expect(res.status).toBe(401);
   });
 });
 
-describe('JSON-RPC batch (#2241)', () => {
+describe('tool metadata', () => {
+  it('every advertised tool annotation title matches its canonical title', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 40, method: 'tools/list' }, FULL_TOKEN);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as unknown as {
+      result: { tools: { name: string; title?: string; annotations?: { title?: string } }[] };
+    };
+    for (const tool of json.result.tools) {
+      expect(tool.annotations?.title, `annotation title drift on ${tool.name}`).toBe(tool.title);
+    }
+  });
+});
+
+describe('resources and prompts', () => {
+  it('initialize advertises prompts but no resources capability', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 41, method: 'initialize', params: {} }, ACTIVE_TOKEN);
+    const json = (await res.json()) as unknown as {
+      result: { capabilities: Record<string, unknown> };
+    };
+    expect(json.result.capabilities.prompts).toBeDefined();
+    expect(json.result.capabilities.resources).toBeUndefined();
+  });
+
+  it('resources/list returns an empty list', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 42, method: 'resources/list' }, ACTIVE_TOKEN);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as unknown as { result: { resources: unknown[] } };
+    expect(json.result.resources).toEqual([]);
+  });
+
+  it('resources/read rejects the formerly advertised paxaver:// URIs', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 43, method: 'resources/read', params: { uri: 'paxaver://user/context' } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number } };
+    expect(json.error.code).toBe(-32602);
+  });
+
+  it('prompts/list returns the advertised prompts', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 44, method: 'prompts/list' }, ACTIVE_TOKEN);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as unknown as { result: { prompts: { name: string }[] } };
+    const names = json.result.prompts.map((p) => p.name);
+    expect(names).toEqual(['daily_lunch_menu', 'wallet_balance', 'upcoming_events', 'lunch_order_helper']);
+  });
+
+  it.each(['daily_lunch_menu', 'wallet_balance', 'upcoming_events'])(
+    'prompts/get %s returns a usable tool instruction',
+    async (name) => {
+      const res = await mcpPost({ jsonrpc: '2.0', id: 45, method: 'prompts/get', params: { name } }, ACTIVE_TOKEN);
+      const json = (await res.json()) as unknown as {
+        result: { description: string; messages: { role: string; content: { text: string } }[] };
+      };
+      expect(json.result.messages).toHaveLength(1);
+      const text = json.result.messages[0]?.content.text ?? '';
+      expect(text).toContain('Call ');
+      expect(text).not.toBe(json.result.description);
+    },
+  );
+
+  it('prompts/get lunch_order_helper interpolates student_name and orders the flow', async () => {
+    const res = await mcpPost(
+      {
+        jsonrpc: '2.0',
+        id: 46,
+        method: 'prompts/get',
+        params: { name: 'lunch_order_helper', arguments: { student_name: 'Alex' } },
+      },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as {
+      result: { messages: { content: { text: string } }[] };
+    };
+    const text = json.result.messages[0]?.content.text ?? '';
+    expect(text).toContain('Alex');
+    for (const tool of ['get_my_context', 'get_lunch_menu', 'create_lunch_order_draft', 'pay_lunch_order_draft']) {
+      expect(text).toContain(tool);
+    }
+    expect(text.indexOf('create_lunch_order_draft')).toBeLessThan(text.indexOf('pay_lunch_order_draft'));
+  });
+
+  it('prompts/get lunch_order_helper works without student_name', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 47, method: 'prompts/get', params: { name: 'lunch_order_helper' } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as {
+      result: { messages: { content: { text: string } }[] };
+    };
+    const text = json.result.messages[0]?.content.text ?? '';
+    expect(text).toContain('create_lunch_order_draft');
+  });
+
+  it('prompts/get rejects an unknown prompt', async () => {
+    const res = await mcpPost(
+      { jsonrpc: '2.0', id: 48, method: 'prompts/get', params: { name: 'not_a_prompt' } },
+      ACTIVE_TOKEN,
+    );
+    const json = (await res.json()) as unknown as { error: { code: number } };
+    expect(json.error.code).toBe(-32602);
+  });
+});
+
+describe('JSON-RPC batch', () => {
   it('returns one result per request and drops notifications', async () => {
     const res = await mcpPost(
       [

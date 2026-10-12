@@ -1,6 +1,6 @@
 /**
  * Tool → backend path mapping. Asserts the exact backend route each tool
- * proxies to — the /api/lunch prefix bug (#912) sent menu tools to routes
+ * proxies to — the /api/lunch prefix bug sent menu tools to routes
  * that do not exist (backend 404 → JSON-RPC dispatch-error), and only a
  * path-level check catches that class of regression.
  */

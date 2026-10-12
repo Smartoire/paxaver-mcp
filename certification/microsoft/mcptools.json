@@ -12,24 +12,15 @@
       "type": "object",
       "properties": {
         "firstName": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "User first name"
         },
         "schoolSlug": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "Active school slug"
         },
         "schoolName": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "Active school display name"
         },
         "students": {
@@ -52,7 +43,7 @@
       "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false,
-      "title": "Get User Info"
+      "title": "Get My Context"
     }
   },
   {
@@ -68,24 +59,15 @@
       "type": "object",
       "properties": {
         "balanceCents": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "Spendable balance in cents"
         },
         "balanceFormatted": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "Balance formatted with the currency symbol"
         },
         "currency": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "ISO currency code (CAD, USD, or MXN)"
         }
       }
@@ -94,7 +76,7 @@
       "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false,
-      "title": "Get Wallet Balance"
+      "title": "Get My Wallet Balance"
     }
   },
   {
@@ -214,10 +196,7 @@
                 "description": "Item display name"
               },
               "restaurantName": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Restaurant offering the item"
               },
               "priceCents": {
@@ -225,10 +204,7 @@
                 "description": "Sale price in cents"
               },
               "availableQty": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
+                "type": ["integer", "null"],
                 "description": "Remaining portions; null means unlimited"
               },
               "dietaryTags": {
@@ -248,7 +224,7 @@
       "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false,
-      "title": "Get Menu"
+      "title": "Get Lunch Menu"
     }
   },
   {
@@ -290,18 +266,11 @@
                 "minimum": 1
               }
             },
-            "required": [
-              "menu_item_id",
-              "menu_item_name",
-              "quantity"
-            ]
+            "required": ["menu_item_id", "menu_item_name", "quantity"]
           }
         }
       },
-      "required": [
-        "menu_date",
-        "items"
-      ],
+      "required": ["menu_date", "items"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -365,9 +334,7 @@
           "default": 0
         }
       },
-      "required": [
-        "order_id"
-      ],
+      "required": ["order_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -419,9 +386,7 @@
           "description": "New date the lunch is served, YYYY-MM-DD"
         }
       },
-      "required": [
-        "order_id"
-      ],
+      "required": ["order_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -457,9 +422,7 @@
           "description": "Draft order ID from create_lunch_order_draft - must still be in draft status"
         }
       },
-      "required": [
-        "order_id"
-      ],
+      "required": ["order_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -495,9 +458,7 @@
           "description": "ID of a finalized order - from list_my_lunch_orders; the order must still be finalized and not yet have labels sent"
         }
       },
-      "required": [
-        "order_id"
-      ],
+      "required": ["order_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -516,10 +477,7 @@
           "description": "Amount refunded to the wallet, in cents"
         },
         "balanceCents": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "Wallet balance after the refund, in cents"
         }
       }
@@ -571,24 +529,15 @@
                 "description": "Event date, YYYY-MM-DD"
               },
               "startsAt": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Start time"
               },
               "endsAt": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "End time"
               },
               "location": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Event location"
               },
               "isClosed": {
@@ -605,7 +554,7 @@
       "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false,
-      "title": "Get Upcoming Events"
+      "title": "List School Events"
     }
   },
   {
@@ -652,10 +601,7 @@
           "description": "Ticket price in cents (0 = free)"
         }
       },
-      "required": [
-        "name",
-        "event_date"
-      ],
+      "required": ["name", "event_date"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -732,17 +678,11 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "active",
-            "cancelled",
-            "completed"
-          ],
+          "enum": ["active", "cancelled", "completed"],
           "description": "Event status - cancelled stops sales, completed closes the event"
         }
       },
-      "required": [
-        "event_id"
-      ],
+      "required": ["event_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -786,9 +726,7 @@
           "description": "Event ID - from list_school_events; cancelling is permanent and cannot be undone"
         }
       },
-      "required": [
-        "event_id"
-      ],
+      "required": ["event_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -830,9 +768,7 @@
           "default": 1
         }
       },
-      "required": [
-        "event_id"
-      ],
+      "required": ["event_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -902,9 +838,7 @@
           "description": "Ticket ID from list_my_event_registrations - must belong to the caller and still be cancellable"
         }
       },
-      "required": [
-        "ticket_id"
-      ],
+      "required": ["ticket_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -966,9 +900,7 @@
           "description": "Signup ID from list_my_volunteer_signups - must belong to the caller and still be active"
         }
       },
-      "required": [
-        "signup_id"
-      ],
+      "required": ["signup_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1004,9 +936,7 @@
           "description": "Volunteer shift ID - from the event's volunteer shifts (list_school_events)"
         }
       },
-      "required": [
-        "shift_id"
-      ],
+      "required": ["shift_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1065,10 +995,7 @@
                 "description": "Restaurant name"
               },
               "description": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Restaurant description"
               },
               "isActive": {
@@ -1076,10 +1003,7 @@
                 "description": "Whether the restaurant is active"
               },
               "logoUrl": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Restaurant logo URL"
               }
             }
@@ -1119,9 +1043,7 @@
           "description": "Sales tax percentage applied to orders (e.g. 5 for 5%)"
         }
       },
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1161,9 +1083,7 @@
           "description": "Restaurant ID - from list_school_restaurants"
         }
       },
-      "required": [
-        "restaurant_id"
-      ],
+      "required": ["restaurant_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1183,10 +1103,7 @@
                 "description": "Item name"
               },
               "description": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Item description"
               },
               "priceCents": {
@@ -1194,10 +1111,7 @@
                 "description": "Sale price in cents"
               },
               "costCents": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
+                "type": ["integer", "null"],
                 "description": "Kitchen cost in cents"
               },
               "isActive": {
@@ -1209,17 +1123,11 @@
                 "description": "Whether the item can currently be ordered"
               },
               "calories": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
+                "type": ["integer", "null"],
                 "description": "Calorie count"
               },
               "ingredients": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "Ingredient list text"
               }
             }
@@ -1232,7 +1140,7 @@
       "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false,
-      "title": "List Menu Items (Admin)"
+      "title": "List Restaurant Menu Items (Admin)"
     }
   },
   {
@@ -1274,10 +1182,7 @@
           "description": "Calorie count"
         }
       },
-      "required": [
-        "restaurant_id",
-        "name"
-      ],
+      "required": ["restaurant_id", "name"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1356,10 +1261,7 @@
           "description": "Sale price in cents (e.g. 550 = $5.50)"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id"
-      ],
+      "required": ["restaurant_id", "menu_item_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1411,10 +1313,7 @@
           "description": "Menu item ID - from list_restaurant_menu_items"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id"
-      ],
+      "required": ["restaurant_id", "menu_item_id"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1462,11 +1361,7 @@
           "description": "Maximum portions for the day; omit for unlimited"
         }
       },
-      "required": [
-        "restaurant_id",
-        "menu_item_id",
-        "menu_date"
-      ],
+      "required": ["restaurant_id", "menu_item_id", "menu_date"],
       "additionalProperties": false
     },
     "outputSchema": {
@@ -1485,10 +1380,7 @@
           "description": "Date the item is orderable, YYYY-MM-DD"
         },
         "availableQty": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "description": "Portion cap for the day; null means unlimited"
         }
       }

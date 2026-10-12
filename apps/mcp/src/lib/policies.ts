@@ -248,7 +248,7 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
 };
 
 /**
- * Bounded legacy-compatibility map (#921): pre-rename tool names that remain
+ * Bounded legacy-compatibility map: pre-rename tool names that remain
  * callable via tools/call but are never advertised in tools/list. Aliases
  * resolve to the canonical handler with identical arguments and semantics —
  * they reuse the canonical policy, so authorization and entitlement checks
