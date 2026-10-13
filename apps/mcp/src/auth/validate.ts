@@ -4,7 +4,9 @@
  * Validates RS256 JWTs from the environment's regional authorization
  * servers via JWKS. Production accepts paxaver.ca/auth, paxaver.com/auth and
  * paxaver.mx/auth; development and staging accept paxaver.dev/auth. The JWT
- * `iss` claim must be one of these issuers (see lib/regions.ts).
+ * `iss` claim must be one of these issuers (see lib/regions.ts), the `aud`
+ * claim must carry this environment's MCP resource audience, and the `scope`
+ * claim must include `tools`.
  *
  * User context (permissions, schoolSlug, studentIds, country) is loaded
  * from the backend via the service-binding API client. The user's region
@@ -76,6 +78,16 @@ async function checkRevocation(env: Env, country: McpCountry, token: string): Pr
   return 'unavailable';
 }
 
+// The resource audience the auth server mints for MCP clients of this
+// environment: the canonical MCP endpoint, not the request origin. A
+// request-derived audience would reject the Docker self-host and local dev,
+// which serve localhost with real environment tokens.
+const MCP_AUDIENCE: Record<Env['ENVIRONMENT'], string> = {
+  production: 'https://mcp.paxaver.com/mcp',
+  staging: 'https://mcp.paxaver.dev/mcp',
+  development: 'https://mcp.paxaver.dev/mcp',
+};
+
 // ponytail: one JWKS per issuer, cached in a Map. Enough for 3 regional issuers.
 // Upgrade path: use a KV-backed JWKS cache for long-lived isolates.
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
@@ -122,18 +134,26 @@ export async function authenticateRequest(
   if (issuer && country) {
     const jwks = getJwks(issuer);
     try {
-      // The auth server always sets aud 'paxaver-api' and adds the MCP URL
-      // only when the client sends an RFC 8707 `resource` parameter; the
-      // `tools` scope is optional. Removing 'paxaver-api' or requiring
-      // `tools` would reject connectors that send neither.
-      // Upgrade path: accept only MCP audiences and require `tools` once the
-      // auth server always sets them for MCP clients.
+      // The auth server mints this environment's MCP resource audience and
+      // the `tools` scope on every MCP client token; a token without them
+      // predates that guarantee and gets a 401 — the client refreshes once
+      // and recovers.
       const { payload } = await jwtVerify(token, jwks, {
         algorithms: ['RS256'],
         issuer,
-        audience: ['paxaver-api', 'mcp', origin, `${origin}/mcp`],
+        audience: MCP_AUDIENCE[env.ENVIRONMENT],
         requiredClaims: ['exp'],
       });
+
+      const scopes = typeof payload.scope === 'string' ? payload.scope.split(' ') : [];
+      if (!scopes.includes('tools')) {
+        return {
+          ok: false,
+          status: 401,
+          error: { code: 'INSUFFICIENT_SCOPE', message: 'Token is missing the required tools scope' },
+          wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp", error="insufficient_scope", scope="tools"`,
+        };
+      }
 
       if (payload.sub) {
         // Revocation check + context load run in parallel — the context hop

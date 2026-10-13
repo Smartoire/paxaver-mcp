@@ -12,8 +12,10 @@ import { request } from './request.js';
 import { TEST_TOKEN, REVOKED_TOKEN, TEST_ENV, mockBackend, backendCalls, makeToken } from './jwt-auth.js';
 
 // The Docker self-host runs with ENVIRONMENT=production, so it needs a token
-// from a production issuer.
-const PRODUCTION_TOKEN = await makeToken('user-1', 'https://paxaver.com/auth');
+// from a production issuer with the production MCP audience.
+const PRODUCTION_TOKEN = await makeToken('user-1', 'https://paxaver.com/auth', {
+  audience: ['paxaver-api', 'https://mcp.paxaver.com/mcp'],
+});
 
 function mcpCall(token: string, envOverrides: Record<string, unknown> = {}) {
   return request(

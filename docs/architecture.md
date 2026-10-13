@@ -149,7 +149,8 @@ each region in turn (`ca`, `us`, `mx`). The first answer that is not
 
 1. **AI client** sends `POST /mcp` with `Authorization: Bearer <rs256-jwt>`.
 2. **Auth middleware** (`src/auth/validate.ts`) verifies the JWT (RS256, via JWKS
-   from the auth worker, audience `paxaver-api` / `mcp` / request origin), then
+   from the auth worker, audience this environment's `<mcp origin>/mcp`, scope
+   `tools`), then
    calls the backend's `GET /api/users/me/context` over the service binding to
    load the live user context (permissions, schoolSlug, studentIds,
    isPlatformAdmin). Context is reloaded on **every** request — there is no
