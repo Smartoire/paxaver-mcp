@@ -45,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   endpoint error or outage gets one retry, then `503`. A revoked token still
   gets `401`. Only the new `REVOCATION_CHECK=skip` var skips the check without
   the secret. Local development and the `Dockerfile` (self-host) set it.
+- Access tokens must carry this environment's MCP resource audience
+  (`<mcp origin>/mcp`) and the `tools` scope — the legacy `paxaver-api`,
+  `mcp` and request-origin audiences no longer pass. A token minted before
+  the auth server added both gets `401` with a `WWW-Authenticate` challenge;
+  a standard OAuth client recovers with one token refresh.
 
 ### Changed
 

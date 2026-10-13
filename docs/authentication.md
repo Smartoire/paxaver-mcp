@@ -53,10 +53,14 @@ The MCP server validates RS256 JWTs using the auth worker's JWKS endpoint
 const { payload } = await jwtVerify(token, jwks, {
   algorithms: ['RS256'],
   issuer, // a regional issuer of this environment (see below)
-  audience: ['paxaver-api', 'mcp', origin, `${origin}/mcp`],
+  audience: MCP_AUDIENCE[env.ENVIRONMENT], // this environment's canonical MCP endpoint
   requiredClaims: ['exp'],
 });
 ```
+
+The verified token must also carry the `tools` scope; a token without it
+gets `401` with a `WWW-Authenticate` challenge (`error="insufficient_scope"`,
+`scope="tools"`).
 
 The JWKS is fetched from `{issuer}/.well-known/jwks.json` and cached per-isolate
 (`src/auth/validate.ts:34`). Workers isolates are short-lived, so the cache is
@@ -64,12 +68,13 @@ effectively per-request.
 
 ### Token claims
 
-| Claim | Value                                                        |
-| ----- | ------------------------------------------------------------ |
-| `sub` | Paxaver user ID                                              |
-| `iss` | Regional auth server (for example `https://paxaver.ca/auth`) |
-| `aud` | `paxaver-api`, `mcp`, the request origin, or `<origin>/mcp`  |
-| `exp` | Token expiration. Required: a token without `exp` gets `401` |
+| Claim   | Value                                                                                |
+| ------- | ------------------------------------------------------------------------------------ |
+| `sub`   | Paxaver user ID                                                                      |
+| `iss`   | Regional auth server (for example `https://paxaver.ca/auth`)                         |
+| `aud`   | Must contain the MCP resource audience (`https://mcp.paxaver.com/mcp` in production) |
+| `scope` | Must include `tools`                                                                 |
+| `exp`   | Token expiration. Required: a token without `exp` gets `401`                         |
 
 ### Regional routing
 

@@ -31,6 +31,8 @@ const productionEnv = {
 } as unknown as Env;
 const developmentEnv = { ...TEST_ENV, ENVIRONMENT: 'development' } as unknown as Env;
 const origin = 'https://mcp.paxaver.com';
+// Tokens minted for production carry the canonical production MCP audience.
+const PRODUCTION_AUDIENCE = ['paxaver-api', 'https://mcp.paxaver.com/mcp'];
 
 describe('OAuth issuer policy', () => {
   it.each([
@@ -38,7 +40,7 @@ describe('OAuth issuer policy', () => {
     ['https://paxaver.com/auth', 'us'],
     ['https://paxaver.mx/auth', 'mx'],
   ])('accepts %s in production and routes to the %s backend', async (issuer, region) => {
-    const token = await makeToken('user-1', issuer);
+    const token = await makeToken('user-1', issuer, { audience: PRODUCTION_AUDIENCE });
     regionCalls.length = 0;
     const result = await authenticateRequest(productionEnv, `Bearer ${token}`, origin);
 
@@ -49,7 +51,7 @@ describe('OAuth issuer policy', () => {
   it.each(['https://paxaver.dev/auth', 'https://evil.example/auth', 'https://paxaver.com/auth/'])(
     'rejects %s in production',
     async (issuer) => {
-      const token = await makeToken('user-1', issuer);
+      const token = await makeToken('user-1', issuer, { audience: PRODUCTION_AUDIENCE });
       const callsBefore = backendCalls.length;
       const result = await authenticateRequest(productionEnv, `Bearer ${token}`, origin);
 

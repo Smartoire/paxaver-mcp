@@ -5,6 +5,10 @@
  * global fetch; the stub serves this keypair's public JWK for the test
  * issuer. Backend calls still go through the mocked service bindings,
  * which resolve user context by the JWT `sub` claim.
+ *
+ * Default claims mirror what the auth server mints for MCP clients: the
+ * `paxaver-api` audience plus this environment's MCP resource audience, and
+ * the `tools` scope.
  */
 
 import { generateKeyPair, exportJWK, SignJWT, decodeJwt } from 'jose';
@@ -32,12 +36,22 @@ vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
   return realFetch(input, init);
 });
 
-export async function makeToken(userId: string, issuer = TEST_ISSUER, { withExp = true } = {}): Promise<string> {
-  const jwt = new SignJWT({ tenant_id: 'user-ca' })
+export async function makeToken(
+  userId: string,
+  issuer = TEST_ISSUER,
+  {
+    withExp = true,
+    scope = 'openid tools',
+    audience = ['paxaver-api', 'https://mcp.paxaver.dev/mcp'],
+  }: { withExp?: boolean; scope?: string | null; audience?: string | string[] } = {},
+): Promise<string> {
+  const claims: Record<string, unknown> = { tenant_id: 'user-ca' };
+  if (scope) claims.scope = scope;
+  const jwt = new SignJWT(claims)
     .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
     .setSubject(userId)
     .setIssuer(issuer)
-    .setAudience('paxaver-api')
+    .setAudience(audience)
     .setIssuedAt();
   if (withExp) jwt.setExpirationTime('1h');
   return jwt.sign(privateKey);

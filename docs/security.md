@@ -22,7 +22,8 @@ Validation flow:
 
 1. Extract Bearer token from `Authorization` header.
 2. Reject a token whose `iss` is not an issuer of this environment.
-3. Verify RS256 signature against the issuer's JWKS, and check `iss`, `aud`, `exp`.
+3. Verify RS256 signature against the issuer's JWKS, and check `iss`, `aud`
+   (the MCP resource audience), `scope` (`tools`) and `exp`.
 4. The region of the issuer is the user region (CA/US/MX).
 5. Call the regional backend's `/api/users/me/context` to load the
    full `AuthContext` (permissions, schoolSlug, studentIds, country).

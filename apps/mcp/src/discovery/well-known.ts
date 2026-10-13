@@ -21,9 +21,9 @@ const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'tools'];
 // Points to the facade on this origin. The `resource` field is the
 // canonical identifier of the protected resource — the MCP endpoint URL
 // (`<origin>/mcp`), the same URL clients configure as the MCP server.
-// Clients send it as the OAuth `resource` parameter and it lands verbatim in
-// the token audience, so validate.ts accepts both the origin and the
-// endpoint form.
+// Clients send it as the OAuth `resource` parameter and it lands in the
+// token audience alongside the canonical environment audience that
+// validate.ts requires.
 function protectedResourceHandler(request: Request): Response {
   const origin = originFrom(request.url);
   return Response.json({
