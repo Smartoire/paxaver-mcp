@@ -354,7 +354,7 @@ Cancels a school event. **DESTRUCTIVE** — cancelled events cannot be reactivat
 
 ### `register_for_event`
 
-Registers the authenticated user (or their student) for an event. Paid
+Registers the authenticated user for an event, with 1–20 tickets. Paid
 versus free registration is explicit in the event's `ticket_price_cents`.
 **WRITE**; for paid events treat as FINANCIAL — confirm before calling.
 

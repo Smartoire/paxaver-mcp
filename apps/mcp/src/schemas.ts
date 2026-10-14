@@ -850,7 +850,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'register_for_event',
     title: 'Register for Event',
     description:
-      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, minimum 1 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance or when the event is sold out or registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering.",
+      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance or when the event is sold out or registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -858,7 +858,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
           type: 'string',
           description: 'Event ID from list_school_events - registration must still be open (check the closed flag)',
         },
-        quantity: { type: 'integer', description: 'Number of tickets', minimum: 1, default: 1 },
+        quantity: { type: 'integer', description: 'Number of tickets', minimum: 1, maximum: 20, default: 1 },
       },
       required: ['event_id'],
       additionalProperties: false,
