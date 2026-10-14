@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.3] — 2026-10-14
+
+### Changed
+
+- Redesigned the regional country picker with country flags, light/dark
+  presentation, and accessible contrast.
+
+## [2.7.2] — 2026-10-13
+
 ### Added
 
 - `get_school_event` returns one event's detail: date, times, location,
