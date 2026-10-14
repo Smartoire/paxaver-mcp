@@ -91,13 +91,9 @@ export async function makeIdempotencyKey(
  * Platform admins are exempt — they may act on any school.
  */
 function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): void {
-  // If the context has a non-empty studentIds list, the supplied
-  // student_id must be in that list.
-  if (args.student_id !== undefined && ctx.studentIds?.length) {
-    const sid = String(args.student_id);
-    if (!ctx.studentIds.includes(sid)) {
-      throw new InvalidParamsError('student_id is not permitted for this user');
-    }
+  // Non-admin callers must supply a student_id from their context.
+  if (args.student_id !== undefined && !ctx.isPlatformAdmin && !ctx.studentIds?.includes(String(args.student_id))) {
+    throw new InvalidParamsError('student_id is not permitted for this user');
   }
   // school_slug: if the caller supplies one, it must match the user's own
   // school. If we don't know the user's school (empty ctx.schoolSlug) and

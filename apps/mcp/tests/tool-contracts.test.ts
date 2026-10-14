@@ -751,6 +751,18 @@ describe('tool → backend contract', () => {
     expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
   });
 
+  it('register_for_program rejects a student when the caller has no linked students', async () => {
+    const env = {
+      ...TEST_ENV,
+      PAXAVER_API_CA: contextOverrideBackend({ studentIds: [] }),
+      PAXAVER_API_US: contextOverrideBackend({ studentIds: [] }),
+    };
+    const res = await postTool('register_for_program', { program_id: 'p1', student_id: 'other-student' }, env);
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error).toEqual({ code: -32602, message: 'student_id is not permitted for this user' });
+    expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+  });
+
   it('list_program_registrations hits /api/programs/registrations with the optional program filter', async () => {
     const c = await callTool('list_program_registrations', { program_id: 'p1' });
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/programs/registrations');
