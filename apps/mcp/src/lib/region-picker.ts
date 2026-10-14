@@ -62,7 +62,7 @@ export function regionPickerPage(
 <title>${escapeHtml(title)}</title>
 <style>
 :root{color-scheme:light dark;--accent:#0051CC;--ink:#191B24;--page:#F2F3FF;--card:#FFFFFF;--line:#C2C6D8;--muted:#565B72;--accent-soft:rgba(0,81,204,.07)}
-@media (prefers-color-scheme:dark){:root{--accent:#0167FF;--ink:#E1E2EE;--page:#191B24;--card:#21232F;--line:#424655;--muted:#A9ADC2;--accent-soft:rgba(1,103,255,.16)}}
+@media (prefers-color-scheme:dark){:root{--accent:#0167FF;--ink:#E1E2EE;--page:#191B24;--card:#21232F;--line:#424655;--muted:#A9ADC2;--accent-soft:rgba(1,103,255,.16)}.tag{color:var(--ink)}}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--page);color:var(--ink)}
 .card{width:100%;max-width:26rem;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 24px;box-shadow:0 8px 24px rgba(25,27,36,.08)}
