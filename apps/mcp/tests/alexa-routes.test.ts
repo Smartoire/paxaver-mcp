@@ -104,13 +104,26 @@ describe('GET /alexa/authorize', () => {
     ['MX', 'https://paxaver.mx'],
     ['US', 'https://paxaver.com'],
     ['CA', 'https://paxaver.ca'],
-  ])('lists the visitor country %s first, and still offers all three', async (country, first) => {
+  ])('lists the visitor country %s first, tagged Suggested', async (country, first) => {
     const req = new Request(`http://localhost/alexa/authorize${query}`);
     Object.defineProperty(req, 'cf', { value: { country } });
     const res = await app.fetch(req, PROD_ENV as never);
-    const links = hrefs(await res.text());
-    expect(links).toHaveLength(3);
-    expect(links[0]!.startsWith(`${first}/`)).toBe(true);
+    const items = [...(await res.text()).matchAll(/<li><a href="([^"]+)">([\s\S]*?)<\/a><\/li>/g)];
+    expect(items).toHaveLength(3);
+    expect(items[0]![1]!.startsWith(`${first}/`)).toBe(true);
+    expect(items[0]![2]).toContain('Suggested');
+  });
+
+  it('renders one aria-hidden SVG flag per link and no script or img', async () => {
+    const res = await request(app, `/alexa/authorize${query}`, {}, PROD_ENV);
+    const html = await res.text();
+    const items = [...html.matchAll(/<li><a href="([^"]+)">([\s\S]*?)<\/a><\/li>/g)];
+    expect(items).toHaveLength(3);
+    for (const item of items) {
+      expect(item[2]!.match(/<svg class="flag"[^>]*aria-hidden="true"/g)).toHaveLength(1);
+    }
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('<img');
   });
 
   it('escapes the query in HTML', async () => {

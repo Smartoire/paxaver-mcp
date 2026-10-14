@@ -95,13 +95,27 @@ describe('GET /oauth/authorize', () => {
     expect(hrefs(await res.text())).toEqual([`${ISSUER.us}/authorize?client_id=id-us`]);
   });
 
-  it('lists the visitor country first', async () => {
+  it('lists the visitor country first, tagged Suggested', async () => {
     const req = new Request(`http://localhost/oauth/authorize${query}`);
     Object.defineProperty(req, 'cf', { value: { country: 'MX' } });
     const res = await app.fetch(req, PROD_ENV as never);
-    const links = hrefs(await res.text());
-    expect(links).toHaveLength(3);
-    expect(links[0]!.startsWith(`${ISSUER.mx}/`)).toBe(true);
+    const items = [...(await res.text()).matchAll(/<li><a href="([^"]+)">([\s\S]*?)<\/a><\/li>/g)];
+    expect(items).toHaveLength(3);
+    expect(items[0]![1]!.startsWith(`${ISSUER.mx}/`)).toBe(true);
+    expect(items[0]![2]).toContain('Suggested');
+    expect(items.slice(1).every((m) => !m[2]!.includes('Suggested'))).toBe(true);
+  });
+
+  it('renders one aria-hidden SVG flag per link and no script or img', async () => {
+    const res = await request(app, `/oauth/authorize${query}`, {}, PROD_ENV);
+    const html = await res.text();
+    const items = [...html.matchAll(/<li><a href="([^"]+)">([\s\S]*?)<\/a><\/li>/g)];
+    expect(items).toHaveLength(3);
+    for (const item of items) {
+      expect(item[2]!.match(/<svg class="flag"[^>]*aria-hidden="true"/g)).toHaveLength(1);
+    }
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('<img');
   });
 
   it('sets CSP and no-store, and escapes the query', async () => {
