@@ -20,14 +20,14 @@
     "full": "Paxaver MCP"
   },
   "description": {
-    "short": "MCP connector for Paxaver school lunch, wallet, and events.",
-    "full": "Paxaver MCP connects AI assistants to your Paxaver school community account. Use it to check lunch menus, order meals, view the wallet balance, see upcoming school events, and manage restaurants and daily menus when you have an admin or PAC role.\n\nAccount requirement and limitations:\n- To use this MCP connector, you need an active Paxaver account. Please contact our support team for more details.\n- Paxaver MCP does not store or process personal data directly; it validates tokens and delegates all data operations to the Paxaver platform.\n- Capabilities and available tools depend on your Paxaver role and school.\n\nUseful links:\n- Sign up: https://paxaver.com/auth/signup\n- Get started: https://paxaver.com/help\n- Contact us: https://paxaver.com/contact\n- Help: https://paxaver.com/help/parent\n- Terms of Service: https://paxaver.com/privacy/terms\n- Privacy Policy: https://paxaver.com/privacy"
+    "short": "MCP connector for Paxaver school lunch, wallet, events, and programs.",
+    "full": "Paxaver MCP connects AI assistants to your Paxaver school community account. Use it to check lunch menus, order meals, view wallet balance and history, see upcoming school events, enroll in school programs, and manage restaurants, event check-in, and daily menus when you have an admin or PAC role.\n\nAccount requirement and limitations:\n- To use this MCP connector, you need an active Paxaver account. Please contact our support team for more details.\n- Paxaver MCP does not store or process personal data directly; it validates tokens and delegates all data operations to the Paxaver platform.\n- Capabilities and available tools depend on your Paxaver role and school.\n\nUseful links:\n- Sign up: https://paxaver.com/auth/signup\n- Get started: https://paxaver.com/help\n- Contact us: https://paxaver.com/contact\n- Help: https://paxaver.com/help/parent\n- Terms of Service: https://paxaver.com/privacy/terms\n- Privacy Policy: https://paxaver.com/privacy"
   },
   "agentConnectors": [
     {
       "id": "paxaver-mcp",
       "displayName": "Paxaver MCP",
-      "description": "Paxaver MCP connector for school lunch, wallet, and events.",
+      "description": "Paxaver MCP connector for school lunch, wallet, events, and programs.",
       "toolSource": {
         "remoteMcpServer": {
           "mcpServerUrl": "https://mcp.paxaver.com/mcp",

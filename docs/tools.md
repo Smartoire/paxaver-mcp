@@ -58,7 +58,9 @@ they are a guardian of, and available roles. **Always call this first.**
 ### `get_my_wallet_balance`
 
 Returns the current wallet balance for the authenticated user at their active
-school. Use this to check funds before ordering lunch.
+school. Use this to check funds before ordering lunch. The response also
+carries `topUpUrl` — the caller's regional wallet top-up page on the Paxaver
+site — to hand to the user when funds are low. Top-ups never run through MCP.
 
 |                     |                         |
 | ------------------- | ----------------------- |
@@ -81,12 +83,45 @@ school. Use this to check funds before ordering lunch.
   "properties": {
     "balanceCents": { "type": "number" },
     "balanceFormatted": { "type": "string" },
-    "currency": { "type": "string" }
+    "currency": { "type": "string" },
+    "topUpUrl": { "type": "string" }
   }
 }
 ```
 
 **Backend:** `GET /api/wallet/balance`
+
+---
+
+### `list_my_wallet_transactions`
+
+Returns the caller's own wallet transaction history — type, signed amount,
+running balance, description, status, timestamps, and school — newest first
+with cursor pagination (`nextCursor` → `cursor`). Never exposes card numbers,
+payment-method identifiers, wallet internals, or checkout links.
+
+|                     |                         |
+| ------------------- | ----------------------- |
+| **Capability**      | `view_balance`          |
+| **Required roles**  | _(any member)_          |
+| **Classifications** | READ, PRIVACY_SENSITIVE |
+| **Confirmation**    | no                      |
+
+**Input schema**
+
+| Property      | Type    | Required | Description                                                        |
+| ------------- | ------- | -------- | ------------------------------------------------------------------ |
+| `student_id`  | string  | no       | Filter to one of the caller's own students                         |
+| `school_slug` | string  | no       | Scope to a school the caller belongs to; defaults to active school |
+| `all_schools` | boolean | no       | `true` returns history across all of the caller's schools          |
+| `type`        | string  | no       | Transaction type (e.g. `deposit`, `payment`, `refund`)             |
+| `status`      | string  | no       | `pending` \| `completed` \| `failed` \| `cancelled`                |
+| `start`       | string  | no       | Range start, YYYY-MM-DD or ISO timestamp                           |
+| `end`         | string  | no       | Range end, YYYY-MM-DD or ISO timestamp                             |
+| `per_page`    | integer | no       | Page size, 1–100 (default 50)                                      |
+| `cursor`      | string  | no       | `nextCursor` from the previous response                            |
+
+**Backend:** `GET /api/wallet/transactions`
 
 ---
 
@@ -269,6 +304,35 @@ feeds `cancel_my_volunteer_signup`. Get `event_id` from `list_school_events`.
 
 ---
 
+### `list_event_attendees` _(admin)_
+
+Lists the attendee tickets for one school event — the minimum check-in desk
+needs: ticket `id`, attendee name, `quantity`, `status`, and `checkedInAt`.
+Contact details, internal user ids, and payment amounts are intentionally not
+returned. Paginate with `per_page` and `offset`; `hasMore` reports whether
+another page exists. Get `event_id` from `list_school_events`; the `id` values
+feed `check_in_event_ticket`.
+
+|                     |                                  |
+| ------------------- | -------------------------------- |
+| **Capability**      | _(null — admin only)_            |
+| **Required roles**  | pac_cordinator, event_cordinator |
+| **Classifications** | READ, ADMIN, PRIVACY_SENSITIVE   |
+| **Confirmation**    | no                               |
+
+**Input schema**
+
+| Property      | Type    | Required | Description                    |
+| ------------- | ------- | -------- | ------------------------------ |
+| `event_id`    | string  | yes      | From `list_school_events`      |
+| `school_slug` | string  | no       | Defaults to active school      |
+| `per_page`    | integer | no       | Page size, 1–100 (default 50)  |
+| `offset`      | integer | no       | Rows to skip for the next page |
+
+**Backend:** `GET /api/events/{event_id}/tickets`
+
+---
+
 ### `create_school_event` _(admin)_
 
 Creates a school event. Do not create events without explicit user request.
@@ -352,11 +416,54 @@ Cancels a school event. **DESTRUCTIVE** — cancelled events cannot be reactivat
 
 ---
 
+### `check_in_event_ticket` _(admin)_
+
+Marks one attendee ticket as checked in (`ticket_id` from
+`list_event_attendees`). Only `paid` tickets can check in — a repeat call on
+an already checked-in ticket is rejected by the backend.
+
+|                          |                                  |
+| ------------------------ | -------------------------------- |
+| **Capability**           | `ai_write`                       |
+| **Entitlement required** | yes                              |
+| **Required roles**       | pac_cordinator, event_cordinator |
+| **Classifications**      | WRITE, ADMIN                     |
+| **Confirmation**         | **yes**                          |
+
+**Input schema**
+
+| Property      | Type   | Required | Description                 |
+| ------------- | ------ | -------- | --------------------------- |
+| `ticket_id`   | string | yes      | From `list_event_attendees` |
+| `school_slug` | string | no       | Defaults to active school   |
+
+**Backend:** `POST /api/events/tickets/{ticket_id}/check-in`
+
+---
+
 ### `register_for_event`
 
-Registers the authenticated user (or their student) for an event. Paid
-versus free registration is explicit in the event's `ticket_price_cents`.
-**WRITE**; for paid events treat as FINANCIAL — confirm before calling.
+Registers the authenticated user for an event and issues tickets (`quantity`
+tickets for the caller). For paid events the wallet is charged
+`quantity × ticket_price_cents`; the call fails on insufficient balance with
+an error carrying the regional Paxaver top-up page — card payments are never
+offered through MCP. **FINANCIAL + WRITE** — confirm before calling.
+
+|                          |                  |
+| ------------------------ | ---------------- |
+| **Capability**           | `ai_write`       |
+| **Entitlement required** | yes              |
+| **Required roles**       | _(any member)_   |
+| **Classifications**      | FINANCIAL, WRITE |
+| **Confirmation**         | **yes**          |
+
+**Input schema**
+
+| Property      | Type    | Required | Description                   |
+| ------------- | ------- | -------- | ----------------------------- |
+| `event_id`    | string  | yes      | From `list_school_events`     |
+| `quantity`    | integer | no       | Number of tickets (default 1) |
+| `school_slug` | string  | no       | Defaults to active school     |
 
 **Backend:** `POST /api/events/{event_id}/register`
 
@@ -409,6 +516,173 @@ Cancels one of the caller's own volunteer signups (`signup_id` required).
 **DESTRUCTIVE** — confirm.
 
 **Backend:** `POST /api/volunteers/signups/{signup_id}/cancel`
+
+---
+
+### `create_volunteer_shift` _(admin)_
+
+Creates a volunteer shift at the active school, optionally attached to an
+event (`event_id` must belong to the same school). Parents discover the shift
+via `get_school_event` and sign up through `sign_up_for_volunteer_shift`.
+
+|                          |                            |
+| ------------------------ | -------------------------- |
+| **Capability**           | `ai_write`                 |
+| **Entitlement required** | yes                        |
+| **Required roles**       | pac_cordinator, pac_member |
+| **Classifications**      | WRITE, ADMIN               |
+| **Confirmation**         | **yes**                    |
+
+**Input schema**
+
+| Property      | Type    | Required | Description                  |
+| ------------- | ------- | -------- | ---------------------------- |
+| `title`       | string  | yes      | Shift title shown to parents |
+| `shift_date`  | string  | yes      | YYYY-MM-DD                   |
+| `start_time`  | string  | yes      | HH:MM                        |
+| `end_time`    | string  | yes      | HH:MM                        |
+| `school_slug` | string  | no       | Defaults to active school    |
+| `event_id`    | string  | no       | Event the shift belongs to   |
+| `description` | string  | no       | Description of the work      |
+| `slots`       | integer | no       | Volunteer slots (default 1)  |
+
+**Backend:** `POST /api/volunteers/shifts`
+
+---
+
+## Programs
+
+Programs are before/after-school care, enrichment, and camp registrations.
+`list_school_programs` is the catalog; `register_for_program` enrolls one of
+the caller's students (or waitlists them at capacity); the two admin tools
+manage the waitlist. Registration records the program fee — no wallet charge
+happens at registration.
+
+### `list_school_programs`
+
+Returns the active programs for the user's active school: name, description,
+type, dates, fee, capacity, and current enrollment. Filter by `program_type`
+(`before_school`, `after_school`, `enrichment`, `camp`).
+
+|                     |                |
+| ------------------- | -------------- |
+| **Capability**      | `view_events`  |
+| **Required roles**  | _(any member)_ |
+| **Classifications** | READ           |
+| **Confirmation**    | no             |
+
+**Input schema**
+
+| Property       | Type   | Required | Description                |
+| -------------- | ------ | -------- | -------------------------- |
+| `school_slug`  | string | no       | Defaults to active school  |
+| `program_type` | string | no       | Filter to one program type |
+
+**Backend:** `GET /api/programs`
+
+---
+
+### `register_for_program`
+
+Registers one of the caller's own students for a program (`program_id` from
+`list_school_programs`, `student_id` from `get_my_context`). Returns
+`registered` when a seat is free or `waitlist` at capacity — the backend
+enforces capacity atomically. The fee (`amountCents`) is recorded on the
+registration; nothing is charged at this point. **WRITE** — confirm.
+
+|                          |                |
+| ------------------------ | -------------- |
+| **Capability**           | `ai_write`     |
+| **Entitlement required** | yes            |
+| **Required roles**       | _(any member)_ |
+| **Classifications**      | WRITE          |
+| **Confirmation**         | **yes**        |
+
+**Input schema**
+
+| Property      | Type   | Required | Description                       |
+| ------------- | ------ | -------- | --------------------------------- |
+| `program_id`  | string | yes      | From `list_school_programs`       |
+| `student_id`  | string | yes      | Caller's own student              |
+| `school_slug` | string | no       | Defaults to active school         |
+| `notes`       | string | no       | Note to staff on the registration |
+
+**Backend:** `POST /api/programs/registrations`
+
+---
+
+### `list_program_registrations` _(admin)_
+
+Lists the school's program registrations — including waitlisted ones — with
+student name, status, fee, and notes. Use it to find the registration `id` for
+`admit_program_registration`; filter to one program with `program_id`.
+
+|                     |                       |
+| ------------------- | --------------------- |
+| **Capability**      | _(null — admin only)_ |
+| **Required roles**  | pac_cordinator        |
+| **Classifications** | READ, ADMIN           |
+| **Confirmation**    | no                    |
+
+**Input schema**
+
+| Property      | Type   | Required | Description               |
+| ------------- | ------ | -------- | ------------------------- |
+| `school_slug` | string | no       | Defaults to active school |
+| `program_id`  | string | no       | Filter to one program     |
+
+**Backend:** `GET /api/programs/registrations`
+
+---
+
+### `cancel_program_registration`
+
+Cancels one of the caller's own students' program registrations
+(`registration_id` from `register_for_program`). When the program has a
+waitlist, the next waitlisted registration is promoted automatically.
+**DESTRUCTIVE** — confirm.
+
+|                          |                    |
+| ------------------------ | ------------------ |
+| **Capability**           | `ai_write`         |
+| **Entitlement required** | yes                |
+| **Required roles**       | _(any member)_     |
+| **Classifications**      | DESTRUCTIVE, WRITE |
+| **Confirmation**         | **yes**            |
+
+**Input schema**
+
+| Property          | Type   | Required | Description                 |
+| ----------------- | ------ | -------- | --------------------------- |
+| `registration_id` | string | yes      | From `register_for_program` |
+| `school_slug`     | string | no       | Defaults to active school   |
+
+**Backend:** `POST /api/programs/registrations/{registration_id}/cancel`
+
+---
+
+### `admit_program_registration` _(admin)_
+
+Manually promotes a waitlisted registration to a seat. The backend rejects
+registrations that are not in `waitlist` status. Find the registration `id`
+with `list_program_registrations`.
+
+|                          |                |
+| ------------------------ | -------------- |
+| **Capability**           | `ai_write`     |
+| **Entitlement required** | yes            |
+| **Required roles**       | pac_cordinator |
+| **Classifications**      | WRITE, ADMIN   |
+| **Confirmation**         | **yes**        |
+
+**Input schema**
+
+| Property          | Type   | Required | Description                       |
+| ----------------- | ------ | -------- | --------------------------------- |
+| `registration_id` | string | yes      | From `list_program_registrations` |
+| `school_slug`     | string | no       | Defaults to active school         |
+
+**Backend:** `POST /api/programs/registrations/{registration_id}/admit`
 
 ---
 

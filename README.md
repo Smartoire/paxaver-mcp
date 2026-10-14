@@ -17,9 +17,10 @@
 
 The Paxaver MCP server lets AI assistants (ChatGPT, Claude, Perplexity, and any
 MCP-compatible client) act on behalf of a Paxaver user: check a lunch menu, order
-lunch, register for fundraising events, volunteer, and — for school administrators
-— manage restaurants, menu items,
-events, and daily orders.
+lunch, review wallet balance and transaction history, register for fundraising
+events, enroll students in school programs, volunteer, and — for school
+administrators — manage restaurants, menu items, events, attendee check-in,
+volunteer shifts, program waitlists, and daily orders.
 
 It is a **thin adapter**. It contains no business logic and never touches the
 database, Stripe, or email directly. Every action is delegated to the private
@@ -147,16 +148,17 @@ The worker reads two Worker secrets, `INTERNAL_SERVICE_SECRET` and
 
 ## Tools
 
-The server exposes 27 tools grouped into five categories. Visibility in
+The server exposes 36 tools grouped into seven categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
 | Category                | Tools                                                                                                                                                                                                                   |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User / account          | `get_my_context`, `get_my_wallet_balance`                                                                                                                                                                               |
+| User / wallet           | `get_my_context`, `get_my_wallet_balance`, `list_my_wallet_transactions`                                                                                                                                                |
 | Lunch ordering          | `get_lunch_menu`, `list_my_lunch_orders`, `create_lunch_order_draft`, `update_lunch_order_draft`, `discard_lunch_order_draft`, `pay_lunch_order_draft`, `cancel_my_lunch_order`                                         |
 | Events & volunteering   | `list_school_events`, `get_school_event`, `register_for_event`, `list_my_event_registrations`, `cancel_my_event_registration`, `list_my_volunteer_signups`, `sign_up_for_volunteer_shift`, `cancel_my_volunteer_signup` |
-| Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`                                                                                                                                                     |
+| Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`, `list_event_attendees`, `check_in_event_ticket`, `create_volunteer_shift`                                                                          |
+| Programs                | `list_school_programs`, `register_for_program`, `cancel_program_registration`, `list_program_registrations`, `admit_program_registration`                                                                               |
 | Restaurant / menu admin | `list_school_restaurants`, `create_school_restaurant`, `list_restaurant_menu_items`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `archive_restaurant_menu_item`, `schedule_lunch_menu_item`           |
 
 ### Prompts

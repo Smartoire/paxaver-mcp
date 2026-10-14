@@ -90,7 +90,7 @@ describe('MCP protocol', () => {
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
     const names = json.result.tools.map((t) => t.name);
     // TEST_TOKEN's context carries pac_cordinator -> full catalog.
-    expect(names.length).toBe(27);
+    expect(names.length).toBe(36);
     expect(names).toContain('get_my_context');
     expect(names).toContain('create_lunch_order_draft');
     expect(names).toContain('get_school_event');
@@ -437,7 +437,10 @@ describe('JSON-RPC batch', () => {
     const json = (await res.json()) as { id: number; result?: { structuredContent?: unknown } }[];
     expect(json.map((r) => r.id)).toEqual([1, 2]);
     expect(json[0]?.result).toEqual({});
-    expect(json[1]?.result?.structuredContent).toEqual({ ok: true });
+    expect(json[1]?.result?.structuredContent).toEqual({
+      ok: true,
+      topUpUrl: expect.stringContaining('/wallet/top-up'),
+    });
   });
 
   it('a batch of notifications only gets 202 with no body', async () => {
