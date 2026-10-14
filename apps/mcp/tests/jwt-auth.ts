@@ -82,6 +82,12 @@ const USER_CONTEXTS: Record<string, typeof BASE_CONTEXT & { userId: string; subs
     ...BASE_CONTEXT,
     subscription: { status: 'active', toolLevel: 'full', expiry: '2099-07-31T00:00:00Z' },
   },
+  'user-event-coordinator': {
+    userId: 'user-event-coordinator',
+    ...BASE_CONTEXT,
+    permissions: ['event_cordinator'],
+    subscription: { status: 'active', toolLevel: 'full', expiry: '2099-07-31T00:00:00Z' },
+  },
   'user-expired': {
     userId: 'user-expired',
     ...BASE_CONTEXT,
@@ -93,6 +99,7 @@ export const TEST_TOKEN = await makeToken('user-1');
 export const REVOKED_TOKEN = await makeToken('user-revoked');
 export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
+export const EVENT_COORDINATOR_TOKEN = await makeToken('user-event-coordinator');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
 
 // Records `${method} ${path}` for every mocked backend call so tests can

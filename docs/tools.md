@@ -584,6 +584,18 @@ Adds or schedules a single menu item on a date (with an optional
 
 ---
 
+## Prompts
+
+The server currently registers four prompts. Clients can discover them with
+`prompts/list` and retrieve the instructions with `prompts/get`.
+
+| Prompt               | Description                                                              | Arguments               |
+| -------------------- | ------------------------------------------------------------------------ | ----------------------- |
+| `daily_lunch_menu`   | Show today's school lunch menu; supports a date or month.                | None                    |
+| `wallet_balance`     | Report the spendable wallet balance and remind the user where to top up. | None                    |
+| `upcoming_events`    | List upcoming school events and offer event or volunteer registration.   | None                    |
+| `lunch_order_helper` | Guide the user through selecting, reviewing, and paying for lunch.       | Optional `student_name` |
+
 ## Legacy tool names
 
 Pre-2.5 tool names still work: `tools/call` resolves them to the canonical

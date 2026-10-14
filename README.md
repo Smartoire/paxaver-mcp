@@ -159,6 +159,17 @@ before dispatch, and the backend re-checks data-level access (defense-in-depth).
 | Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`                                                                                                                                                     |
 | Restaurant / menu admin | `list_school_restaurants`, `create_school_restaurant`, `list_restaurant_menu_items`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `archive_restaurant_menu_item`, `schedule_lunch_menu_item`           |
 
+### Prompts
+
+The server currently registers four prompts:
+
+- `daily_lunch_menu` — show the school's lunch menu, with optional date or month.
+- `wallet_balance` — report the current spendable wallet balance and remind the user that top-up happens in the Paxaver panel.
+- `upcoming_events` — list upcoming school events and offer registration or volunteer sign-up.
+- `lunch_order_helper` — guide a user through selecting a student, reviewing a lunch order draft, and confirming payment. It accepts an optional `student_name` argument.
+
+Prompt availability and content are returned by `prompts/list` and `prompts/get`.
+
 Ordering is draft → review → payment: `create_lunch_order_draft`, adjust
 with `update_lunch_order_draft`, then `pay_lunch_order_draft`.
 

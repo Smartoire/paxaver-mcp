@@ -6,7 +6,18 @@
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
 import { request } from './request.js';
-import { TEST_TOKEN, ACTIVE_TOKEN, FULL_TOKEN, EXPIRED_TOKEN, TEST_ENV, backendCalls, makeToken } from './jwt-auth.js';
+import {
+  TEST_TOKEN,
+  ACTIVE_TOKEN,
+  FULL_TOKEN,
+  EVENT_COORDINATOR_TOKEN,
+  EXPIRED_TOKEN,
+  TEST_ENV,
+  backendCalls,
+  makeToken,
+} from './jwt-auth.js';
+import { ALL_TOOLS } from '../src/schemas.js';
+import { canSeeTool } from '../src/lib/policies.js';
 
 async function mcpPost(body: unknown, token?: string, mcpMethod?: string) {
   const headers: Record<string, string> = {
@@ -38,6 +49,31 @@ describe('MCP protocol', () => {
     expect(json.result.instructions).toContain('subscription');
     expect(json.result.instructions).toContain('portal');
     expect(res.headers.get('Mcp-Session-Id')).toBeTruthy();
+  });
+
+  it('initialize lists exactly the tools visible to the caller and directs clients to tools/list', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }, FULL_TOKEN);
+    const json = (await res.json()) as unknown as { result: { instructions: string } };
+    const visibleTools = ALL_TOOLS.filter((tool) =>
+      canSeeTool(tool.name, { isPlatformAdmin: false, permissions: ['pac_cordinator'] }),
+    );
+    const listedTools = json.result.instructions.match(/Tools available for this account: (.*)\. Use tools\/list/)?.[1];
+
+    expect(listedTools?.split(', ')).toEqual(visibleTools.map((tool) => tool.name));
+    expect(json.result.instructions).toContain('tools/list as the authoritative source');
+  });
+
+  it('initialize lists event coordinator tools without promising restaurant tools', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }, EVENT_COORDINATOR_TOKEN);
+    const json = (await res.json()) as unknown as { result: { instructions: string } };
+    const visibleTools = ALL_TOOLS.filter((tool) =>
+      canSeeTool(tool.name, { isPlatformAdmin: false, permissions: ['event_cordinator'] }),
+    );
+    const listedTools = json.result.instructions.match(/Tools available for this account: (.*)\. Use tools\/list/)?.[1];
+
+    expect(listedTools?.split(', ')).toEqual(visibleTools.map((tool) => tool.name));
+    expect(listedTools).toContain('create_school_event');
+    expect(listedTools).not.toContain('list_school_restaurants');
   });
 
   it('ping returns empty result', async () => {
