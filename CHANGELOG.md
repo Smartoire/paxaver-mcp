@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `register_for_event` `quantity` is capped at 20 in the tool schema, matching the backend.
+
 ## [2.7.3] — 2026-10-14
 
 ### Changed
