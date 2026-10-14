@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.3] — 2026-10-14
+
+### Changed
+
+- Redesigned the regional country picker with country flags, light/dark
+  presentation, and accessible contrast.
+
 ## [2.7.2] — 2026-10-13
 
 ### Added
@@ -94,13 +101,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ENVIRONMENT` is `development`. `tools/call` and all other data methods
   still need a token. The bridge now also stops its `wrangler dev` process
   when it exits.
-
-## [2.7.3] — 2026-10-14
-
-### Changed
-
-- Redesigned the regional country picker with country flags, light/dark
-  presentation, and accessible contrast.
 
 ## [2.7.1] — 2026-10-09
 
