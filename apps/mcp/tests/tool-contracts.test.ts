@@ -90,6 +90,15 @@ const draftItem = { menu_item_id: 'item-1', menu_item_name: 'Pizza', price_cents
 const draftItemCamel = { menuItemId: 'item-1', menuItemName: 'Pizza', quantity: 2 };
 
 describe('tool → backend contract', () => {
+  it('caps register_for_event quantity at 20 in its input schema', () => {
+    const tool = ALL_TOOLS.find((t) => t.name === 'register_for_event');
+    expect(tool?.inputSchema.properties.quantity).toMatchObject({
+      type: 'integer',
+      minimum: 1,
+      maximum: 20,
+    });
+  });
+
   it('pins idempotentHint for every advertised tool', () => {
     const expected: Record<string, boolean | undefined> = {
       get_my_context: undefined,

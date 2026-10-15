@@ -444,7 +444,7 @@ an already checked-in ticket is rejected by the backend.
 ### `register_for_event`
 
 Registers the authenticated user for an event and issues tickets (`quantity`
-tickets for the caller). For paid events the wallet is charged
+tickets for the caller, 1–20). For paid events the wallet is charged
 `quantity × ticket_price_cents`; the call fails on insufficient balance with
 an error carrying the regional Paxaver top-up page — card payments are never
 offered through MCP. **FINANCIAL + WRITE** — confirm before calling.
@@ -459,11 +459,11 @@ offered through MCP. **FINANCIAL + WRITE** — confirm before calling.
 
 **Input schema**
 
-| Property      | Type    | Required | Description                   |
-| ------------- | ------- | -------- | ----------------------------- |
-| `event_id`    | string  | yes      | From `list_school_events`     |
-| `quantity`    | integer | no       | Number of tickets (default 1) |
-| `school_slug` | string  | no       | Defaults to active school     |
+| Property      | Type    | Required | Description                         |
+| ------------- | ------- | -------- | ----------------------------------- |
+| `event_id`    | string  | yes      | From `list_school_events`           |
+| `quantity`    | integer | no       | Number of tickets, 1–20 (default 1) |
+| `school_slug` | string  | no       | Defaults to active school           |
 
 **Backend:** `POST /api/events/{event_id}/register`
 
