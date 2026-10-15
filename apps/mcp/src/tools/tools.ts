@@ -9,7 +9,8 @@
 
 import { callPaxaverApi } from '../api/client.js';
 import type { ApiCallOptions, ApiCallResult } from '../api/client.js';
-import type { AppVariables } from '../env.js';
+import type { AppVariables, Env } from '../env.js';
+import { regionBaseUrl } from '../lib/regions.js';
 import type { ToolHandlerArgs } from './shared.js';
 import { requireArgs, validatePathId } from './shared.js';
 
@@ -32,7 +33,7 @@ interface ToolSpec {
   /** Query-string builder; undefined values are dropped by the client. */
   query?: (args: Args, ctx: AppVariables) => Record<string, string | undefined>;
   /** Post-process the API result in place (e.g. strip PII fields). */
-  after?: (result: ApiCallResult, args: Args, ctx: AppVariables) => void;
+  after?: (result: ApiCallResult, args: Args, ctx: AppVariables, env: Env) => void;
 }
 
 // The backend prices every draft item from the daily menu and ignores a
@@ -56,6 +57,24 @@ function defaultStudentId(args: Args, ctx: AppVariables): unknown {
 // Interpolate `:arg` placeholders in a path template with validated values.
 function resolvePath(template: string, args: Args): string {
   return template.replace(/:([A-Za-z0-9_]+)/g, (_, key: string) => validatePathId(args[key], key));
+}
+
+/**
+ * Public wallet top-up hand-off URL for the caller's region. This is a
+ * static page on the regional Paxaver site — never a checkout-session or
+ * card-payment URL.
+ */
+function walletTopUpUrl(env: Env, ctx: AppVariables): string {
+  return new URL('/wallet/top-up', regionBaseUrl(env, ctx.country)).toString();
+}
+
+// Backend list endpoints return `data` plus a `pagination` envelope sibling.
+// The dispatcher forwards only `data`, so fold the pagination fields the
+// caller needs into the data envelope.
+function paginationFields(result: ApiCallResult): Record<string, unknown> {
+  const p = (result.data as Record<string, unknown> | undefined)?.pagination;
+  const meta = (p ?? {}) as Record<string, unknown>;
+  return { perPage: meta.perPage, nextCursor: meta.nextCursor ?? null, hasMore: meta.hasMore ?? false };
 }
 
 const TOOL_SPECS: Record<string, ToolSpec> = {
@@ -100,6 +119,62 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   get_my_wallet_balance: {
     method: 'GET',
     path: '/api/wallet/balance',
+    after: (result, _args, ctx, env) => {
+      if (!result.ok) return;
+      const envelope = result.data as { data?: Record<string, unknown> } | undefined;
+      if (envelope?.data && typeof envelope.data === 'object') {
+        envelope.data.topUpUrl = walletTopUpUrl(env, ctx);
+      }
+    },
+  },
+  // The backend returns `data.transactions` plus a `pagination` sibling.
+  // Field allowlist: only user-facing wallet-history fields pass through —
+  // internal ids and raw backend extras never reach the AI client.
+  list_my_wallet_transactions: {
+    method: 'GET',
+    path: '/api/wallet/transactions',
+    // Backend precedence: an explicit schoolSlug scopes to one school even
+    // when all=1 is set — mirror it: all_schools suppresses only the
+    // context-derived default, never a caller-supplied school_slug.
+    query: (args, ctx) => {
+      const all = args.all_schools === true;
+      return {
+        schoolSlug: (args.school_slug as string | undefined) ?? (all ? undefined : ctx.schoolSlug || undefined),
+        type: args.type as string | undefined,
+        status: args.status as string | undefined,
+        start: args.start as string | undefined,
+        end: args.end as string | undefined,
+        studentId: args.student_id as string | undefined,
+        perPage: args.per_page !== undefined ? String(args.per_page) : undefined,
+        cursor: args.cursor as string | undefined,
+        all: all ? '1' : undefined,
+      };
+    },
+    after: (result, _args, ctx, env) => {
+      if (!result.ok) return;
+      const envelope = result.data as { data?: { transactions?: unknown[] } } | undefined;
+      const rows = envelope?.data?.transactions;
+      if (!envelope?.data || !Array.isArray(rows)) return;
+      envelope.data.transactions = rows.map((tx) => {
+        const t = tx as Record<string, unknown>;
+        return {
+          id: t.id,
+          type: t.type,
+          amountCents: t.amountCents,
+          balanceBeforeCents: t.balanceBeforeCents,
+          balanceAfterCents: t.balanceAfterCents,
+          description: t.description,
+          paymentMethod: t.paymentMethod,
+          status: t.status,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+          schoolSlug: t.schoolSlug,
+          schoolName: t.schoolName,
+          currency: t.currency,
+        };
+      });
+      Object.assign(envelope.data, paginationFields(result), { topUpUrl: walletTopUpUrl(env, ctx) });
+    },
   },
 
   // Order
@@ -197,6 +272,36 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     required: ['event_id'],
     query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
   },
+  // Staff attendee list. The backend returns contact fields (email, userId)
+  // and charge amounts — check-in needs none of them, so only the fields the
+  // output schema declares pass through.
+  list_event_attendees: {
+    method: 'GET',
+    path: '/api/events/:event_id/tickets',
+    required: ['event_id'],
+    query: (args, ctx) => ({
+      schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+      perPage: args.per_page !== undefined ? String(args.per_page) : undefined,
+      offset: args.offset !== undefined ? String(args.offset) : undefined,
+    }),
+    after: (result) => {
+      if (!result.ok) return;
+      const envelope = result.data as { data?: unknown };
+      const rows = Array.isArray(envelope?.data) ? (envelope.data as Record<string, unknown>[]) : [];
+      envelope.data = {
+        attendees: rows.map((t) => ({
+          id: t.id,
+          eventId: t.eventId,
+          firstName: t.firstName,
+          lastName: t.lastName,
+          quantity: t.quantity,
+          status: t.status,
+          checkedInAt: t.checkedInAt ?? null,
+        })),
+        ...paginationFields(result),
+      };
+    },
+  },
   // eventCreateSchema is camelCase; schoolSlug defaults to the
   // active school and must match the authenticated school context.
   create_school_event: {
@@ -238,6 +343,12 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     path: '/api/events/:event_id/cancel',
     required: ['event_id'],
   },
+  check_in_event_ticket: {
+    method: 'POST',
+    path: '/api/events/tickets/:ticket_id/check-in',
+    required: ['ticket_id'],
+    query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
+  },
   // /register is the MCP-facing endpoint: it charges the wallet for paid
   // events and fails on insufficient funds. /tickets only creates a
   // 'reserved' ticket without collecting payment.
@@ -245,7 +356,12 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     method: 'POST',
     path: '/api/events/:event_id/register',
     required: ['event_id'],
-    body: (args) => ({ quantity: args.quantity }),
+    // The register route resolves the school tenant from body school_slug;
+    // passing it pins the charge to the caller's verified active school.
+    body: (args, ctx) => ({
+      quantity: args.quantity,
+      school_slug: (args.school_slug as string | undefined) ?? (ctx.schoolSlug || undefined),
+    }),
   },
   // Backend volunteerSignupSchema reads shiftId.
   sign_up_for_volunteer_shift: {
@@ -271,6 +387,75 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     method: 'POST',
     path: '/api/volunteers/signups/:signup_id/cancel',
     required: ['signup_id'],
+  },
+  // volunteerShiftCreateSchema is camelCase and requires schoolSlug, which
+  // must match the authenticated school context — the query pins it.
+  create_volunteer_shift: {
+    method: 'POST',
+    path: '/api/volunteers/shifts',
+    required: ['title', 'shift_date', 'start_time', 'end_time'],
+    query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
+    body: (args, ctx) => ({
+      schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+      eventId: args.event_id,
+      title: args.title,
+      description: args.description,
+      shiftDate: args.shift_date,
+      startTime: args.start_time,
+      endTime: args.end_time,
+      slots: args.slots,
+    }),
+  },
+
+  // Programs
+  // Both program list routes return the rows as a bare data array; wrap it
+  // so the tool result matches the declared object outputSchema.
+  list_school_programs: {
+    method: 'GET',
+    path: '/api/programs',
+    query: (args, ctx) => ({
+      schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+      type: args.program_type as string | undefined,
+    }),
+    after: (result) => {
+      if (!result.ok) return;
+      const envelope = result.data as { data?: unknown };
+      if (Array.isArray(envelope?.data)) envelope.data = { programs: envelope.data };
+    },
+  },
+  // programRegistrationSchema is camelCase; the backend resolves the school
+  // from the schoolSlug query (or the caller's active school profile).
+  register_for_program: {
+    method: 'POST',
+    path: '/api/programs/registrations',
+    required: ['program_id', 'student_id'],
+    query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
+    body: (args) => ({ programId: args.program_id, studentId: args.student_id, notes: args.notes }),
+  },
+  list_program_registrations: {
+    method: 'GET',
+    path: '/api/programs/registrations',
+    query: (args, ctx) => ({
+      schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
+      programId: args.program_id as string | undefined,
+    }),
+    after: (result) => {
+      if (!result.ok) return;
+      const envelope = result.data as { data?: unknown };
+      if (Array.isArray(envelope?.data)) envelope.data = { registrations: envelope.data };
+    },
+  },
+  cancel_program_registration: {
+    method: 'POST',
+    path: '/api/programs/registrations/:registration_id/cancel',
+    required: ['registration_id'],
+    query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
+  },
+  admit_program_registration: {
+    method: 'POST',
+    path: '/api/programs/registrations/:registration_id/admit',
+    required: ['registration_id'],
+    query: (args, ctx) => ({ schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug }),
   },
 
   // Restaurant
@@ -364,6 +549,6 @@ export async function handleTool({
     query: spec.query?.(args, ctx),
     idempotencyKey,
   });
-  spec.after?.(result, args, ctx);
+  spec.after?.(result, args, ctx, env);
   return result;
 }

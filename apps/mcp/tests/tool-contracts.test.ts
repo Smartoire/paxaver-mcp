@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import app from '../src/index.js';
 import { request } from './request.js';
-import { FULL_TOKEN, TEST_ENV, mockBackend } from './jwt-auth.js';
+import { FULL_TOKEN, EVENT_COORDINATOR_TOKEN, TEST_ENV, mockBackend } from './jwt-auth.js';
 import { ALL_TOOLS } from '../src/schemas.js';
 
 interface BackendCall {
@@ -56,9 +56,14 @@ function contextOverrideBackend(overrides: Record<string, unknown>) {
   };
 }
 
-async function postTool(name: string, args: Record<string, unknown>, env = ENV, { id = 1, sessionId = '' } = {}) {
+async function postTool(
+  name: string,
+  args: Record<string, unknown>,
+  env = ENV,
+  { id = 1, sessionId = '', token = FULL_TOKEN } = {},
+) {
   calls.length = 0;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${FULL_TOKEN}` };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   if (sessionId) headers['Mcp-Session-Id'] = sessionId;
   const res = await request(
     app,
@@ -98,6 +103,7 @@ describe('tool → backend contract', () => {
     const expected: Record<string, boolean | undefined> = {
       get_my_context: undefined,
       get_my_wallet_balance: undefined,
+      list_my_wallet_transactions: true,
       list_my_lunch_orders: undefined,
       get_lunch_menu: undefined,
       create_lunch_order_draft: false,
@@ -107,15 +113,23 @@ describe('tool → backend contract', () => {
       cancel_my_lunch_order: false,
       list_school_events: undefined,
       get_school_event: true,
+      list_event_attendees: true,
       create_school_event: false,
       update_school_event: true,
       cancel_school_event: false,
+      check_in_event_ticket: false,
       register_for_event: false,
       list_my_event_registrations: true,
       cancel_my_event_registration: false,
       list_my_volunteer_signups: true,
       cancel_my_volunteer_signup: true,
       sign_up_for_volunteer_shift: false,
+      create_volunteer_shift: false,
+      list_school_programs: true,
+      register_for_program: false,
+      list_program_registrations: true,
+      cancel_program_registration: false,
+      admit_program_registration: false,
       list_school_restaurants: undefined,
       create_school_restaurant: false,
       list_restaurant_menu_items: undefined,
@@ -442,7 +456,7 @@ describe('tool → backend contract', () => {
     );
     expect(res.status).toBe(200);
     const json = (await res.json()) as { error: { code: number; message: string } };
-    expect(json.error.message).toContain('top up');
+    expect(json.error.message).toContain('/wallet/top-up');
     expect(json.error.message).not.toContain('paymentUrl');
   });
 
@@ -485,8 +499,316 @@ describe('tool → backend contract', () => {
     );
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect((json as { error?: { message: string } }).error?.message).toContain('top up');
+    expect((json as { error?: { message: string } }).error?.message).toContain('/wallet/top-up');
     expect(JSON.stringify(json)).not.toContain('checkout.stripe.com');
+  });
+
+  it('list_my_wallet_transactions hits /api/wallet/transactions with safe filters only', async () => {
+    const c = await callTool('list_my_wallet_transactions', {
+      student_id: 'student-1',
+      type: 'payment',
+      status: 'completed',
+      start: '2026-09-01',
+      end: '2026-09-30',
+      per_page: 25,
+      cursor: 'cur-1',
+    });
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/wallet/transactions');
+    expect(c?.query.get('studentId')).toBe('student-1');
+    expect(c?.query.get('type')).toBe('payment');
+    expect(c?.query.get('status')).toBe('completed');
+    expect(c?.query.get('start')).toBe('2026-09-01');
+    expect(c?.query.get('end')).toBe('2026-09-30');
+    expect(c?.query.get('perPage')).toBe('25');
+    expect(c?.query.get('cursor')).toBe('cur-1');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+    expect(c?.query.get('all')).toBeNull();
+    expect(c?.body).toBeUndefined();
+  });
+
+  it('all_schools suppresses the school pin — the backend treats schoolSlug as an explicit scope', async () => {
+    const c = await callTool('list_my_wallet_transactions', { all_schools: true });
+    expect(c?.query.get('all')).toBe('1');
+    expect(c?.query.get('schoolSlug')).toBeNull();
+  });
+
+  it('list_my_wallet_transactions allowlists fields, folds pagination, and adds the regional top-up URL', async () => {
+    const txBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        if (new URL(req.url).pathname === '/api/wallet/transactions') {
+          return Response.json({
+            data: {
+              transactions: [
+                {
+                  id: 'tx-1',
+                  type: 'payment',
+                  amountCents: -550,
+                  balanceBeforeCents: 2000,
+                  balanceAfterCents: 1450,
+                  description: 'Lunch order',
+                  paymentMethod: 'wallet',
+                  status: 'completed',
+                  createdAt: '2026-09-10T12:00:00Z',
+                  updatedAt: '2026-09-10T12:00:00Z',
+                  schoolSlug: 'test-school',
+                  schoolName: 'Test School',
+                  currency: 'CAD',
+                  walletId: 'wallet-internal-1',
+                  referenceId: 'cs_test_stripe_session',
+                  cardFingerprint: 'fp_123',
+                },
+              ],
+            },
+            pagination: { perPage: 50, nextCursor: 'nc-2', hasMore: true },
+          });
+        }
+        return recordingBackend.fetch(req);
+      },
+    };
+    const env = { ...TEST_ENV, PAXAVER_API_CA: txBackend, PAXAVER_API_US: txBackend };
+    const res = await postTool('list_my_wallet_transactions', {}, env);
+    const json = (await res.json()) as {
+      result: { structuredContent: Record<string, unknown> };
+    };
+    const out = json.result.structuredContent;
+    const rows = out.transactions as Record<string, unknown>[];
+    expect(rows[0]).toEqual({
+      id: 'tx-1',
+      type: 'payment',
+      amountCents: -550,
+      balanceBeforeCents: 2000,
+      balanceAfterCents: 1450,
+      description: 'Lunch order',
+      paymentMethod: 'wallet',
+      status: 'completed',
+      createdAt: '2026-09-10T12:00:00Z',
+      updatedAt: '2026-09-10T12:00:00Z',
+      schoolSlug: 'test-school',
+      schoolName: 'Test School',
+      currency: 'CAD',
+    });
+    expect(JSON.stringify(rows)).not.toContain('wallet-internal-1');
+    expect(JSON.stringify(rows)).not.toContain('cs_test_');
+    expect(JSON.stringify(rows)).not.toContain('fp_123');
+    expect(out.nextCursor).toBe('nc-2');
+    expect(out.hasMore).toBe(true);
+    expect(out.topUpUrl).toBe('http://localhost:8787/wallet/top-up');
+  });
+
+  it('get_my_wallet_balance returns the regional static top-up page', async () => {
+    const res = await postTool('get_my_wallet_balance', {});
+    const json = (await res.json()) as {
+      result: { structuredContent: { topUpUrl?: string } };
+    };
+    expect(json.result.structuredContent.topUpUrl).toBe('http://localhost:8787/wallet/top-up');
+  });
+
+  it('register_for_event maps to the paid /register route with an idempotency key', async () => {
+    const c = await callTool('register_for_event', { event_id: 'e1', quantity: 2 });
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/events/e1/register');
+    expect(c?.body).toEqual({ quantity: 2, school_slug: 'test-school' });
+    expect(c?.idempotencyKey).toMatch(/^mcp-register_for_event-[0-9a-f]{64}$/);
+    const policy = ALL_TOOLS.find((t) => t.name === 'register_for_event');
+    expect(policy).toBeDefined();
+  });
+
+  it('register_for_event insufficient funds returns the top-up URL, never a payment link', async () => {
+    const insufficientBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        if (new URL(req.url).pathname === '/api/events/e1/register') {
+          return new Response(
+            JSON.stringify({ error: { code: 'INSUFFICIENT_FUNDS', message: 'Insufficient balance' } }),
+            {
+              status: 422,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+        return mockBackend.fetch(req);
+      },
+    };
+    const res = await postTool(
+      'register_for_event',
+      { event_id: 'e1' },
+      { ...TEST_ENV, PAXAVER_API_CA: insufficientBackend, PAXAVER_API_US: insufficientBackend },
+    );
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error.code).toBe(-32602);
+    expect(json.error.message).toContain('http://localhost:8787/wallet/top-up');
+    expect(json.error.message).not.toContain('checkout.stripe.com');
+  });
+
+  it('list_event_attendees hits /api/events/:id/tickets and strips contact and payment fields', async () => {
+    const attendeeBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/events/e1/tickets') {
+          calls.push({
+            method: req.method,
+            path: url.pathname,
+            query: url.searchParams,
+            body: undefined,
+            idempotencyKey: req.headers.get('Idempotency-Key'),
+          });
+          return Response.json({
+            data: [
+              {
+                id: 't1',
+                eventId: 'e1',
+                userId: 'user-other',
+                email: 'parent@example.com',
+                firstName: 'Ana',
+                lastName: 'Lee',
+                quantity: 2,
+                totalCents: 1000,
+                status: 'paid',
+                checkedInAt: null,
+                createdAt: '2026-09-01T10:00:00Z',
+              },
+            ],
+            pagination: { perPage: 50, nextCursor: null, hasMore: false },
+          });
+        }
+        return recordingBackend.fetch(req);
+      },
+    };
+    const env = { ...TEST_ENV, PAXAVER_API_CA: attendeeBackend, PAXAVER_API_US: attendeeBackend };
+    const res = await postTool('list_event_attendees', { event_id: 'e1', per_page: 10, offset: 5 }, env, {
+      token: EVENT_COORDINATOR_TOKEN,
+    });
+    const call = calls.filter((c) => c.path !== '/api/users/me/context').at(-1);
+    expect(`${call?.method} ${call?.path}`).toBe('GET /api/events/e1/tickets');
+    expect(call?.query.get('schoolSlug')).toBe('test-school');
+    expect(call?.query.get('perPage')).toBe('10');
+    expect(call?.query.get('offset')).toBe('5');
+    const json = (await res.json()) as {
+      result: { structuredContent: { attendees: Record<string, unknown>[]; hasMore: boolean } };
+    };
+    expect(json.result.structuredContent.attendees[0]).toEqual({
+      id: 't1',
+      eventId: 'e1',
+      firstName: 'Ana',
+      lastName: 'Lee',
+      quantity: 2,
+      status: 'paid',
+      checkedInAt: null,
+    });
+    expect(JSON.stringify(json.result.structuredContent)).not.toContain('parent@example.com');
+    expect(JSON.stringify(json.result.structuredContent)).not.toContain('user-other');
+    expect(JSON.stringify(json.result.structuredContent)).not.toContain('totalCents');
+  });
+
+  it('check_in_event_ticket posts to the ticket check-in route with an idempotency key', async () => {
+    const c = await callTool('check_in_event_ticket', { ticket_id: 't1' });
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/events/tickets/t1/check-in');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+    expect(c?.body).toBeUndefined();
+    expect(c?.idempotencyKey).toMatch(/^mcp-check_in_event_ticket-[0-9a-f]{64}$/);
+  });
+
+  it('create_volunteer_shift posts the camelCase volunteerShiftCreateSchema body', async () => {
+    const c = await callTool('create_volunteer_shift', {
+      title: 'Setup crew',
+      shift_date: '2026-10-15',
+      start_time: '17:00',
+      end_time: '19:00',
+      event_id: 'e1',
+      slots: 4,
+      description: 'Set up tables',
+    });
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/volunteers/shifts');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+    expect(c?.body).toEqual({
+      schoolSlug: 'test-school',
+      eventId: 'e1',
+      title: 'Setup crew',
+      description: 'Set up tables',
+      shiftDate: '2026-10-15',
+      startTime: '17:00',
+      endTime: '19:00',
+      slots: 4,
+    });
+    expect(c?.idempotencyKey).toMatch(/^mcp-create_volunteer_shift-[0-9a-f]{64}$/);
+  });
+
+  it('list_school_programs hits /api/programs with the school query', async () => {
+    const c = await callTool('list_school_programs', { program_type: 'after_school' });
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/programs');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+    expect(c?.query.get('type')).toBe('after_school');
+  });
+
+  it('register_for_program posts camelCase programId/studentId', async () => {
+    const c = await callTool('register_for_program', {
+      program_id: 'p1',
+      student_id: 'student-1',
+      notes: 'Peanut allergy',
+    });
+    expect(`${c?.method} ${c?.path}`).toBe('POST /api/programs/registrations');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+    expect(c?.body).toEqual({ programId: 'p1', studentId: 'student-1', notes: 'Peanut allergy' });
+    expect(c?.idempotencyKey).toMatch(/^mcp-register_for_program-[0-9a-f]{64}$/);
+  });
+
+  it('register_for_program rejects a student the caller does not own', async () => {
+    const res = await postTool('register_for_program', { program_id: 'p1', student_id: 'other-student' });
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error).toEqual({ code: -32602, message: 'student_id is not permitted for this user' });
+    expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+  });
+
+  it('register_for_program rejects a student when the caller has no linked students', async () => {
+    const env = {
+      ...TEST_ENV,
+      PAXAVER_API_CA: contextOverrideBackend({ studentIds: [] }),
+      PAXAVER_API_US: contextOverrideBackend({ studentIds: [] }),
+    };
+    const res = await postTool('register_for_program', { program_id: 'p1', student_id: 'other-student' }, env);
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error).toEqual({ code: -32602, message: 'student_id is not permitted for this user' });
+    expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+  });
+
+  it('list_program_registrations hits /api/programs/registrations with the optional program filter', async () => {
+    const c = await callTool('list_program_registrations', { program_id: 'p1' });
+    expect(`${c?.method} ${c?.path}`).toBe('GET /api/programs/registrations');
+    expect(c?.query.get('schoolSlug')).toBe('test-school');
+    expect(c?.query.get('programId')).toBe('p1');
+  });
+
+  it('cancel_program_registration and admit_program_registration post to the registration routes', async () => {
+    const cancel = await callTool('cancel_program_registration', { registration_id: 'reg-1' });
+    expect(`${cancel?.method} ${cancel?.path}`).toBe('POST /api/programs/registrations/reg-1/cancel');
+    expect(cancel?.idempotencyKey).toMatch(/^mcp-cancel_program_registration-[0-9a-f]{64}$/);
+
+    const admit = await callTool('admit_program_registration', { registration_id: 'reg-2' });
+    expect(`${admit?.method} ${admit?.path}`).toBe('POST /api/programs/registrations/reg-2/admit');
+    expect(admit?.query.get('schoolSlug')).toBe('test-school');
+    expect(admit?.idempotencyKey).toMatch(/^mcp-admit_program_registration-[0-9a-f]{64}$/);
+  });
+
+  it('pac_cordinator-only program tools are forbidden for an event coordinator', async () => {
+    for (const name of ['list_program_registrations', 'admit_program_registration', 'create_volunteer_shift']) {
+      const res = await postTool(
+        name,
+        { registration_id: 'reg-1', title: 'x', shift_date: '2026-10-01', start_time: '09:00', end_time: '10:00' },
+        ENV,
+        { token: EVENT_COORDINATOR_TOKEN },
+      );
+      const json = (await res.json()) as { error: { code: number; message: string } };
+      expect(json.error.code).toBe(-32603);
+      expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+    }
+  });
+
+  it('event staff tools are reachable for an event coordinator', async () => {
+    const res = await postTool('list_event_attendees', { event_id: 'e1' }, ENV, { token: EVENT_COORDINATOR_TOKEN });
+    expect(res.status).toBe(200);
+    const call = calls.filter((c) => c.path !== '/api/users/me/context').at(-1);
+    expect(call?.path).toBe('/api/events/e1/tickets');
   });
 });
 

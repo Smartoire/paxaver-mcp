@@ -15,9 +15,10 @@
  * the final MCP response.
  */
 
-import type { AppVariables } from '../env.js';
+import type { AppVariables, Env } from '../env.js';
 import { mcpError, apiErrorToMcp } from '../lib/errors.js';
 import { getToolPolicy } from '../lib/policies.js';
+import { regionBaseUrl } from '../lib/regions.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId } from './shared.js';
 import { InvalidParamsError } from './shared.js';
@@ -39,8 +40,15 @@ function toolError(id: RpcId, code: number, message: string): Response {
   return Response.json(mcpError(id, code, message));
 }
 
-const WALLET_TOP_UP_MESSAGE =
-  'Insufficient wallet balance. Open the Paxaver panel, top up the wallet balance, then retry this tool.';
+// Wallet-charging tools surface the regional top-up page on insufficient
+// funds. The URL is a static destination per region — never a checkout
+// session or card-payment link.
+function walletTopUpMessage(env: Env, ctx: AppVariables): string {
+  const url = new URL('/wallet/top-up', regionBaseUrl(env, ctx.country)).toString();
+  return `Insufficient wallet balance. Top up at ${url}, then retry this tool.`;
+}
+
+const WALLET_CHARGE_TOOLS = new Set(['pay_lunch_order_draft', 'register_for_event']);
 
 // JSON with sorted object keys, so equal arguments give equal text.
 function canonicalJson(value: unknown): string {
@@ -83,13 +91,9 @@ export async function makeIdempotencyKey(
  * Platform admins are exempt — they may act on any school.
  */
 function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): void {
-  // If the context has a non-empty studentIds list, the supplied
-  // student_id must be in that list.
-  if (args.student_id !== undefined && ctx.studentIds?.length) {
-    const sid = String(args.student_id);
-    if (!ctx.studentIds.includes(sid)) {
-      throw new InvalidParamsError('student_id is not permitted for this user');
-    }
+  // Non-admin callers must supply a student_id from their context.
+  if (args.student_id !== undefined && !ctx.isPlatformAdmin && !ctx.studentIds?.includes(String(args.student_id))) {
+    throw new InvalidParamsError('student_id is not permitted for this user');
   }
   // school_slug: if the caller supplies one, it must match the user's own
   // school. If we don't know the user's school (empty ctx.schoolSlug) and
@@ -136,15 +140,15 @@ export async function dispatchTool(
     }
 
     if (!result.ok) {
-      // pay_lunch_order_draft is wallet-only: an insufficient-balance
+      // Wallet-charging tools are wallet-only: an insufficient-balance
       // rejection must direct the user to top up in the panel — the
       // card-payment link is never surfaced through MCP.
       if (
-        name === 'pay_lunch_order_draft' &&
+        WALLET_CHARGE_TOOLS.has(name) &&
         result.status === 422 &&
         /insufficient/i.test(JSON.stringify(result.data ?? ''))
       ) {
-        return toolError(id, -32602, WALLET_TOP_UP_MESSAGE);
+        return toolError(id, -32602, walletTopUpMessage(env, ctx));
       }
       const err = apiErrorToMcp(result.status);
       return toolError(id, err.code, err.message);
@@ -162,7 +166,7 @@ export async function dispatchTool(
       data !== null &&
       ('paymentUrl' in data || (data as Record<string, unknown>).status === 'awaiting_payment')
     ) {
-      return toolError(id, -32602, WALLET_TOP_UP_MESSAGE);
+      return toolError(id, -32602, walletTopUpMessage(env, ctx));
     }
 
     return toolResult(id, data);

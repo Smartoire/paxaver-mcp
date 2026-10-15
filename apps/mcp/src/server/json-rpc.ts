@@ -91,12 +91,12 @@ export async function handleJsonRpc(
   if (method === 'initialize') {
     const ctx = c.var;
     const permissions = ctx.permissions ?? [];
-    const admin = ctx.isPlatformAdmin || permissions.includes('pac_cordinator') || permissions.includes('pac_member');
+    const availableTools = ALL_TOOLS.filter((tool) =>
+      canSeeTool(tool.name, { isPlatformAdmin: ctx.isPlatformAdmin ?? false, permissions }),
+    ).map((tool) => tool.name);
     const subStatus = ctx.subscription?.status ?? 'none';
     const needsSubscription = !ctx.isPlatformAdmin && subStatus !== 'active';
-    const baseInstructions = admin
-      ? "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Admin tools: list_school_restaurants, create_school_restaurant, list_restaurant_menu_items, create_restaurant_menu_item, update_restaurant_menu_item, archive_restaurant_menu_item, schedule_lunch_menu_item, create_school_event, update_school_event, cancel_school_event. Do not invent tool names - use only the tools returned by tools/list."
-      : "This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Do not invent tool names - use only the tools returned by tools/list.";
+    const baseInstructions = `This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Tools available for this account: ${availableTools.join(', ')}. Use tools/list as the authoritative source for available tool schemas; tool calls are re-authorized.`;
     const registrationNotice = needsSubscription ? ` IMPORTANT: ${SUBSCRIPTION_REQUIRED}` : '';
     return Response.json({
       jsonrpc: '2.0',

@@ -69,6 +69,10 @@
         "currency": {
           "type": ["string", "null"],
           "description": "ISO currency code (CAD, USD, or MXN)"
+        },
+        "topUpUrl": {
+          "type": "string",
+          "description": "Regional Paxaver wallet top-up page - hand this URL to the user when funds are low. Topping up happens on the Paxaver site, never through this tool"
         }
       }
     },
@@ -77,6 +81,158 @@
       "destructiveHint": false,
       "openWorldHint": false,
       "title": "Get My Wallet Balance"
+    }
+  },
+  {
+    "name": "list_my_wallet_transactions",
+    "title": "List My Wallet Transactions",
+    "description": "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own wallet transaction history (type, amount, running balance, description, status, timestamps, school) - never card numbers, payment-method identifiers, or checkout links. Defaults to the active school; pass all_schools: true for every school the user belongs to, or student_id (own students only) to narrow to one student. Cursor-paginated, newest first: pass the returned nextCursor as cursor for the next page. topUpUrl is the regional top-up page on the Paxaver site for when the user asks to add funds. Filters combine with AND.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "student_id": {
+          "type": "string",
+          "description": "Filter to transactions for a specific student (must be your own student, from get_my_context)"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug to scope history to (must be a school the user belongs to); defaults to the active school"
+        },
+        "all_schools": {
+          "type": "boolean",
+          "description": "When true, return history across every school the user belongs to; ignored when school_slug is also given"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "deposit",
+            "payment",
+            "refund",
+            "cash_in",
+            "cash_out",
+            "adjustment",
+            "cashout",
+            "fee",
+            "payout",
+            "transfer_in",
+            "transfer_out"
+          ],
+          "description": "Transaction type filter"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "completed", "failed", "cancelled"],
+          "description": "Transaction status filter"
+        },
+        "start": {
+          "type": "string",
+          "description": "Range start, YYYY-MM-DD (UTC day) or an ISO timestamp with timezone"
+        },
+        "end": {
+          "type": "string",
+          "description": "Range end, YYYY-MM-DD (UTC day) or an ISO timestamp with timezone"
+        },
+        "per_page": {
+          "type": "integer",
+          "description": "Page size, 1-100 (default 50)",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "cursor": {
+          "type": "string",
+          "description": "Pagination cursor - pass the nextCursor value from the previous response"
+        }
+      },
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Transaction ID"
+              },
+              "type": {
+                "type": "string",
+                "description": "Transaction type (deposit, payment, refund, ...)"
+              },
+              "amountCents": {
+                "type": "integer",
+                "description": "Signed amount in cents"
+              },
+              "balanceBeforeCents": {
+                "type": "integer",
+                "description": "Wallet balance before the transaction, in cents"
+              },
+              "balanceAfterCents": {
+                "type": "integer",
+                "description": "Wallet balance after the transaction, in cents"
+              },
+              "description": {
+                "type": ["string", "null"],
+                "description": "Human-readable transaction description"
+              },
+              "paymentMethod": {
+                "type": ["string", "null"],
+                "description": "Coarse payment-method label (e.g. wallet, stripe) - never a card or account identifier"
+              },
+              "status": {
+                "type": "string",
+                "description": "Transaction status"
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO timestamp the transaction was created"
+              },
+              "updatedAt": {
+                "type": "string",
+                "description": "ISO timestamp the transaction was last updated"
+              },
+              "schoolSlug": {
+                "type": ["string", "null"],
+                "description": "School the wallet belongs to"
+              },
+              "schoolName": {
+                "type": ["string", "null"],
+                "description": "School display name"
+              },
+              "currency": {
+                "type": "string",
+                "description": "ISO currency code (CAD, USD, or MXN)"
+              }
+            }
+          },
+          "description": "Transactions matching the filters, newest first"
+        },
+        "nextCursor": {
+          "type": ["string", "null"],
+          "description": "Pass as cursor to fetch the next page; null when there is none"
+        },
+        "hasMore": {
+          "type": "boolean",
+          "description": "Whether more pages exist"
+        },
+        "perPage": {
+          "type": "integer",
+          "description": "Page size applied"
+        },
+        "topUpUrl": {
+          "type": "string",
+          "description": "Regional Paxaver wallet top-up page - hand this URL to the user when they ask to add funds. Topping up happens on the Paxaver site, never through this tool"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "title": "List My Wallet Transactions"
     }
   },
   {
@@ -712,6 +868,94 @@
     }
   },
   {
+    "name": "list_event_attendees",
+    "title": "List Event Attendees (Admin)",
+    "description": "ADMIN: Read-only attendee list for one school event - the ticket ids needed by check_in_event_ticket, attendee first/last name, ticket quantity, status (paid, reserved, checked_in, cancelled) and check-in time. Contact details and payment data are intentionally not included - this is the minimum needed to run a check-in desk. Paginate with per_page and offset; hasMore says whether another page exists. Requires pac_cordinator or event_cordinator role. Get event_id from list_school_events.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "description": "Event ID - from list_school_events"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        },
+        "per_page": {
+          "type": "integer",
+          "description": "Page size, 1-100 (default 50)",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Rows to skip for the next page (default 0)",
+          "minimum": 0
+        }
+      },
+      "required": ["event_id"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "attendees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Ticket ID - input to check_in_event_ticket"
+              },
+              "eventId": {
+                "type": "string",
+                "description": "Event the ticket belongs to"
+              },
+              "firstName": {
+                "type": ["string", "null"],
+                "description": "Attendee first name"
+              },
+              "lastName": {
+                "type": ["string", "null"],
+                "description": "Attendee last name"
+              },
+              "quantity": {
+                "type": "integer",
+                "description": "Seats covered by this ticket"
+              },
+              "status": {
+                "type": "string",
+                "description": "Ticket status (paid, reserved, checked_in, cancelled)"
+              },
+              "checkedInAt": {
+                "type": ["string", "null"],
+                "description": "ISO timestamp the ticket was checked in; null until then"
+              }
+            }
+          },
+          "description": "Attendee tickets for the event, newest first"
+        },
+        "hasMore": {
+          "type": "boolean",
+          "description": "Whether more pages exist"
+        },
+        "perPage": {
+          "type": "integer",
+          "description": "Page size applied"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "title": "List Event Attendees (Admin)"
+    }
+  },
+  {
     "name": "create_school_event",
     "title": "Create School Event (Admin)",
     "description": "ADMIN: Creates a school event, optionally ticketed, at the active school. To change an existing event use update_school_event; to register a parent for an event use register_for_event. Requires pac_cordinator or event_cordinator role. WRITE - only create on explicit user request.",
@@ -905,9 +1149,49 @@
     }
   },
   {
+    "name": "check_in_event_ticket",
+    "title": "Check In Event Ticket (Admin)",
+    "description": "ADMIN: Marks one attendee ticket as checked in at the door - use ticket ids from list_event_attendees. Only tickets in paid status can be checked in; a repeat call on an already-checked-in ticket is rejected by the backend, so accidental double-calls do not corrupt state. Requires pac_cordinator or event_cordinator role. WRITE - confirm the attendee before checking in.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "description": "Ticket ID - from list_event_attendees"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        }
+      },
+      "required": ["ticket_id"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Checked-in ticket ID"
+        },
+        "status": {
+          "type": "string",
+          "description": "Ticket status ('checked_in')"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "title": "Check In Event Ticket (Admin)"
+    }
+  },
+  {
     "name": "register_for_event",
     "title": "Register for Event",
-    "description": "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance or when the event is sold out or registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering.",
+    "description": "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance (the error includes the regional Paxaver top-up page for the user to add funds), when the event is sold out, or when registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -921,6 +1205,10 @@
           "minimum": 1,
           "maximum": 20,
           "default": 1
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
         }
       },
       "required": ["event_id"],
@@ -1117,6 +1405,402 @@
       "idempotentHint": false,
       "openWorldHint": false,
       "title": "Sign Up for Volunteer Shift"
+    }
+  },
+  {
+    "name": "create_volunteer_shift",
+    "title": "Create Volunteer Shift (Admin)",
+    "description": "ADMIN: Creates a volunteer shift at the active school, optionally attached to an event (event_id must reference an event of the same school). Parents discover the new shift via the event's shifts in get_school_event or the volunteer views in the Paxaver panel, and sign up through sign_up_for_volunteer_shift. Requires pac_cordinator or pac_member role. WRITE - confirm title, date and times with the user before calling.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        },
+        "event_id": {
+          "type": "string",
+          "description": "Event the shift belongs to (from list_school_events); omit for a standalone school shift"
+        },
+        "title": {
+          "type": "string",
+          "description": "Shift title shown to parents (e.g. Setup crew)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of the work involved"
+        },
+        "shift_date": {
+          "type": "string",
+          "description": "Shift date, YYYY-MM-DD"
+        },
+        "start_time": {
+          "type": "string",
+          "description": "Shift start time, HH:MM"
+        },
+        "end_time": {
+          "type": "string",
+          "description": "Shift end time, HH:MM"
+        },
+        "slots": {
+          "type": "integer",
+          "description": "Number of volunteer slots (default 1)",
+          "minimum": 1
+        }
+      },
+      "required": ["title", "shift_date", "start_time", "end_time"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Volunteer shift ID"
+        },
+        "schoolSlug": {
+          "type": "string",
+          "description": "School the shift belongs to"
+        },
+        "title": {
+          "type": "string",
+          "description": "Shift title"
+        },
+        "shiftDate": {
+          "type": "string",
+          "description": "Shift date, YYYY-MM-DD"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Shift start time, HH:MM"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Shift end time, HH:MM"
+        },
+        "slots": {
+          "type": "integer",
+          "description": "Number of volunteer slots"
+        },
+        "status": {
+          "type": "string",
+          "description": "Shift status ('open')"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "title": "Create Volunteer Shift (Admin)"
+    }
+  },
+  {
+    "name": "list_school_programs",
+    "title": "List School Programs",
+    "description": "Returns the active before/after-school, enrichment, and camp programs for the user's active school: name, description, type, dates, price, capacity, and how many seats are already enrolled. The program ids returned feed register_for_program and the program administration tools. Optionally filter by program_type.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        },
+        "program_type": {
+          "type": "string",
+          "enum": ["before_school", "after_school", "enrichment", "camp"],
+          "description": "Filter to one program type"
+        }
+      },
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "programs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Program ID - input to register_for_program"
+              },
+              "schoolSlug": {
+                "type": "string",
+                "description": "School running the program"
+              },
+              "name": {
+                "type": "string",
+                "description": "Program name"
+              },
+              "description": {
+                "type": ["string", "null"],
+                "description": "Program description"
+              },
+              "programType": {
+                "type": "string",
+                "description": "Program type (before_school, after_school, enrichment, camp)"
+              },
+              "startDate": {
+                "type": ["string", "null"],
+                "description": "Program start date"
+              },
+              "endDate": {
+                "type": ["string", "null"],
+                "description": "Program end date"
+              },
+              "priceCents": {
+                "type": "integer",
+                "description": "Program fee in cents (0 = free)"
+              },
+              "capacity": {
+                "type": ["integer", "null"],
+                "description": "Maximum registrations; null means unlimited"
+              },
+              "enrolled": {
+                "type": "integer",
+                "description": "Registrations already counted against capacity"
+              }
+            }
+          },
+          "description": "Active programs at the school"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "title": "List School Programs"
+    }
+  },
+  {
+    "name": "register_for_program",
+    "title": "Register for Program",
+    "description": "Registers one of the caller's own students for a school program (before/after-school care, enrichment, camp). Returns status 'registered' when a seat is available or 'waitlist' when the program is at capacity - the backend enforces the capacity check atomically. The response records the program fee (amountCents) owed; no wallet charge happens on this call. program_id comes from list_school_programs, student_id from get_my_context. WRITE - confirm the student and program before calling.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "program_id": {
+          "type": "string",
+          "description": "Program ID - from list_school_programs"
+        },
+        "student_id": {
+          "type": "string",
+          "description": "Student to register (must be your own student, from get_my_context)"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional note to staff attached to the registration"
+        }
+      },
+      "required": ["program_id", "student_id"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Registration ID - input to cancel_program_registration"
+        },
+        "programId": {
+          "type": "string",
+          "description": "Program registered for"
+        },
+        "status": {
+          "type": "string",
+          "description": "Registration status ('registered' or 'waitlist')"
+        },
+        "amountCents": {
+          "type": "integer",
+          "description": "Program fee recorded on the registration, in cents"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "title": "Register for Program"
+    }
+  },
+  {
+    "name": "list_program_registrations",
+    "title": "List Program Registrations (Admin)",
+    "description": "ADMIN: Lists program registrations for the active school - including waitlisted ones - with program name, student name, status, fee and notes. Use it to find the registration id for admit_program_registration or to review enrollment. Optionally filter to one program with program_id (from list_school_programs). Requires pac_cordinator role.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        },
+        "program_id": {
+          "type": "string",
+          "description": "Filter to one program - from list_school_programs"
+        }
+      },
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "registrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Registration ID - input to admit_program_registration"
+              },
+              "programId": {
+                "type": "string",
+                "description": "Program the registration belongs to"
+              },
+              "programName": {
+                "type": "string",
+                "description": "Program name"
+              },
+              "studentId": {
+                "type": "string",
+                "description": "Registered student"
+              },
+              "studentName": {
+                "type": "string",
+                "description": "Student display name"
+              },
+              "status": {
+                "type": "string",
+                "description": "registered, waitlist, or cancelled"
+              },
+              "amountCents": {
+                "type": "integer",
+                "description": "Program fee recorded on the registration, in cents"
+              },
+              "notes": {
+                "type": ["string", "null"],
+                "description": "Note attached by the parent"
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO timestamp the registration was created"
+              }
+            }
+          },
+          "description": "Registrations at the school, newest first"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "title": "List Program Registrations (Admin)"
+    }
+  },
+  {
+    "name": "cancel_program_registration",
+    "title": "Cancel Program Registration",
+    "description": "Cancels one of the caller's own students' program registrations (registration_id from register_for_program). When the program has a waitlist, the backend automatically promotes the next waitlisted registration. Coordinators manage cancellations through the Paxaver panel. DESTRUCTIVE - confirm with the user before cancelling.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "registration_id": {
+          "type": "string",
+          "description": "Registration ID - from register_for_program; must belong to one of the caller's students"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        }
+      },
+      "required": ["registration_id"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Cancelled registration ID"
+        },
+        "status": {
+          "type": "string",
+          "description": "Registration status ('cancelled')"
+        },
+        "promoted": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Waitlisted registration promoted to a seat"
+            },
+            "status": {
+              "type": "string",
+              "description": "New status of the promoted registration"
+            }
+          },
+          "description": "Waitlisted registration automatically promoted to the freed seat, if any"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "title": "Cancel Program Registration"
+    }
+  },
+  {
+    "name": "admit_program_registration",
+    "title": "Admit Program Registration (Admin)",
+    "description": "ADMIN: Manually promotes a waitlisted program registration to a seat, regardless of the current capacity count - the backend rejects registrations that are not in waitlist status. Find the waitlisted registration id with list_program_registrations. Requires pac_cordinator role. WRITE - confirm with the user before admitting.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "registration_id": {
+          "type": "string",
+          "description": "Waitlisted registration ID - from list_program_registrations"
+        },
+        "school_slug": {
+          "type": "string",
+          "description": "School slug (defaults to the active school)"
+        }
+      },
+      "required": ["registration_id"],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Admitted registration ID"
+        },
+        "status": {
+          "type": "string",
+          "description": "Registration status ('registered')"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "title": "Admit Program Registration (Admin)"
     }
   },
   {

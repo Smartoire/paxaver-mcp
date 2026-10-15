@@ -11,10 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Microsoft Teams package: 32x32 white outline icon (`certification/microsoft/icons/outline.png`)
   and its SVG source, for the manifest `outline` slot.
+- Microsoft Teams package: 192x192 color icon (`certification/microsoft/icons/color.png`).
+- `list_my_wallet_transactions` lists the caller's wallet activity. The output
+  keeps only the safe fields.
+- Program tools: `list_school_programs`, `register_for_program`,
+  `list_program_registrations`, `cancel_program_registration`, and
+  `admit_program_registration` (PAC staff admit from the waitlist).
+- Event staff tools: `list_event_attendees`, `check_in_event_ticket`, and
+  `create_volunteer_shift`.
 
 ### Changed
 
 - `register_for_event` `quantity` is capped at 20 in the tool schema, matching the backend.
+- `register_for_event` is classified FINANCIAL. On insufficient balance,
+  `register_for_event` and `pay_lunch_order_draft` return the regional
+  Paxaver top-up page. Card data never goes through MCP.
+- `initialize` instructions list the tools that the caller's roles can see.
+  The README and `docs/tools.md` document the four prompts.
+- The Microsoft and Codex listings no longer claim student management.
+
+### Security
+
+- A non-admin caller cannot send a `student_id` that is not in their own
+  context, also when their context has no students.
 
 ## [2.7.3] — 2026-10-14
 
