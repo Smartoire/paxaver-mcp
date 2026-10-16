@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.4] — 2026-10-16
+
 ### Added
 
 - Microsoft Teams package: 32x32 white outline icon (`certification/microsoft/icons/outline.png`)
@@ -34,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A non-admin caller cannot send a `student_id` that is not in their own
   context, also when their context has no students.
+
+### Fixed
+
+- The 2.7.2 and 2.7.3 changelog entries list the changes that each release
+  contains.
 
 ## [2.7.3] — 2026-10-14
 
