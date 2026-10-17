@@ -2,7 +2,7 @@
   {
     "name": "get_my_context",
     "title": "Get My Context",
-    "description": "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, active school, the students they are a guardian for, and their role codes at that school. This is the context-discovery call - most other tools need a student_id or school_slug from here, and admin-role checks come from roles. Returns live account state, so call again if the user may have switched schools or had roles changed.",
+    "description": "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, sign-in account email, account region, server environment, active school, the students they are a guardian for, and their role codes at that school. This is the context-discovery call - most other tools need a student_id or school_slug from here, admin-role checks come from roles, and email/region/environment answer which account is signed in. Returns live account state, so call again if the user may have switched schools or had roles changed.",
     "inputSchema": {
       "type": "object",
       "properties": {},
@@ -14,6 +14,20 @@
         "firstName": {
           "type": ["string", "null"],
           "description": "User first name"
+        },
+        "email": {
+          "type": ["string", "null"],
+          "description": "Sign-in account email (the caller's own)"
+        },
+        "region": {
+          "type": ["string", "null"],
+          "enum": ["CA", "US", "MX", null],
+          "description": "Region of the signed-in account"
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["production", "dev"],
+          "description": "Server environment - production, or dev for staging and development"
         },
         "schoolSlug": {
           "type": ["string", "null"],
@@ -44,6 +58,40 @@
       "destructiveHint": false,
       "openWorldHint": false,
       "title": "Get My Context"
+    }
+  },
+  {
+    "name": "sign_out",
+    "title": "Sign Out",
+    "description": "Ends the caller's current Paxaver sign-in for this MCP connection - revokes the session so the next request makes the client ask the user to sign in again. Call this ONLY when the user explicitly asks to sign out, log in again, or switch to a different Paxaver account or region. Deletes no data and changes no settings. An app that holds its own Paxaver credentials cannot be signed out here - the result then says to disconnect in that app or in Paxaver account settings instead.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "signedOut": {
+          "type": "boolean",
+          "description": "Whether the session was revoked; false when the app manages its own sign-in"
+        },
+        "account": {
+          "type": ["string", "null"],
+          "description": "Sign-in account email the call applied to"
+        },
+        "message": {
+          "type": "string",
+          "description": "Outcome and what the client does next, in plain words"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "title": "Sign Out"
     }
   },
   {

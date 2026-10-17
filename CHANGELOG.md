@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `sign_out` ends the caller's Paxaver sign-in for this MCP connection: it
+  posts the caller's access token and its `client_id` to the issuing
+  region's `/revoke`, which revokes the whole grant family (access and
+  refresh tokens). The next request gets the normal `401` +
+  `WWW-Authenticate` challenge, so clients without a disconnect control
+  can ask the user to sign in again — for example to switch account or
+  region. A confidential client (an app that holds its own credentials)
+  gets a guidance message instead of a success claim. `sign_out` stays
+  listed and callable without an active subscription.
+- `get_my_context` also returns the caller's sign-in `email`, the account
+  `region` (`CA`/`US`/`MX`), and the server `environment` (`production` or
+  `dev`; staging reads `dev`) — one call answers "which login am I on?".
+
+### Security
+
+- A token rejected as revoked now carries the same
+  `WWW-Authenticate: Bearer resource_metadata=…` challenge as the other
+  `401` responses, so clients re-prompt sign-in after a session ends.
+  Before, the revoked-token `401` had no challenge.
+
 ## [2.7.4] — 2026-10-16
 
 ### Added

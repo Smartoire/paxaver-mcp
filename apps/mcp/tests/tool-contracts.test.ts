@@ -102,6 +102,7 @@ describe('tool → backend contract', () => {
   it('pins idempotentHint for every advertised tool', () => {
     const expected: Record<string, boolean | undefined> = {
       get_my_context: undefined,
+      sign_out: true,
       get_my_wallet_balance: undefined,
       list_my_wallet_transactions: true,
       list_my_lunch_orders: undefined,

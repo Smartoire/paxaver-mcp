@@ -36,6 +36,14 @@ export const TOOL_POLICIES: Record<string, ToolPolicy> = {
     mutates: false,
     requiresConfirmation: false,
   },
+  sign_out: {
+    capability: 'view_account',
+    requiresEntitlement: false,
+    classifications: ['WRITE'],
+    requiredRoles: [],
+    mutates: true,
+    requiresConfirmation: true,
+  },
   // --- Wallet ---
   get_my_wallet_balance: {
     capability: 'view_balance',
@@ -373,6 +381,13 @@ export const TOOL_ALIASES: Record<string, string> = {
 export function resolveToolName(name: string): string {
   return TOOL_ALIASES[name] ?? name;
 }
+
+/**
+ * Tools that stay listed and callable without an active MCP subscription.
+ * sign_out is the escape hatch: a client that cannot drop the session on
+ * its own must always reach it.
+ */
+export const SUBSCRIPTION_EXEMPT_TOOLS: ReadonlySet<string> = new Set(['sign_out']);
 
 /**
  * Check whether the authenticated context is allowed to *see* a tool in

@@ -6,7 +6,14 @@
  * business logic runs in the backend via the service-binding API client.
  */
 
-import { canSeeTool, checkToolAuthorization, getToolPolicy, resolveToolName, TOOL_POLICIES } from '../lib/policies.js';
+import {
+  canSeeTool,
+  checkToolAuthorization,
+  getToolPolicy,
+  resolveToolName,
+  SUBSCRIPTION_EXEMPT_TOOLS,
+  TOOL_POLICIES,
+} from '../lib/policies.js';
 import { ALL_TOOLS, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
 import { mcpError } from '../lib/errors.js';
@@ -121,13 +128,20 @@ export async function handleJsonRpc(
 
   if (method === 'tools/list') {
     const ctx = c.var;
-    if (!hasMcpSubscription(ctx)) return subscriptionRequired(id);
     // Unauthenticated metadata probes (marketplace crawlers) see the full
     // catalog — tool schemas are public integration contracts. Auth stays
-    // enforced on tools/call below.
+    // enforced on tools/call below. An authenticated caller without an
+    // active subscription sees only the subscription-exempt tools
+    // (sign_out) — the escape hatch stays discoverable.
+    const subscribed = hasMcpSubscription(ctx);
     const visibleTools = ctx.userId
-      ? ALL_TOOLS.filter((t) =>
-          canSeeTool(t.name, { isPlatformAdmin: ctx.isPlatformAdmin ?? false, permissions: ctx.permissions ?? [] }),
+      ? ALL_TOOLS.filter(
+          (t) =>
+            (subscribed || SUBSCRIPTION_EXEMPT_TOOLS.has(t.name)) &&
+            canSeeTool(t.name, {
+              isPlatformAdmin: ctx.isPlatformAdmin ?? false,
+              permissions: ctx.permissions ?? [],
+            }),
         )
       : ALL_TOOLS;
     return Response.json({
@@ -181,7 +195,11 @@ export async function handleJsonRpc(
     return Response.json(mcpError(id, -32600, 'Authorization required'), { status: 401 });
   }
 
-  if (!hasMcpSubscription(c.var)) return subscriptionRequired(id);
+  // sign_out is the subscription-gate exception: a client that cannot drop
+  // its own session must still reach it.
+  const exemptFromSubscription =
+    method === 'tools/call' && SUBSCRIPTION_EXEMPT_TOOLS.has(resolveToolName(params?.name as string));
+  if (!hasMcpSubscription(c.var) && !exemptFromSubscription) return subscriptionRequired(id);
 
   if (method === 'tools/call') {
     // Legacy names resolve to canonical tools (TOOL_ALIASES) — they stay

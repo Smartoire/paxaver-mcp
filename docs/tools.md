@@ -17,8 +17,10 @@ Authorization policy lives in `apps/mcp/src/lib/policies.ts`; tool definitions i
 
 ### `get_my_context`
 
-Returns the authenticated Paxaver user context: name, active school, students
-they are a guardian of, and available roles. **Always call this first.**
+Returns the authenticated Paxaver user context: name, sign-in account email,
+account region, server environment, active school, students they are a
+guardian of, and available roles. `email`, `region`, and `environment`
+answer "which login am I on?" in one call. **Always call this first.**
 
 |                     |                |
 | ------------------- | -------------- |
@@ -40,7 +42,9 @@ they are a guardian of, and available roles. **Always call this first.**
   "type": "object",
   "properties": {
     "firstName": { "type": "string" },
-    "lastName": { "type": "string" },
+    "email": { "type": "string" },
+    "region": { "type": "string", "enum": ["CA", "US", "MX"] },
+    "environment": { "type": "string", "enum": ["production", "dev"] },
     "schoolSlug": { "type": "string" },
     "schoolName": { "type": "string" },
     "students": { "type": "array", "items": { "type": "object" } },
@@ -49,7 +53,52 @@ they are a guardian of, and available roles. **Always call this first.**
 }
 ```
 
+`environment` is `production` only on `mcp.paxaver.com`; staging and
+development both report `dev`. Only the caller's own sign-in email is
+returned — no other contact fields.
+
 **Backend:** `GET /api/users/me`
+
+---
+
+### `sign_out`
+
+Ends the caller's current Paxaver sign-in for this MCP connection — the
+session's access and refresh grants are revoked, so the next request makes
+the client ask the user to sign in again. Call only when the user
+explicitly asks to sign out, log in again, or switch account or region. It
+stays listed and callable even without an active subscription. An app that
+holds its own Paxaver credentials (a confidential client) cannot be signed
+out this way — the result then says to disconnect in that app or in the
+user's Paxaver account settings (Connected apps).
+
+|                     |                |
+| ------------------- | -------------- |
+| **Capability**      | `view_account` |
+| **Required roles**  | _(any member)_ |
+| **Classifications** | WRITE          |
+| **Confirmation**    | **yes**        |
+
+**Input schema**
+
+```json
+{ "type": "object", "properties": {} }
+```
+
+**Output schema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "signedOut": { "type": "boolean" },
+    "account": { "type": "string" },
+    "message": { "type": "string" }
+  }
+}
+```
+
+**Backend:** regional auth server `/revoke` (no Paxaver API call)
 
 ---
 
