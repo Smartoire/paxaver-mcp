@@ -90,7 +90,7 @@ describe('MCP protocol', () => {
     const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
     const names = json.result.tools.map((t) => t.name);
     // TEST_TOKEN's context carries pac_cordinator -> full catalog.
-    expect(names.length).toBe(36);
+    expect(names.length).toBe(37);
     expect(names).toContain('get_my_context');
     expect(names).toContain('create_lunch_order_draft');
     expect(names).toContain('get_school_event');
@@ -163,12 +163,10 @@ describe('MCP protocol', () => {
     expect(json.error.message).not.toContain('https://');
   });
 
-  it('tools/list is blocked for users without an active MCP subscription', async () => {
+  it('tools/list shows only the exempt sign_out for users without an active MCP subscription', async () => {
     const res = await mcpPost({ jsonrpc: '2.0', id: 9, method: 'tools/list' }, TEST_TOKEN);
-    const json = (await res.json()) as unknown as { error: { message: string } };
-    expect(json.error.message).toContain('subscription');
-    expect(json.error.message).toContain('portal');
-    expect(json.error.message).not.toContain('https://');
+    const json = (await res.json()) as unknown as { result: { tools: { name: string }[] } };
+    expect(json.result.tools.map((t) => t.name)).toEqual(['sign_out']);
   });
 
   it('resources/list is blocked for users without an active MCP subscription', async () => {

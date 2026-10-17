@@ -14,11 +14,11 @@ import {
 } from '../src/lib/policies.js';
 
 describe('Authorization policy', () => {
-  it('canonical catalog exposes exactly 36 tools, 21 parent-visible', () => {
-    expect(ALL_TOOLS.length).toBe(36);
+  it('canonical catalog exposes exactly 37 tools, 22 parent-visible', () => {
+    expect(ALL_TOOLS.length).toBe(37);
     const parent = { isPlatformAdmin: false, permissions: [] };
     const parentVisible = ALL_TOOLS.filter((t) => canSeeTool(t.name, parent));
-    expect(parentVisible.length).toBe(21);
+    expect(parentVisible.length).toBe(22);
   });
 
   it('every canonical tool has a policy entry', () => {

@@ -22,7 +22,7 @@ gating in both functions.
 
 ### Legacy name resolution
 
-`tools/list` advertises only the 36 canonical names. `tools/call` first runs
+`tools/list` advertises only the 37 canonical names. `tools/call` first runs
 `resolveToolName`, which maps pre-2.5 names through `TOOL_ALIASES`
 (`apps/mcp/src/lib/policies.ts`) onto the canonical policy and handler — same
 capability, roles, entitlement, and confirmation checks. The retired
@@ -49,6 +49,7 @@ Fields:
 | Tool                           | Capability     | Entitlement | Classifications                | Required roles                               | Mutates | Confirm |
 | ------------------------------ | -------------- | ----------- | ------------------------------ | -------------------------------------------- | ------- | ------- |
 | `get_my_context`               | `view_account` | no          | READ                           | _(any)_                                      | no      | no      |
+| `sign_out`                     | `view_account` | no          | WRITE                          | _(any)_                                      | yes     | **yes** |
 | `get_my_wallet_balance`        | `view_balance` | no          | READ, PRIVACY_SENSITIVE        | _(any)_                                      | no      | no      |
 | `list_my_wallet_transactions`  | `view_balance` | no          | READ, PRIVACY_SENSITIVE        | _(any)_                                      | no      | no      |
 | `list_my_lunch_orders`         | `view_orders`  | no          | READ                           | _(any)_                                      | no      | no      |
@@ -120,6 +121,10 @@ Used by `tools/list`. A tool is visible if:
 Tools a user cannot see are omitted entirely from `tools/list` — they are not
 returned with a "forbidden" marker. This prevents AI clients from attempting to
 call tools the user has no access to, and reduces prompt noise.
+
+A caller without an active MCP subscription sees only the subscription-exempt
+tools (`SUBSCRIPTION_EXEMPT_TOOLS` in `policies.ts` — currently `sign_out`),
+and `tools/call` rejects everything else.
 
 ## Tool call authorization — `checkToolAuthorization`
 

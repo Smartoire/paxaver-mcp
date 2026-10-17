@@ -13,6 +13,7 @@ import type { AppVariables, Env } from '../env.js';
 import { regionBaseUrl } from '../lib/regions.js';
 import type { ToolHandlerArgs } from './shared.js';
 import { requireArgs, validatePathId } from './shared.js';
+import { signOut } from './sign-out.js';
 
 type Args = Record<string, unknown>;
 
@@ -82,7 +83,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   get_my_context: {
     method: 'GET',
     path: '/api/users/me',
-    after: (result, _args, ctx) => {
+    after: (result, _args, ctx, env) => {
       if (!result.ok) return;
       const raw = (result.data as { data?: Record<string, unknown> })?.data ?? result.data;
       const u = (raw ?? {}) as Record<string, unknown>;
@@ -102,6 +103,12 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
             }))
           : u.students,
         roles: u.roles,
+        // Identity fields come from the verified context, not the backend
+        // payload: the caller's own sign-in email, account region, and the
+        // public server environment (staging/development both read 'dev').
+        email: ctx.email || null,
+        region: ctx.country?.toUpperCase() ?? null,
+        environment: env.ENVIRONMENT === 'production' ? 'production' : 'dev',
       };
       if (ctx.subscription) {
         filtered.subscription = ctx.subscription;
@@ -539,6 +546,9 @@ export async function handleTool({
   args,
   idempotencyKey,
 }: ToolHandlerArgs): Promise<ApiCallResult | undefined> {
+  // sign_out talks to the regional auth server, not the backend API — it
+  // has no ToolSpec entry.
+  if (name === 'sign_out') return signOut(env, ctx);
   const spec = TOOL_SPECS[name];
   if (!spec) return undefined;
   if (spec.required) requireArgs(args, ...spec.required);

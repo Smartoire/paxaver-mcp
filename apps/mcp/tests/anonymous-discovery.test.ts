@@ -75,9 +75,11 @@ describe('anonymous discovery enabled (development)', () => {
   });
 
   it('a request with a token still authenticates (subscription gate applies)', async () => {
+    // user-1 has no subscription: the gate limits tools/list to the
+    // subscription-exempt sign_out instead of the anonymous full catalog.
     const res = await mcpPost({ jsonrpc: '2.0', id: 7, method: 'tools/list' }, DEV_ANON_ENV, TEST_TOKEN);
-    const json = (await res.json()) as { error?: { message: string } };
-    expect(json.error?.message).toContain('subscription');
+    const json = (await res.json()) as { result: { tools: { name: string }[] } };
+    expect(json.result.tools.map((t) => t.name)).toEqual(['sign_out']);
   });
 });
 

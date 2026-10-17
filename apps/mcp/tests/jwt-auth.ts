@@ -43,10 +43,12 @@ export async function makeToken(
     withExp = true,
     scope = 'openid tools',
     audience = ['paxaver-api', 'https://mcp.paxaver.dev/mcp'],
-  }: { withExp?: boolean; scope?: string | null; audience?: string | string[] } = {},
+    clientId,
+  }: { withExp?: boolean; scope?: string | null; audience?: string | string[]; clientId?: string } = {},
 ): Promise<string> {
   const claims: Record<string, unknown> = { tenant_id: 'user-ca' };
   if (scope) claims.scope = scope;
+  if (clientId) claims.client_id = clientId;
   const jwt = new SignJWT(claims)
     .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
     .setSubject(userId)

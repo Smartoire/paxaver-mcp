@@ -148,13 +148,13 @@ The worker reads two Worker secrets, `INTERNAL_SERVICE_SECRET` and
 
 ## Tools
 
-The server exposes 36 tools grouped into seven categories. Visibility in
+The server exposes 37 tools grouped into seven categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
 | Category                | Tools                                                                                                                                                                                                                   |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User / wallet           | `get_my_context`, `get_my_wallet_balance`, `list_my_wallet_transactions`                                                                                                                                                |
+| User / wallet           | `get_my_context`, `sign_out`, `get_my_wallet_balance`, `list_my_wallet_transactions`                                                                                                                                    |
 | Lunch ordering          | `get_lunch_menu`, `list_my_lunch_orders`, `create_lunch_order_draft`, `update_lunch_order_draft`, `discard_lunch_order_draft`, `pay_lunch_order_draft`, `cancel_my_lunch_order`                                         |
 | Events & volunteering   | `list_school_events`, `get_school_event`, `register_for_event`, `list_my_event_registrations`, `cancel_my_event_registration`, `list_my_volunteer_signups`, `sign_up_for_volunteer_shift`, `cancel_my_volunteer_signup` |
 | Event administration    | `create_school_event`, `update_school_event`, `cancel_school_event`, `list_event_attendees`, `check_in_event_ticket`, `create_volunteer_shift`                                                                          |
@@ -184,11 +184,20 @@ Financial and destructive tools are labeled and require user confirmation. Full
 reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
 [`docs/authorization.md`](./docs/authorization.md).
 
+`sign_out` ends the caller's sign-in for this MCP connection: the session's
+access and refresh grants are revoked at the issuing regional auth server, so
+the next request gets the usual sign-in challenge. It works without an active
+subscription. An app that holds its own Paxaver credentials cannot be signed
+out this way — the result directs the user to disconnect Paxaver in that app
+or in their Paxaver account settings instead.
+
 ### Privacy
 
-No personal contact information (email, phone, address) is collected or
-returned through MCP tools. The `get_my_context` tool returns only the user's
-name, school, students, and roles. Student data is limited to IDs, names, and
+The only contact information returned through MCP tools is the caller's own
+sign-in email — `get_my_context` includes it (with the account region and
+server environment) so a client can answer "which login am I on?", and
+`sign_out` names the account it signs out. Phone, address, and other contact
+fields are never returned. Student data is limited to IDs, names, and
 school slugs. Allergies, notes, birthday, and other PII are not exposed in
 read responses. The MCP server does not log user data.
 

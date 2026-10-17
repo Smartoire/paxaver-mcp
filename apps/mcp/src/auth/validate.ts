@@ -196,6 +196,7 @@ export async function authenticateRequest(
             ok: false,
             status: 401,
             error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+            wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
           };
         }
 
@@ -204,6 +205,7 @@ export async function authenticateRequest(
             ok: false,
             status: 401,
             error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+            wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
           };
         }
 
@@ -213,6 +215,7 @@ export async function authenticateRequest(
             ok: false,
             status: 401,
             error: { code: 'INVALID_TOKEN', message: 'Token has been revoked or user no longer exists' },
+            wwwAuthenticate: `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
           };
         }
         if (!ctx.country) ctx.country = country;
