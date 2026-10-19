@@ -77,7 +77,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full development setup.
 
 ## Tools
 
-The server exposes 37 tools grouped into seven categories. Visibility in
+The server exposes 37 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
@@ -140,7 +140,7 @@ Paxaver monorepo under `docs/paxaver-mcp/` and is intentionally not published.
 - **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
 - **Protocol:** MCP `2025-06-18`, Streamable HTTP
 - **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
-- **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)
+- **Test:** [Vitest](https://vitest.dev) v5 (Workers pool + Node pool)
 
 ---
 
