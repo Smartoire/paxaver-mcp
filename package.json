@@ -37,7 +37,6 @@
   ],
   "files": [
     "apps/mcp/src/",
-    "docs/",
     "AGENTS.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",

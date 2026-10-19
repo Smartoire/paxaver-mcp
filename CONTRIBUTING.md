@@ -6,13 +6,14 @@ so external contributions are limited to review and educational purposes.
 
 ## Development setup
 
-**Requirements:** Node.js >= 26.8.2 (see [`.nvmrc`](./.nvmrc)) and npm.
+**Requirements:** Node.js >= 26.8.2 (see [`.nvmrc`](./.nvmrc)) and pnpm >= 10
+(see `packageManager` in [`package.json`](./package.json)).
 
 ```bash
 git clone <repo-url> paxaver-mcp
 cd paxaver-mcp
 nvm use              # use the pinned Node version
-npm install
+pnpm install
 ```
 
 ### Local secrets
@@ -27,8 +28,8 @@ client falls back to authenticated HTTPS.
 ### Run locally
 
 ```bash
-npm run dev          # wrangler dev (Miniflare) on http://localhost:8787
-npm run dev:staging  # wrangler dev --env staging
+pnpm dev             # wrangler dev (Miniflare) on http://localhost:8787
+pnpm dev:staging     # wrangler dev --env staging
 ```
 
 ## Testing
@@ -36,9 +37,9 @@ npm run dev:staging  # wrangler dev --env staging
 Two Vitest configurations:
 
 ```bash
-npm test             # runs both: vitest ( Workers-style ) + vitest.node
-npm run test:node    # node-pool tests only (apps/mcp/tests/node/**/*.test.ts)
-npm run test:watch   # watch mode for the primary config
+pnpm test            # runs both: vitest ( Workers-style ) + vitest.node
+pnpm test:node       # node-pool tests only (apps/mcp/tests/node/**/*.test.ts)
+pnpm test:watch      # watch mode for the primary config
 ```
 
 Test files live in `apps/mcp/tests/`:
@@ -55,15 +56,14 @@ Test files live in `apps/mcp/tests/`:
 Post-deploy smoke tests hit live endpoints and require network access:
 
 ```bash
-npm run smoke:staging
-npm run smoke:ca
-npm run smoke:us
+pnpm smoke:staging
+pnpm smoke:prod
 ```
 
 ## Typecheck
 
 ```bash
-npm run typecheck    # tsc --noEmit
+pnpm typecheck       # tsc --noEmit
 ```
 
 The project uses `strict` mode and `noUncheckedIndexedAccess`. All type errors
@@ -72,18 +72,18 @@ must be resolved before a PR can merge.
 ## Lint
 
 ```bash
-npm run lint         # eslint .
+pnpm lint            # eslint .
 ```
 
-ESLint config is in [`eslint.config.js`](./eslint.config.js) (flat config,
+ESLint config is in [`eslint.config.mjs`](./eslint.config.mjs) (flat config,
 TypeScript-aware). Lint errors must be fixed; warnings should be addressed.
 
 ## Build
 
 ```bash
-npm run build              # wrangler deploy --dry-run (default env)
-npm run build:staging      # wrangler deploy --dry-run --env staging
-npm run wrangler:check     # dry-run for all 3 environments
+pnpm build              # wrangler deploy --dry-run (default env)
+pnpm build:staging      # wrangler deploy --dry-run --env staging
+pnpm wrangler:check     # dry-run for all environments
 ```
 
 The build is a Wrangler dry-run — it validates the bundle and config without
@@ -92,15 +92,16 @@ deploying. CI runs `wrangler:check` to ensure all environments build.
 ## Code style
 
 - **TypeScript, strict.** No `any` without an explanatory comment (see
-  `src/server/json-rpc.ts` for the one justified exception).
+  `apps/mcp/src/server/json-rpc.ts` for the one justified exception).
 - **ESM only.** The project uses `"type": "module"` and `.js` import specifiers
   (TypeScript's `verbatimModuleSyntax`).
 - **Hono for routing.** Keep route handlers thin; business logic belongs in the
   backend.
 - **No business logic in the MCP server.** It is an adapter. If you find
   yourself writing domain rules, they belong in the private backend, not here.
-- **Vendored contracts.** `src/lib/contracts.ts` mirrors private names. If the
-  backend's capability/role model changes, update this file to match.
+- **Vendored names.** `apps/mcp/src/lib/policies.ts` mirrors the backend's
+  capability and role names. If the backend's capability/role model changes,
+  update the names to match.
 - **Every tool needs a policy entry.** A tool without an entry in
   `TOOL_POLICIES` is rejected as unknown. Add the entry when adding a tool.
 - **Errors are sanitized.** Never return raw backend error text to the client.
@@ -115,7 +116,7 @@ deploying. CI runs `wrangler:check` to ensure all environments build.
 2. Write tests for new behavior. Update existing tests for changed behavior.
 3. Ensure all checks pass locally:
    ```bash
-   npm run typecheck && npm run lint && npm test && npm run wrangler:check
+   pnpm typecheck && pnpm lint && pnpm test && pnpm wrangler:check
    ```
 4. Update [`CHANGELOG.md`](./CHANGELOG.md) under an `## [Unreleased]` section.
 5. Open a PR with a clear description. Link any related backend changes.
@@ -125,15 +126,15 @@ deploying. CI runs `wrangler:check` to ensure all environments build.
 
 ### Adding a new tool
 
-1. Add the tool definition to the appropriate file in `src/schemas/` and export
-   it from `src/schemas/index.ts` (add to `ALL_TOOLS`).
-2. Add a policy entry in `src/lib/policy.ts` (`TOOL_POLICIES`).
-3. Add a spec entry in `src/tools/tools.ts` (`TOOL_SPECS`) mapping the tool
-   to a backend API path. Mutations get an `Idempotency-Key` automatically
+1. Add the tool definition to `apps/mcp/src/schemas.ts` (add to `ALL_TOOLS`).
+2. Add a policy entry in `apps/mcp/src/lib/policies.ts` (`TOOL_POLICIES`).
+3. Add a spec entry in `apps/mcp/src/tools/tools.ts` (`TOOL_SPECS`) mapping the
+   tool to a backend API path. Mutations get an `Idempotency-Key` automatically
    via `mutates: true` in their policy.
-4. Add tests in `tests/authz.test.ts` (visibility/authorization) and
-   `tests/protocol.test.ts` (dispatch) as appropriate.
-5. Document the tool in [`docs/tools.md`](./docs/tools.md).
+4. Add tests in `apps/mcp/tests/authz.test.ts` (visibility/authorization) and
+   `apps/mcp/tests/protocol.test.ts` (dispatch) as appropriate.
+5. Document the tool in the internal tool reference (`docs/paxaver-mcp/tools.md`
+   in the private Paxaver monorepo).
 6. Update the tool count in [`README.md`](./README.md) if needed.
 
 ## Questions

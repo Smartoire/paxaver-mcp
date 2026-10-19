@@ -30,8 +30,8 @@ assessment within **5 business days**.
 | 2.x     | yes       |
 | < 2.0   | no        |
 
-Only the latest minor release of v2 receives security fixes. The legacy v1
-`mcp-server/` in the private monorepo is end-of-life.
+Only the latest minor release of v2 receives security fixes; v1 is
+end-of-life.
 
 ## Disclosure timeline
 
@@ -50,39 +50,23 @@ they prefer to remain anonymous.
 
 The Paxaver MCP server is designed with defense-in-depth. Key measures:
 
-- **No direct data access.** The MCP worker does not bind D1, Stripe, or SES.
-  All data access flows through the Paxaver backend via a same-region Cloudflare
-  service binding. See [docs/architecture.md](./docs/architecture.md).
-- **Service binding auth.** Backend calls go over a same-region Cloudflare
-  service binding and carry the caller's OAuth access token (RS256) as
-  `Authorization: Bearer`. The backend validates the token via JWKS and
-  applies its own authorization pipeline; there is no separate service
-  token. See [docs/architecture.md](./docs/architecture.md).
 - **OAuth 2.1 + PKCE S256.** Authorization Code flow with PKCE; `S256` is the
-  only accepted challenge method. See [docs/authentication.md](./docs/authentication.md).
-- **OAuth `state` pass-through.** The authorization facade forwards the
-  client's `state` value unchanged to the regional auth server, which
-  validates it on the redirect back to the client.
-- **CORS allowlist.** Origins are allowlisted; no reflect-any-origin.
-- **Error sanitization.** Backend errors are mapped to generic MCP error
-  messages; stack traces and internal details are never leaked.
+  only accepted challenge method.
+- **Per-request authentication.** Every request presents an RS256 JWT verified
+  by signature, issuer, audience, scope, and expiry; the user context is
+  reloaded on every request, so revocation takes effect immediately.
+- **No direct data access.** The server holds no database, payment, or email
+  credentials. All data access flows through the Paxaver backend API, which
+  re-checks authorization on every call.
+- **CORS allowlist.** Origins are allowlisted; the server never reflects an
+  arbitrary origin.
+- **Error sanitization.** Backend errors are mapped to generic messages; stack
+  traces and internal details are never returned to the client.
 - **Security headers.** `X-Content-Type-Options: nosniff`,
-  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.
-- **Idempotency.** Mutating tool calls include an `Idempotency-Key` to suppress
-  duplicate side effects from retries. The key is a hash of the user, the tool,
-  the canonical arguments, the `Mcp-Session-Id` and the JSON-RPC `id`.
-- **Batches.** A JSON-RPC batch holds at most 20 messages and returns one
-  result per request.
-- **Stateless auth.** User context is reloaded from the backend on every
-  request; revocation is immediate.
-- **Defense-in-depth authorization.** Tool authorization is checked at the MCP
-  layer and re-checked (data-level) by the backend. See
-  [docs/authorization.md](./docs/authorization.md) and
-  [docs/security.md](./docs/security.md).
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` on every response.
 
 ## Scope
 
-This policy covers the Paxaver MCP server (this repository). The private Paxaver
-backend has its own security policy in the private monorepo. Vulnerabilities that
-require backend access to exploit should be reported to both if the boundary is
-relevant.
+This policy covers the Paxaver MCP server (this repository). The rest of the
+Paxaver platform has its own security policy. Vulnerabilities that cross the
+boundary should be reported to both.
