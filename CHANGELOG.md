@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Internal documentation (`docs/`) moved out of this public repository and the
+  npm package; it now lives in the private Paxaver monorepo under
+  `docs/paxaver-mcp/`. The public `README.md`, `SECURITY.md`,
+  `CONTRIBUTING.md`, and `CHANGELOG.md` are self-contained.
+
 ## [2.7.5] — 2026-10-16
 
 ### Added

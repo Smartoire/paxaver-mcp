@@ -22,106 +22,44 @@ events, enroll students in school programs, volunteer, and — for school
 administrators — manage restaurants, menu items, events, attendee check-in,
 volunteer shifts, program waitlists, and daily orders.
 
-It is a **thin adapter**. It contains no business logic and never touches the
-database, Stripe, or email directly. Every action is delegated to the private
-Paxaver backend API over a Cloudflare **service binding** (same region, no public
-network hop). The MCP server's only responsibilities are:
-
-- MCP protocol handling (JSON-RPC 2.0, Streamable HTTP)
-- RS256 JWT validation via JWKS from the centralized Paxaver auth worker
-- Per-tool capability policy and role gating
-- Sanitized, user-safe error mapping
-
-Authentication is handled by the regional Paxaver auth servers
-(`paxaver.ca/auth`, `paxaver.com/auth`, `paxaver.mx/auth`), which issue the
-OAuth 2.0 / OIDC tokens. The MCP server shows one facade authorization server
-on its own origin: the user picks the country of their account at login, and
-the facade routes each OAuth call to that region. The MCP server validates the
-resulting RS256 JWTs and forwards them to the backend.
+It is a **thin adapter**. It contains no business logic and holds no database,
+payment, or email credentials. Every action runs against the Paxaver backend API
+as the authenticated user, and errors are sanitized before they reach the client.
 
 ---
 
-## Architecture
+## Connect
+
+Point an MCP-compatible client at the hosted endpoint and sign in with a Paxaver
+account when prompted (OAuth 2.1 Authorization Code + PKCE):
 
 ```text
-┌───────────────┐     MCP (Streamable HTTP)      ┌──────────────────────┐
-│   AI Client   │ ─────────────────────────────▶ │   Paxaver MCP Worker │
-│ ChatGPT/Claude│ ◀───────────────────────────── │  (this repo)         │
-│  /Perplexity  │     RS256 JWT + JSON-RPC 2.0   │  Hono + jose         │
-└───────────────┘                                └──────────┬───────────┘
-                                                            │
-                                          Cloudflare service binding
-                                          (PAXAVER_API, same region)
-                                                            │
-                                                            ▼
-                                                 ┌──────────────────────┐
-                                                 │  Paxaver API Worker  │
-                                                 │  (private backend)   │
-                                                 │  D1 · Stripe · SES   │
-                                                 └──────────────────────┘
+https://mcp.paxaver.com/mcp
 ```
 
-The MCP worker **never** binds D1, Stripe, or SES. The service binding forwards
-the caller's OAuth access token (RS256 JWT) as `Authorization: Bearer`; the
-backend validates it via JWKS and runs its own authorization pipeline, so every
-action is attributed to the authenticated Paxaver user. See
-[`docs/architecture.md`](./docs/architecture.md) for the full picture.
+The server speaks MCP protocol `2025-06-18` over Streamable HTTP (`POST /mcp`).
+One endpoint serves all regions; the user's region is resolved from their
+account at sign-in.
 
 ---
 
-## Quick start
-
-### Install
+## Install
 
 ```bash
 npm install @paxaver/mcp
 ```
 
-### Develop locally
+The package ships the Worker source for self-hosting and development. Most users
+only need the hosted endpoint above.
+
+### Run locally
 
 ```bash
-# 1. Install dependencies (Node >= 26.8.2)
-npm install
-
-# 2. Run the worker locally (Miniflare)
-npm run dev
-
-# 3. Typecheck, lint, and test
-npm run typecheck
-npm run lint
-npm test
+pnpm install        # Node >= 26.8.2, pnpm >= 10
+pnpm dev            # Miniflare on http://localhost:8787 — MCP endpoint: POST /mcp
 ```
 
-The local dev server starts on `http://localhost:8787`. Discovery endpoints live
-under `/.well-known/`; the MCP endpoint is `POST /mcp`.
-
-> **Note:** Local development without the `PAXAVER_API_*` service bindings falls
-> back to authenticated HTTPS against `API_BASE_URL_CA`, `API_BASE_URL_US`, and
-> `API_BASE_URL_MX` (default `http://localhost:8787`). For full integration
-> testing, run the Paxaver backend worker locally; the defaults already point at
-> it.
-
----
-
-## Deployment
-
-Two environments, each a separate Worker with its own custom domain:
-
-| Environment  | Worker name           | Domain            |
-| ------------ | --------------------- | ----------------- |
-| `staging`    | `paxaver-mcp-staging` | `mcp.paxaver.dev` |
-| `production` | `paxaver-mcp`         | `mcp.paxaver.com` |
-
-The production worker serves CA, US and MX users through a single endpoint
-(`mcp.paxaver.com`). User region is resolved from the JWT issuer (`iss`),
-and the worker routes to the correct regional backend via service bindings
-(`PAXAVER_API_CA`, `PAXAVER_API_US`, `PAXAVER_API_MX`). Currency is determined by the user's
-school, not by the MCP endpoint.
-
 ### Docker
-
-The `Dockerfile` runs the worker locally via `wrangler dev`, proxying the
-production backends over HTTPS:
 
 ```bash
 docker build -t paxaver-mcp .
@@ -129,26 +67,17 @@ docker run -p 8787:8787 paxaver-mcp
 # MCP endpoint: http://localhost:8787/mcp
 ```
 
-The image sets `REVOCATION_CHECK=skip`, because a self-hosted server does not
-have `INTERNAL_SERVICE_SECRET`. Tokens are still checked by signature, expiry
-and a live user-context load, but the internal token revocation check does not
-run: a revoked token stays valid until it expires. The container runs as the
-unprivileged `node` user. `ALLOWED_ORIGINS` keeps the localhost defaults; add
-`--var ALLOWED_ORIGINS:<origin>` for a browser client. See [`docs/authentication.md`](./docs/authentication.md#token-revocation-check).
+Self-hosted and local instances perform no token-revocation check: a revoked
+token stays valid until it expires. Tokens are still verified by signature,
+expiry, and a live user-context load.
 
-```bash
-npm run deploy:staging   # wrangler deploy --env staging
-npm run deploy:prod      # wrangler deploy --env production
-```
-
-The worker reads two Worker secrets, `INTERNAL_SERVICE_SECRET` and
-`ALEXA_SKILL_ID`. See [`docs/deployment.md`](./docs/deployment.md#secrets).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full development setup.
 
 ---
 
 ## Tools
 
-The server exposes 37 tools grouped into seven categories. Visibility in
+The server exposes 37 tools grouped into six categories. Visibility in
 `tools/list` is filtered by the caller's roles; every call is re-authorized
 before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
@@ -163,75 +92,63 @@ before dispatch, and the backend re-checks data-level access (defense-in-depth).
 
 ### Prompts
 
-The server currently registers four prompts:
-
-- `daily_lunch_menu` — show the school's lunch menu, with optional date or month.
-- `wallet_balance` — report the current spendable wallet balance and remind the user that top-up happens in the Paxaver panel.
-- `upcoming_events` — list upcoming school events and offer registration or volunteer sign-up.
-- `lunch_order_helper` — guide a user through selecting a student, reviewing a lunch order draft, and confirming payment. It accepts an optional `student_name` argument.
-
-Prompt availability and content are returned by `prompts/list` and `prompts/get`.
+The server registers four prompts: `daily_lunch_menu`, `wallet_balance`,
+`upcoming_events`, and `lunch_order_helper` (optional `student_name` argument).
+Availability and content are returned by `prompts/list` and `prompts/get`.
 
 Ordering is draft → review → payment: `create_lunch_order_draft`, adjust
 with `update_lunch_order_draft`, then `pay_lunch_order_draft`.
 
-**Compatibility:** pre-2.5 tool names (`get_menu`, `register_event`,
-`create_menu_item`, …) still work — they resolve to the canonical tools —
-but are no longer advertised. The retired `order_lunch` tool is removed.
-See [`docs/tools.md`](./docs/tools.md) for the full legacy-name mapping.
+`sign_out` ends the caller's sign-in for this MCP connection: the next request
+gets the usual sign-in challenge. An app that holds its own Paxaver credentials
+cannot be signed out this way — the result directs the user to disconnect
+Paxaver in that app or in their Paxaver account settings instead.
 
-Financial and destructive tools are labeled and require user confirmation. Full
-reference: [`docs/tools.md`](./docs/tools.md). Authorization policy:
-[`docs/authorization.md`](./docs/authorization.md).
-
-`sign_out` ends the caller's sign-in for this MCP connection: the session's
-access and refresh grants are revoked at the issuing regional auth server, so
-the next request gets the usual sign-in challenge. It works without an active
-subscription. An app that holds its own Paxaver credentials cannot be signed
-out this way — the result directs the user to disconnect Paxaver in that app
-or in their Paxaver account settings instead.
+Pre-2.5 tool names still resolve to the canonical tools but are no longer
+advertised; the retired `order_lunch` tool is removed. Financial and destructive
+tools are labeled and require user confirmation.
 
 ### Privacy
 
 The only contact information returned through MCP tools is the caller's own
-sign-in email — `get_my_context` includes it (with the account region and
-server environment) so a client can answer "which login am I on?", and
-`sign_out` names the account it signs out. Phone, address, and other contact
-fields are never returned. Student data is limited to IDs, names, and
-school slugs. Allergies, notes, birthday, and other PII are not exposed in
+sign-in email — `get_my_context` includes it so a client can answer "which login
+am I on?", and `sign_out` names the account it signs out. Phone, address, and
+other contact fields are never returned. Student data is limited to IDs, names,
+and school slugs; allergies, notes, birthday, and other PII are not exposed in
 read responses. The MCP server does not log user data.
 
 ---
 
 ## Documentation
 
-| Document                                           | Topic                                                             |
-| -------------------------------------------------- | ----------------------------------------------------------------- |
-| [docs/architecture.md](./docs/architecture.md)     | System architecture, service binding boundary, regional isolation |
-| [docs/authentication.md](./docs/authentication.md) | JWT validation, JWKS, auth worker delegation, token format        |
-| [docs/authorization.md](./docs/authorization.md)   | Capability policy table, role gating, defense-in-depth            |
-| [docs/tools.md](./docs/tools.md)                   | Full tool reference with input schemas and classifications        |
-| [docs/deployment.md](./docs/deployment.md)         | Wrangler config, environments, secrets, custom domains            |
-| [docs/security.md](./docs/security.md)             | Security model, CORS, CSRF, error sanitization, headers           |
-| [docs/compatibility.md](./docs/compatibility.md)   | MCP protocol version, transports, supported AI clients            |
-| [docs/migration.md](./docs/migration.md)           | Migration from the legacy `mcp-server/` in the private monorepo   |
-| [CHANGELOG.md](./CHANGELOG.md)                     | Release history                                                   |
-| [SECURITY.md](./SECURITY.md)                       | Vulnerability reporting policy                                    |
-| [CONTRIBUTING.md](./CONTRIBUTING.md)               | Development setup and contribution process                        |
+| Document                             | Topic                                      |
+| ------------------------------------ | ------------------------------------------ |
+| [CHANGELOG.md](./CHANGELOG.md)       | Release history                            |
+| [SECURITY.md](./SECURITY.md)         | Vulnerability reporting policy             |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Development setup and contribution process |
+
+Internal documentation (architecture, authentication, authorization, full tool
+reference, deployment, security model, test scenarios) lives in the private
+Paxaver monorepo under `docs/paxaver-mcp/` and is intentionally not published.
 
 ---
 
 ## Tech stack
 
-- **Runtime:** Cloudflare Workers (`compatibility_date: 2026-09-15`)
+- **Runtime:** Cloudflare Workers
 - **Framework:** [Hono](https://hono.dev) v4
 - **JWT:** [jose](https://github.com/panva/jose) v6 (RS256 via JWKS)
 - **Protocol:** MCP `2025-06-18`, Streamable HTTP
-- **Auth:** RS256 JWT validation via the regional auth servers (`paxaver.{ca,com,mx}/auth`)
 - **Build/deploy:** [Wrangler](https://developers.cloudflare.com/workers/wrangler/) v4
-- **Test:** [Vitest](https://vitest.dev) v2 (Workers pool + Node pool)
+- **Test:** [Vitest](https://vitest.dev) v5 (Workers pool + Node pool)
 
 ---
+
+## Support
+
+- Bug reports and feature requests:
+  [GitHub issues](https://github.com/Smartoire/paxaver-mcp/issues)
+- Security reports: see [SECURITY.md](./SECURITY.md)
 
 ## License
 

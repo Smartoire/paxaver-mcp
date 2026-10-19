@@ -9,7 +9,7 @@ This file defines the rules for AI agents that work in the Paxaver MCP repositor
 - Follow system, developer, and user instructions first. Within repository guidance, more specific `AGENTS.md` files override parent guidance.
 - Run commands from this repository root. Use Node and pnpm versions from `package.json`.
 - Check `git status --short` before editing. Preserve user changes. Inspect existing code, consumers, and tests before adding a tool or dependency.
-- Read [CONTRIBUTING.md](CONTRIBUTING.md) and relevant [documentation](docs/README.md). The sibling platform repository has its own instructions.
+- Read [CONTRIBUTING.md](CONTRIBUTING.md). Internal documentation (architecture, authentication, authorization, tool reference, deployment, security model, test scenarios) lives in the private Paxaver monorepo under `docs/paxaver-mcp/`; it is intentionally not in this public repo. The sibling platform repository has its own instructions.
 
 ## Project Overview
 
@@ -29,7 +29,12 @@ The server is a thin adapter. It contains no business logic and never touches th
   - `tools/` — Tool handlers
   - `transport/` — Streamable HTTP transport
 - `apps/mcp/tests/` — Unit, protocol, and smoke tests
-- `docs/` — Documentation
+
+Internal documentation is kept out of this repository: it lives in the private
+Paxaver monorepo under `docs/paxaver-mcp/` (`architecture.md`,
+`authentication.md`, `authorization.md`, `tools.md`, `deployment.md`,
+`security.md`, `compatibility.md`, `migration.md`, `TEST_SCENARIOS.md`,
+`CONTEXT-MAP.md`, `privacy/compliance.md`).
 
 ## Tech Stack
 
