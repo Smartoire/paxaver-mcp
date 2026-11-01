@@ -78,6 +78,19 @@ function paginationFields(result: ApiCallResult): Record<string, unknown> {
   return { perPage: meta.perPage, nextCursor: meta.nextCursor ?? null, hasMore: meta.hasMore ?? false };
 }
 
+// MCP requires structuredContent to be an object. A list route that returns a
+// bare array (top level or under `data`) is wrapped under the array property
+// its outputSchema declares, e.g. `{ events: [...] }`.
+function wrapListBody(key: string, result: ApiCallResult): void {
+  if (!result.ok) return;
+  if (Array.isArray(result.data)) {
+    result.data = { [key]: result.data };
+    return;
+  }
+  const envelope = result.data as { data?: unknown } | undefined;
+  if (Array.isArray(envelope?.data)) envelope.data = { [key]: envelope.data };
+}
+
 const TOOL_SPECS: Record<string, ToolSpec> = {
   // User
   get_my_context: {
@@ -193,6 +206,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
       start: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-01` : undefined),
       end: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-31` : undefined),
     }),
+    after: (result) => wrapListBody('orders', result),
   },
   get_lunch_menu: {
     method: 'GET',
@@ -257,17 +271,19 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
       // the tool schema is applied here on the returned eventDate values.
       const start = args.start_date as string | undefined;
       const end = args.end_date as string | undefined;
-      if (!result.ok || (!start && !end)) return;
-      const data = result.data as Record<string, unknown> | unknown[] | undefined;
-      const list = Array.isArray(data) ? data : ((data as Record<string, unknown>)?.data as unknown[]);
-      if (Array.isArray(list)) {
-        const filtered = list.filter((e) => {
-          const d = (e as Record<string, unknown>).eventDate as string | undefined;
-          return d !== undefined && (!start || d >= start) && (!end || d <= end);
-        });
-        if (Array.isArray(data)) result.data = filtered;
-        else if (data && typeof data === 'object') (data as Record<string, unknown>).data = filtered;
+      if (result.ok && (start || end)) {
+        const data = result.data as Record<string, unknown> | unknown[] | undefined;
+        const list = Array.isArray(data) ? data : ((data as Record<string, unknown>)?.data as unknown[]);
+        if (Array.isArray(list)) {
+          const filtered = list.filter((e) => {
+            const d = (e as Record<string, unknown>).eventDate as string | undefined;
+            return d !== undefined && (!start || d >= start) && (!end || d <= end);
+          });
+          if (Array.isArray(data)) result.data = filtered;
+          else if (data && typeof data === 'object') (data as Record<string, unknown>).data = filtered;
+        }
       }
+      wrapListBody('events', result);
     },
   },
   // The detail route returns the event plus its volunteer shifts and the
@@ -380,6 +396,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   list_my_event_registrations: {
     method: 'GET',
     path: '/api/events/tickets/mine',
+    after: (result) => wrapListBody('tickets', result),
   },
   cancel_my_event_registration: {
     method: 'POST',
@@ -389,6 +406,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   list_my_volunteer_signups: {
     method: 'GET',
     path: '/api/volunteers/my-signups',
+    after: (result) => wrapListBody('signups', result),
   },
   cancel_my_volunteer_signup: {
     method: 'POST',
@@ -470,6 +488,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     method: 'GET',
     path: (args, ctx) =>
       `/api/schools/${validatePathId(args.school_slug || ctx.schoolSlug, 'school_slug')}/restaurants`,
+    after: (result) => wrapListBody('restaurants', result),
   },
   // restaurantCreateSchema is camelCase and requires schoolSlug.
   create_school_restaurant: {
@@ -488,6 +507,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   list_restaurant_menu_items: {
     method: 'GET',
     path: '/api/restaurants/:restaurant_id/items',
+    after: (result) => wrapListBody('items', result),
   },
   // menuItemCreateSchema is camelCase; ingredients is string[].
   create_restaurant_menu_item: {

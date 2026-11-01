@@ -14,6 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/paxaver-mcp/`. The public `README.md`, `SECURITY.md`,
   `CONTRIBUTING.md`, and `CHANGELOG.md` are self-contained.
 
+## [2.7.6] — 2026-10-31
+
+### Fixed
+
+- List tools returned `structuredContent` as a bare JSON array, which breaks
+  the MCP object requirement and fails clients that validate output against
+  `outputSchema` (for example, Claude Code rejected `list_school_events`).
+  `list_my_lunch_orders`, `list_school_events`, `list_my_event_registrations`,
+  `list_my_volunteer_signups`, `list_school_restaurants` and
+  `list_restaurant_menu_items` now return an object wrapping the rows under the
+  property their output schema declares (`orders`, `events`, `tickets`,
+  `signups`, `restaurants`, `items`). Tool names, inputs and schemas are unchanged.
+
+### Added
+
+- A contract test calls every tool that declares an `outputSchema` and
+  validates its `structuredContent` against that schema with a JSON Schema
+  validator, so a bare array fails the build.
+
 ## [2.7.5] — 2026-10-16
 
 ### Added
