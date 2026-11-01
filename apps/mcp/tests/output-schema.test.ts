@@ -25,12 +25,28 @@ interface ToolEntry {
 
 // Backend GET routes that return a list. Shapes follow the backend: a bare
 // `data` array, or an object envelope where the MCP adapter reads a field.
+// Flags are SQLite integers (0/1), nullable columns are null, and JSON
+// columns are parsed (ingredients is an array), as the live backend returns.
 const LIST_FIXTURES: Array<[RegExp, unknown]> = [
   [
     /^\/api\/lunch\/orders$/,
     [{ id: 'order-1', status: 'paid', menuDate: '2026-11-02', itemTotalCents: 550, studentId: 'student-1' }],
   ],
-  [/^\/api\/events$/, [{ id: 'event-1', name: 'Fixture event', eventDate: '2026-11-05', status: 'open' }]],
+  [
+    /^\/api\/events$/,
+    [
+      {
+        id: 'event-1',
+        name: 'Fixture event',
+        eventDate: '2026-11-05',
+        startsAt: null,
+        endsAt: null,
+        location: null,
+        isClosed: 0,
+        status: 'open',
+      },
+    ],
+  ],
   [
     /^\/api\/events\/tickets\/mine$/,
     [{ id: 'ticket-1', eventId: 'event-1', quantity: 1, status: 'paid', checkedInAt: null }],
@@ -57,10 +73,51 @@ const LIST_FIXTURES: Array<[RegExp, unknown]> = [
   [/^\/api\/programs$/, [{ id: 'program-1', name: 'Fixture program', type: 'club' }]],
   [
     /^\/api\/programs\/registrations$/,
-    [{ id: 'reg-1', programId: 'program-1', status: 'enrolled', studentId: 'student-1' }],
+    [
+      {
+        id: 'reg-1',
+        programId: 'program-1',
+        programName: 'Fixture program',
+        studentId: 'student-1',
+        studentName: 'Ada Fixture',
+        status: 'registered',
+        amountCents: 0,
+        notes: null,
+        createdAt: '2026-11-01T10:00:00Z',
+      },
+      {
+        id: 'reg-2',
+        programId: 'program-1',
+        programName: 'Fixture program',
+        studentId: null,
+        studentName: null,
+        status: 'registered',
+        amountCents: 0,
+        notes: null,
+        createdAt: '2026-11-01T11:00:00Z',
+      },
+    ],
   ],
-  [/^\/api\/schools\/[^/]+\/restaurants$/, [{ id: 'restaurant-1', name: 'Fixture kitchen', isActive: true }]],
-  [/^\/api\/restaurants\/[^/]+\/items$/, [{ id: 'item-1', name: 'Fixture pizza', priceCents: 550, isActive: true }]],
+  [
+    /^\/api\/schools\/[^/]+\/restaurants$/,
+    [{ id: 'restaurant-1', name: 'Fixture kitchen', description: null, isActive: 1, logoUrl: null }],
+  ],
+  [
+    /^\/api\/restaurants\/[^/]+\/items$/,
+    [
+      {
+        id: 'item-1',
+        name: 'Fixture pizza',
+        description: null,
+        priceCents: 550,
+        costCents: null,
+        isActive: 1,
+        isAvailable: 1,
+        calories: null,
+        ingredients: [],
+      },
+    ],
+  ],
 ];
 
 // Wallet history is an envelope: the adapter reads `data.transactions`.

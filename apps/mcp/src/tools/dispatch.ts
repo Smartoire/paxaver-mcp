@@ -19,9 +19,11 @@ import type { AppVariables, Env } from '../env.js';
 import { mcpError, apiErrorToMcp } from '../lib/errors.js';
 import { getToolPolicy } from '../lib/policies.js';
 import { regionBaseUrl } from '../lib/regions.js';
+import { ALL_TOOLS } from '../schemas.js';
 import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId } from './shared.js';
 import { InvalidParamsError } from './shared.js';
+import { coerceBooleans } from './coerce.js';
 import { handleTool } from './tools.js';
 
 function toolResult(id: RpcId, data: unknown): Response {
@@ -154,8 +156,10 @@ export async function dispatchTool(
       return toolError(id, err.code, err.message);
     }
 
-    // Extract the backend's `data` envelope if present.
-    const data = (result.data as { data?: unknown })?.data ?? result.data;
+    // Extract the backend's `data` envelope if present, then match the
+    // declared outputSchema (0/1 flags become booleans).
+    const raw = (result.data as { data?: unknown })?.data ?? result.data;
+    const data = coerceBooleans(raw, ALL_TOOLS.find((t) => t.name === name)?.outputSchema);
 
     // Wallet-only is enforced backend-side, but a backend that does not
     // yet honor the flag can still return a split-checkout shape. Never

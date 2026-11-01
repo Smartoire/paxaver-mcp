@@ -14,6 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/paxaver-mcp/`. The public `README.md`, `SECURITY.md`,
   `CONTRIBUTING.md`, and `CHANGELOG.md` are self-contained.
 
+## [2.7.7] — 2026-10-31
+
+### Fixed
+
+- Tool results now match their declared `outputSchema` on live data. The
+  backend stores flags as SQLite integers, so 0/1 values for boolean fields
+  (`isClosed` on events, `isActive` and `isAvailable` on restaurants and menu
+  items) now return as `true`/`false`. `list_restaurant_menu_items` returns
+  `ingredients` as an array of strings, as the backend sends it.
+  `list_program_registrations` allows `null` for `studentId` and `studentName`
+  when a registration has no student.
+
+### Changed
+
+- The output-schema contract test uses fixtures with the backend's real shapes
+  (0/1 flags, nulls, empty arrays) instead of invented ones.
+
 ## [2.7.6] — 2026-10-31
 
 ### Fixed

@@ -1720,12 +1720,12 @@
                 "description": "Program name"
               },
               "studentId": {
-                "type": "string",
-                "description": "Registered student"
+                "type": ["string", "null"],
+                "description": "Registered student; null if none is recorded"
               },
               "studentName": {
-                "type": "string",
-                "description": "Student display name"
+                "type": ["string", "null"],
+                "description": "Student display name; null if none is recorded"
               },
               "status": {
                 "type": "string",
@@ -2014,8 +2014,11 @@
                 "description": "Calorie count"
               },
               "ingredients": {
-                "type": ["string", "null"],
-                "description": "Ingredient list text"
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Ingredient list, as accepted by create_restaurant_menu_item"
               }
             }
           },
