@@ -1,6 +1,6 @@
 {
   "name": "@paxaver/mcp",
-  "version": "2.7.5",
+  "version": "2.7.6",
   "mcpName": "io.github.Smartoire/paxaver-mcp",
   "description": "Paxaver MCP server — AI-facing adapter over the Paxaver school community operating system. Streamable HTTP, OAuth 2.1, capability-first authorization.",
   "license": "Apache-2.0",
@@ -86,6 +86,7 @@
     "@eslint/js": "catalog:",
     "@types/node": "26.6.5",
     "@typescript/native": "catalog:",
+    "ajv": "^8.20.0",
     "eslint": "^10.12.0",
     "globals": "catalog:",
     "prettier": "3.9.9",

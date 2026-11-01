@@ -6,7 +6,7 @@
     "url": "https://github.com/Smartoire/paxaver-mcp",
     "source": "github"
   },
-  "version": "2.7.5",
+  "version": "2.7.6",
   "remotes": [
     {
       "type": "streamable-http",
