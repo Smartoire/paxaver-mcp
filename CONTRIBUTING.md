@@ -60,6 +60,31 @@ pnpm smoke:staging
 pnpm smoke:prod
 ```
 
+## Continuous integration
+
+Two workflows run the same checks. They differ in when they run.
+
+| Workflow               | When                                                    | Runs                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `ci.yml`, job `check`  | Each pull request to `main`                             | Release manifest version check, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm wrangler:check` |
+| `full.yml`, job `full` | Every 6 hours on `main` (`17 */6 * * *`), and on demand | The same steps as `check`                                                                                                            |
+
+The PR check finishes in about a minute. Merge a pull request when `check` is
+green.
+
+`full.yml` skips a scheduled run when its commit already passed a full run.
+A manual run always runs.
+
+If a full run fails, the workflow opens an issue titled "Full test failed on
+main", with the label `ci:full-failed`. The issue lists the run, each failed
+job and its first failed step, the tested commit, and the commits since the
+last green full run. A later failing run adds a comment to the open issue. A
+later green run adds a comment ("green again at ...") and does not close the
+issue. Close the issue by hand after the cause is fixed.
+
+Smoke tests, `pnpm test:api`, and the post-deploy checks are not in CI. They
+need live services.
+
 ## Typecheck
 
 ```bash
