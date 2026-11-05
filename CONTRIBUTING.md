@@ -83,9 +83,14 @@ the last green full run. A later failing run adds a comment to the open issue.
 A later green run adds a comment ("green again at ...") and does not close the
 issue. Close the issue by hand after the cause is fixed.
 
-The report job needs the repository secret `PAXAVER_TRACKER_TOKEN`. Without it,
-the job writes the report to the run summary and fails. It does not fall back
-to this repository.
+The report job needs two settings on this repository:
+
+- the repository secret `PAXAVER_TRACKER_TOKEN`, a token with issue read and
+  write access to the tracker only;
+- the repository variable `PAXAVER_TRACKER_REPO`, the tracker as `owner/repo`.
+
+Without either one, the job writes the report to the run summary and fails. It
+does not fall back to this repository.
 
 Smoke tests, `pnpm test:api`, and the post-deploy checks are not in CI. They
 need live services.

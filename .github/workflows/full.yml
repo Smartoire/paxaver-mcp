@@ -101,6 +101,7 @@ jobs:
         env:
           FULL_RESULT: ${{ needs.full.result }}
           TRACKER_TOKEN: ${{ secrets.PAXAVER_TRACKER_TOKEN }}
+          TRACKER_REPO_VAR: ${{ vars.PAXAVER_TRACKER_REPO }}
         with:
           script: |
             const { execFileSync } = require('child_process');
@@ -109,9 +110,11 @@ jobs:
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
 
             // Tickets go to the team's private tracker, never to this public
-            // repo. The token is scoped to that tracker's issues.
-            const TRACKER_OWNER = 'Smartoire';
-            const TRACKER_REPO = 'paxaver';
+            // repo. The tracker is named by the repository variable
+            // PAXAVER_TRACKER_REPO ("owner/repo"), so this file names no
+            // private repo. The token is scoped to that tracker's issues.
+            const trackerRepo = process.env.TRACKER_REPO_VAR || '';
+            const [TRACKER_OWNER = '', TRACKER_REPO = ''] = trackerRepo.split('/');
             const TRACKER_FILTER = 'ci:full-failed,repo:paxaver-mcp';
 
             // Last successful full run on this branch, other than this one.
@@ -169,15 +172,15 @@ jobs:
               text = failureBody;
             }
 
-            // Fail closed: without the token, print the report and fail the job.
-            // Never fall back to the public repo.
-            if (!process.env.TRACKER_TOKEN) {
+            // Fail closed: without the token or the tracker variable, print the
+            // report and fail the job. Never fall back to the public repo.
+            if (!process.env.TRACKER_TOKEN || !TRACKER_OWNER || !TRACKER_REPO) {
               await core.summary
-                .addHeading('Full test report (tracker token missing)')
+                .addHeading('Full test report (tracker not configured)')
                 .addRaw(text)
                 .write();
               core.setFailed(
-                'Secret PAXAVER_TRACKER_TOKEN is not set. The report is in the run summary; no tracker issue was written.'
+                'Secret PAXAVER_TRACKER_TOKEN or variable PAXAVER_TRACKER_REPO is not set. The report is in the run summary; no tracker issue was written.'
               );
               return;
             }
