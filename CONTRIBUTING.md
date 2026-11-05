@@ -76,11 +76,16 @@ green.
 A manual run always runs.
 
 If a full run fails, the workflow opens an issue titled "Full test failed on
-main", with the label `ci:full-failed`. The issue lists the run, each failed
-job and its first failed step, the tested commit, and the commits since the
-last green full run. A later failing run adds a comment to the open issue. A
-later green run adds a comment ("green again at ...") and does not close the
+main" in the team's private issue tracker, with the label `ci:full-failed`.
+The issue is not created in this repository. The issue lists the run, each
+failed job and its first failed step, the tested commit, and the commits since
+the last green full run. A later failing run adds a comment to the open issue.
+A later green run adds a comment ("green again at ...") and does not close the
 issue. Close the issue by hand after the cause is fixed.
+
+The report job needs the repository secret `PAXAVER_TRACKER_TOKEN`. Without it,
+the job writes the report to the run summary and fails. It does not fall back
+to this repository.
 
 Smoke tests, `pnpm test:api`, and the post-deploy checks are not in CI. They
 need live services.
