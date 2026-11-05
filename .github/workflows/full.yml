@@ -1,10 +1,13 @@
 name: Full test
 
 # Runs the full suite on the default branch every 6 hours, and on demand.
-# A failed run opens one `ci:full-failed` issue, or comments on the open one.
-# A later green run comments on that issue. Nothing closes it automatically.
+# A failed run opens one `ci:full-failed` issue in the team's private tracker,
+# or comments on the open one. A later green run comments on that issue.
+# Nothing closes it automatically.
 #
-# Public repo: no pull_request_target, no secrets. The only token is GITHUB_TOKEN.
+# Public repo: no pull_request_target. The only secret is PAXAVER_TRACKER_TOKEN,
+# used by the report job alone, and this workflow runs only on schedule and
+# manual dispatch (never on fork pull requests).
 
 on:
   schedule:
@@ -90,7 +93,6 @@ jobs:
     permissions:
       actions: read
       contents: read
-      issues: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -98,6 +100,8 @@ jobs:
       - uses: actions/github-script@v7
         env:
           FULL_RESULT: ${{ needs.full.result }}
+          TRACKER_TOKEN: ${{ secrets.PAXAVER_TRACKER_TOKEN }}
+          TRACKER_REPO_VAR: ${{ vars.PAXAVER_TRACKER_REPO }}
         with:
           script: |
             const { execFileSync } = require('child_process');
@@ -105,12 +109,13 @@ jobs:
             const sha = context.sha;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
 
-            async function openFailureIssue() {
-              const { data } = await github.rest.issues.listForRepo({
-                owner, repo, state: 'open', labels: 'ci:full-failed', per_page: 10,
-              });
-              return data.find((i) => !i.pull_request) || null;
-            }
+            // Tickets go to the team's private tracker, never to this public
+            // repo. The tracker is named by the repository variable
+            // PAXAVER_TRACKER_REPO ("owner/repo"), so this file names no
+            // private repo. The token is scoped to that tracker's issues.
+            const trackerRepo = process.env.TRACKER_REPO_VAR || '';
+            const [TRACKER_OWNER = '', TRACKER_REPO = ''] = trackerRepo.split('/');
+            const TRACKER_FILTER = 'ci:full-failed,repo:paxaver-mcp';
 
             // Last successful full run on this branch, other than this one.
             const { data: prev } = await github.rest.actions.listWorkflowRuns({
@@ -122,75 +127,100 @@ jobs:
               (r) => r.id !== Number(context.runId) && r.head_sha !== sha
             ) || null;
 
+            let text;
+            let failureBody = null;
             if (process.env.FULL_RESULT === 'success') {
-              const open = await openFailureIssue();
+              text = `green again at \`${sha}\` (${runUrl})`;
+            } else {
+              // Failed: each failed job and its first failed step.
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner, repo, run_id: context.runId, filter: 'latest', per_page: 100,
+              });
+              const failed = jobs
+                .filter((j) => j.conclusion === 'failure')
+                .map((j) => {
+                  const step = (j.steps || []).find((s) => s.conclusion === 'failure');
+                  return `- ${j.name}: ${step ? `step "${step.name}"` : 'no failed step recorded'}`;
+                });
+
+              // Commits that could have caused it: last green sha .. this sha.
+              let log;
+              try {
+                const args = last
+                  ? ['log', '--oneline', `${last.head_sha}..${sha}`]
+                  : ['log', '--oneline', '-20', sha];
+                log = execFileSync('git', args, { encoding: 'utf8' }).trim();
+              } catch (e) {
+                log = `(git log failed: ${e.message.split('\n')[0]})`;
+              }
+
+              failureBody = [
+                `Full test failed at \`${sha}\`.`,
+                '',
+                `- Run: ${runUrl}`,
+                `- Tested sha: \`${sha}\``,
+                `- Last green full run: ${last ? `\`${last.head_sha}\` (${last.html_url})` : 'none on this branch; the last 20 commits follow'}`,
+                '',
+                'Failed jobs:',
+                failed.length ? failed.join('\n') : '- none recorded; see the run log',
+                '',
+                'Commits since the last green full run:',
+                '```',
+                log || '(no commits)',
+                '```',
+              ].join('\n');
+              text = failureBody;
+            }
+
+            // Fail closed: without the token or the tracker variable, print the
+            // report and fail the job. Never fall back to the public repo.
+            if (!process.env.TRACKER_TOKEN || !TRACKER_OWNER || !TRACKER_REPO) {
+              await core.summary
+                .addHeading('Full test report (tracker not configured)')
+                .addRaw(text)
+                .write();
+              core.setFailed(
+                'Secret PAXAVER_TRACKER_TOKEN or variable PAXAVER_TRACKER_REPO is not set. The report is in the run summary; no tracker issue was written.'
+              );
+              return;
+            }
+
+            const tracker = getOctokit(process.env.TRACKER_TOKEN);
+            const { data: openList } = await tracker.rest.issues.listForRepo({
+              owner: TRACKER_OWNER, repo: TRACKER_REPO, state: 'open',
+              labels: TRACKER_FILTER, per_page: 10,
+            });
+            const open = openList.find((i) => !i.pull_request) || null;
+
+            if (process.env.FULL_RESULT === 'success') {
               if (open) {
-                await github.rest.issues.createComment({
-                  owner, repo, issue_number: open.number,
-                  body: `green again at \`${sha}\` (${runUrl})`,
+                await tracker.rest.issues.createComment({
+                  owner: TRACKER_OWNER, repo: TRACKER_REPO, issue_number: open.number,
+                  body: text,
                 });
               }
               return;
             }
 
-            // Failed: each failed job and its first failed step.
-            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-              owner, repo, run_id: context.runId, filter: 'latest', per_page: 100,
-            });
-            const failed = jobs
-              .filter((j) => j.conclusion === 'failure')
-              .map((j) => {
-                const step = (j.steps || []).find((s) => s.conclusion === 'failure');
-                return `- ${j.name}: ${step ? `step "${step.name}"` : 'no failed step recorded'}`;
-              });
-
-            // Commits that could have caused it: last green sha .. this sha.
-            let log;
-            try {
-              const args = last
-                ? ['log', '--oneline', `${last.head_sha}..${sha}`]
-                : ['log', '--oneline', '-20', sha];
-              log = execFileSync('git', args, { encoding: 'utf8' }).trim();
-            } catch (e) {
-              log = `(git log failed: ${e.message.split('\n')[0]})`;
-            }
-
-            const body = [
-              `Full test failed at \`${sha}\`.`,
-              '',
-              `- Run: ${runUrl}`,
-              `- Tested sha: \`${sha}\``,
-              `- Last green full run: ${last ? `\`${last.head_sha}\` (${last.html_url})` : 'none on this branch; the last 20 commits follow'}`,
-              '',
-              'Failed jobs:',
-              failed.length ? failed.join('\n') : '- none recorded; see the run log',
-              '',
-              'Commits since the last green full run:',
-              '```',
-              log || '(no commits)',
-              '```',
-            ].join('\n');
-
-            const open = await openFailureIssue();
             if (open) {
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: open.number,
-                body: `## New failing run\n\n${body}`,
+              await tracker.rest.issues.createComment({
+                owner: TRACKER_OWNER, repo: TRACKER_REPO, issue_number: open.number,
+                body: `## New failing run\n\n${failureBody}`,
               });
               return;
             }
 
             try {
-              await github.rest.issues.createLabel({
-                owner, repo, name: 'ci:full-failed', color: 'B60205',
-                description: 'Full test on main failed',
+              await tracker.rest.issues.createLabel({
+                owner: TRACKER_OWNER, repo: TRACKER_REPO, name: 'ci:full-failed',
+                color: 'B60205', description: 'Full test on main failed',
               });
             } catch (e) {
               if (e.status !== 422) throw e; // 422: label already exists
             }
-            await github.rest.issues.create({
-              owner, repo,
+            await tracker.rest.issues.create({
+              owner: TRACKER_OWNER, repo: TRACKER_REPO,
               title: 'Full test failed on main',
               labels: ['phase:development', 'ci:full-failed', 'repo:paxaver-mcp'],
-              body,
+              body: failureBody,
             });
