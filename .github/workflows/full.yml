@@ -29,8 +29,11 @@ jobs:
     outputs:
       skip: ${{ steps.check.outputs.skip }}
     steps:
+      # A gate error must run the suite, not skip it. Without this, the
+      # failed gate job cuts the chain and nothing runs or reports.
       - id: check
         if: github.event_name == 'schedule'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
