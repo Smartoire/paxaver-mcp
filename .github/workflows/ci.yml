@@ -9,6 +9,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Quick checks only (about a minute). The full suite runs every 6 hours on
+# main in full.yml, which files a ticket when it fails.
+
 permissions:
   contents: read
 
@@ -39,6 +42,7 @@ jobs:
           echo "all release manifest versions agree: $PKG"
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
