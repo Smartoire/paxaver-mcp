@@ -83,6 +83,26 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm wrangler:check
+      # API smoke tests against a local `wrangler dev` server in this job's
+      # container. Never point this step at a deployed environment.
+      - name: API smoke tests (pnpm test:api) against a local dev server
+        env:
+          MCP_API_URL: http://127.0.0.1:8787
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          setsid pnpm dev --ip 127.0.0.1 --port 8787 > wrangler-dev.log 2>&1 &
+          DEV_PGID=$!
+          trap 'kill -- -"$DEV_PGID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null "$MCP_API_URL/health"; then break; fi
+            if [ "$i" = 60 ]; then
+              echo "::error::local dev server did not answer within 60 s"
+              cat wrangler-dev.log
+              exit 1
+            fi
+            sleep 1
+          done
+          pnpm test:api || { cat wrangler-dev.log; exit 1; }
 
   report:
     needs: [gate, full]
