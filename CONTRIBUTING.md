@@ -62,12 +62,13 @@ pnpm smoke:prod
 
 ## Continuous integration
 
-Two workflows run the same checks. They differ in when they run.
+Two workflows run the same checks. They differ in when they run. The full run
+also runs the API smoke tests.
 
 | Workflow               | When                                                    | Runs                                                                                                                                 |
 | ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `ci.yml`, job `check`  | Each pull request to `main`                             | Release manifest version check, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm wrangler:check` |
-| `full.yml`, job `full` | Every 6 hours on `main` (`17 */6 * * *`), and on demand | The same steps as `check`                                                                                                            |
+| `full.yml`, job `full` | Every 6 hours on `main` (`17 */6 * * *`), and on demand | The same steps as `check`, then `pnpm test:api` against a local `pnpm dev` server                                                    |
 
 The PR check finishes in about a minute. Merge a pull request when `check` is
 green.
@@ -92,8 +93,12 @@ The report job needs two settings on this repository:
 Without either one, the job writes the report to the run summary and fails. It
 does not fall back to this repository.
 
-Smoke tests, `pnpm test:api`, and the post-deploy checks are not in CI. They
-need live services.
+`full.yml` starts a local `pnpm dev` server in the job container, waits until
+`/health` answers, runs `pnpm test:api` against it, then stops the server. The
+step never uses a deployed environment and needs no secret.
+
+The post-deploy smoke tests (`pnpm smoke:staging`, `pnpm smoke:prod`) are not
+in CI. They need live services.
 
 ## Typecheck
 
