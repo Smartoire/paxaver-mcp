@@ -65,10 +65,10 @@ pnpm smoke:prod
 Two workflows run the same checks. They differ in when they run. The full run
 also runs the API smoke tests.
 
-| Workflow               | When                                                    | Runs                                                                                                                                 |
-| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `ci.yml`, job `check`  | Each pull request to `main`                             | Release manifest version check, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm wrangler:check` |
-| `full.yml`, job `full` | Every 6 hours on `main` (`17 */6 * * *`), and on demand | The same steps as `check`, then `pnpm test:api` against a local `pnpm dev` server                                                    |
+| Workflow               | When                                                    | Runs                                                                                                          |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`, job `check`  | Each pull request to `main`                             | Release manifest version check, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, `pnpm build` |
+| `full.yml`, job `full` | Every 6 hours on `main` (`17 */6 * * *`), and on demand | The same steps as `check`, plus `pnpm wrangler:check`, then `pnpm test:api` against a local `pnpm dev` server |
 
 The PR check finishes in about a minute. Merge a pull request when `check` is
 green.
@@ -127,7 +127,9 @@ pnpm wrangler:check     # dry-run for all environments
 ```
 
 The build is a Wrangler dry-run — it validates the bundle and config without
-deploying. CI runs `wrangler:check` to ensure all environments build.
+deploying. The 6-hour full run on `main` runs `wrangler:check` to ensure all
+environments build. The PR check does not run it; run it locally before you
+open a pull request.
 
 ## Code style
 
@@ -160,7 +162,8 @@ deploying. CI runs `wrangler:check` to ensure all environments build.
    ```
 4. Update [`CHANGELOG.md`](./CHANGELOG.md) under an `## [Unreleased]` section.
 5. Open a PR with a clear description. Link any related backend changes.
-6. CI must be green. Request review from a maintainer.
+6. CI must be green. Request review from a maintainer. The pull request check
+   does not run `wrangler:check`; the 6-hour full run on `main` does.
 7. Squash-merge to `main`. The commit message should follow
    [Conventional Commits](https://www.conventionalcommits.org/) where practical.
 
