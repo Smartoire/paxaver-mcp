@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- OpenAI plugin package: `pnpm package:openai-plugin` builds
+  `paxaver-openai-plugin-<version>.zip`. The plugin manifest now meets the
+  current OpenAI limits (short and long descriptions, support URL, icons).
+
 ### Removed
 
 - Internal documentation (`docs/`) moved out of this public repository and the

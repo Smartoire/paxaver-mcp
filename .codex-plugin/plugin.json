@@ -13,19 +13,77 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Paxaver MCP",
-    "shortDescription": "Paxaver MCP — school lunch, events, programs, and wallet. Requires an active Paxaver account.",
+    "displayName": "Paxaver",
+    "shortDescription": "School lunch, events & wallet",
+    "longDescription": "Paxaver connects ChatGPT to your Paxaver school community account. Parents and guardians can check lunch menus, order and cancel lunch, review wallet balance and transactions, register for fundraising events, enroll students in school programs, and sign up to volunteer. School administrators can manage restaurants, menu items, events, attendee check-in, volunteer shifts, program waitlists, and daily orders. Every action runs as the signed-in user through OAuth, with that user's own permissions. Requires an active Paxaver account.",
     "developerName": "Smartoire Solutions",
-    "category": "Education",
+    "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://paxaver.com",
-    "privacyPolicyURL": "https://paxaver.com/privacy",
-    "termsOfServiceURL": "https://paxaver.com/privacy/terms",
+    "supportURL": "https://paxaver.com/en/ca/contact",
+    "privacyPolicyURL": "https://paxaver.com/en/ca/privacy",
+    "termsOfServiceURL": "https://paxaver.com/en/ca/privacy/terms",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
     "brandColor": "#3B82F6",
     "defaultPrompt": [
       "Order lunch for my child today.",
       "Show me today's lunch menu.",
       "Check my Paxaver wallet balance."
     ]
+  },
+  "extensions": {
+    "com.openai": {
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Parent checks the lunch menu for their child's school. The plugin reads the signed-in account's school and student, then returns the menu.",
+              "prompt": "What's on the lunch menu at my child's school this week?",
+              "tools_triggered": "get_my_context, get_lunch_menu",
+              "expected_behavior": "Lists the menu items for the school days of the current week (name, price and the dates each is offered) for the student's school. If no menu is published for a day, it says so."
+            },
+            {
+              "description": "Parent checks their Paxaver wallet balance and recent activity.",
+              "prompt": "How much is in my Paxaver wallet, and what were my last few transactions?",
+              "tools_triggered": "get_my_wallet_balance, list_my_wallet_transactions",
+              "expected_behavior": "Shows the current wallet balance with currency, then the most recent transactions with date, description and amount."
+            },
+            {
+              "description": "Parent orders lunch for their child. The plugin builds an order draft, shows it for confirmation, and pays it from the wallet only after the user confirms.",
+              "prompt": "Order lunch for my child for the next school day that has a menu. Pick the first main item, and confirm with me before paying.",
+              "tools_triggered": "get_my_context, get_lunch_menu, create_lunch_order_draft, pay_lunch_order_draft",
+              "expected_behavior": "Creates a draft order for the student and date, shows the item, date and total, and asks for confirmation. After the user says yes, it pays from the wallet and returns the confirmed order. The wallet balance drops by the order total."
+            },
+            {
+              "description": "Parent reviews their lunch orders and cancels an upcoming one. The refund goes back to the wallet.",
+              "prompt": "Show my upcoming lunch orders and cancel the most recent one.",
+              "tools_triggered": "list_my_lunch_orders, cancel_my_lunch_order",
+              "expected_behavior": "Lists upcoming orders with student, date, items and status. After the user confirms which one, it cancels it and reports the refund to the wallet. If the cancellation deadline has passed, it explains that the order can no longer be cancelled."
+            },
+            {
+              "description": "Parent looks at upcoming school events and their own event registrations.",
+              "prompt": "What events are coming up at my school, and which ones am I registered for?",
+              "tools_triggered": "list_school_events, list_my_event_registrations",
+              "expected_behavior": "Lists upcoming school events with name, date and price, then lists the events the user is registered for. If the user has no registrations, it says so."
+            }
+          ],
+          "negative": [
+            {
+              "description": "General recipe request about school lunches. It needs no Paxaver account data, so the plugin should not be invoked.",
+              "prompt": "Give me five healthy lunchbox ideas for a 7-year-old who doesn't like vegetables."
+            },
+            {
+              "description": "Question about public school meal programs in general, not the user's Paxaver school. The answer should come from general knowledge or web search, not Paxaver.",
+              "prompt": "Which provinces in Canada offer free school lunch programs, and how do families apply?"
+            },
+            {
+              "description": "Writing help for a school-related message. Paxaver does not send messages to teachers, so the plugin should not be invoked.",
+              "prompt": "Help me write a short email to my son's teacher explaining he missed class yesterday because he was sick."
+            }
+          ]
+        }
+      }
+    }
   }
 }
