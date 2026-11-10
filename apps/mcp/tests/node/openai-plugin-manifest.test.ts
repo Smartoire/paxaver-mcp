@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { ALL_TOOLS } from '../../src/schemas.js';
 
 const ROOT = resolve(process.cwd());
 const manifest = JSON.parse(readFileSync(resolve(ROOT, '.codex-plugin/plugin.json'), 'utf8')) as {
@@ -16,7 +17,18 @@ const manifest = JSON.parse(readFileSync(resolve(ROOT, '.codex-plugin/plugin.jso
     shortDescription: string;
     longDescription: string;
   };
+  extensions?: {
+    'com.openai'?: {
+      review?: {
+        test_cases?: {
+          positive?: Array<Record<string, unknown>>;
+          negative?: Array<Record<string, unknown>>;
+        };
+      };
+    };
+  };
 };
+const testCases = manifest.extensions?.['com.openai']?.review?.test_cases;
 const ui = manifest.interface;
 
 // Category values offered by the OpenAI Plugins dashboard. Only the two named
@@ -65,6 +77,33 @@ describe('OpenAI plugin manifest', () => {
   it('declares the required interface fields', () => {
     for (const key of [...REQUIRED_URLS, 'composerIcon', 'logo', 'longDescription']) {
       expect(ui[key], key).toBeTruthy();
+    }
+  });
+
+  it('has 5 positive and 3 negative review test cases with the required fields', () => {
+    expect(testCases?.positive?.length).toBe(5);
+    expect(testCases?.negative?.length).toBe(3);
+    for (const c of testCases?.positive ?? []) {
+      for (const key of ['description', 'prompt', 'tools_triggered', 'expected_behavior']) {
+        expect(typeof c[key], `positive.${key}`).toBe('string');
+      }
+    }
+    for (const c of testCases?.negative ?? []) {
+      for (const key of ['description', 'prompt']) {
+        expect(typeof c[key], `negative.${key}`).toBe('string');
+      }
+    }
+  });
+
+  it('names only real tools in tools_triggered', () => {
+    const toolNames = new Set(ALL_TOOLS.map((t) => t.name));
+    for (const c of testCases?.positive ?? []) {
+      const names = String(c.tools_triggered)
+        .split(',')
+        .map((n) => n.trim());
+      for (const name of names) {
+        expect(toolNames.has(name), `unknown tool ${name}`).toBe(true);
+      }
     }
   });
 
