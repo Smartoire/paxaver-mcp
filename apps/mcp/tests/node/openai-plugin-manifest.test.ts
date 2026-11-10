@@ -19,6 +19,9 @@ const manifest = JSON.parse(readFileSync(resolve(ROOT, '.codex-plugin/plugin.jso
 };
 const ui = manifest.interface;
 
+// Category values offered by the OpenAI Plugins dashboard. Only the two named
+// in the OpenAI docs are listed here; extend this when the dropdown shows more.
+const DASHBOARD_CATEGORIES = ['Productivity', 'Developer Tools'];
 const REQUIRED_URLS = ['websiteURL', 'supportURL', 'privacyPolicyURL', 'termsOfServiceURL'] as const;
 const PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
@@ -45,6 +48,10 @@ describe('OpenAI plugin manifest', () => {
   it('keeps longDescription within 4000 characters', () => {
     expect(ui.longDescription.length).toBeGreaterThan(0);
     expect(ui.longDescription.length).toBeLessThanOrEqual(4000);
+  });
+
+  it('uses a category from the OpenAI dashboard list', () => {
+    expect(DASHBOARD_CATEGORIES).toContain(ui.category);
   });
 
   it('uses HTTPS for every URL field', () => {
