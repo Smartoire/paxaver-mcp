@@ -91,7 +91,7 @@
     "ajv": "^8.20.0",
     "eslint": "^10.14.0",
     "globals": "catalog:",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "typescript": "catalog:",
     "typescript-eslint": "8.72.1",
     "vitest": "catalog:",
