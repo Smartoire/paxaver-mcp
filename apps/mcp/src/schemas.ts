@@ -349,7 +349,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'get_lunch_menu',
     title: 'Get Lunch Menu',
     description:
-      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, and remaining quantity. Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by create_lunch_order_draft. For orders already placed, use list_my_lunch_orders.",
+      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, remaining quantity, and each item's choice groups (toppings, sizes, ...). Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by create_lunch_order_draft; choiceGroups give the group_id and option_id values for selected_choices. For orders already placed, use list_my_lunch_orders.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -364,34 +364,42 @@ export const ALL_TOOLS: ToolDefinition[] = [
     outputSchema: {
       type: 'object',
       properties: {
-        date: {
-          type: 'string',
-          description: 'Date this menu applies to, YYYY-MM-DD',
-        },
-        menuItems: {
+        items: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              dailyMenuId: {
+              id: {
                 type: 'string',
                 description: 'Daily-menu entry ID',
               },
               menuItemId: {
                 type: 'string',
-                description: 'Menu item ID for ordering tools',
+                description: 'Menu item ID - pass as menu_item_id to the draft tools',
               },
-              menuItemName: {
+              name: {
                 type: 'string',
                 description: 'Item display name',
+              },
+              description: {
+                type: ['string', 'null'],
+                description: 'Item description',
+              },
+              imageUrl: {
+                type: ['string', 'null'],
+                description: 'Item image URL',
+              },
+              calories: {
+                type: ['integer', 'null'],
+                description: 'Calorie count',
               },
               restaurantName: {
                 type: ['string', 'null'],
                 description: 'Restaurant offering the item',
               },
               priceCents: {
-                type: 'integer',
-                description: 'Sale price in cents',
+                type: ['integer', 'null'],
+                description: 'Menu price in cents before choice adjustments',
               },
               availableQty: {
                 type: ['integer', 'null'],
@@ -404,9 +412,136 @@ export const ALL_TOOLS: ToolDefinition[] = [
                 },
                 description: 'Dietary labels (e.g. vegetarian, halal)',
               },
+              choiceGroups: {
+                type: 'array',
+                description:
+                  'Option groups the item asks for (toppings, sizes, ...). Order picks go in selected_choices on the draft tools; every required group needs a pick',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: {
+                      type: 'string',
+                      description: 'Choice group ID - send as group_id in selected_choices',
+                    },
+                    name: {
+                      type: 'string',
+                      description: 'Group display name (e.g. Toppings)',
+                    },
+                    required: {
+                      type: 'boolean',
+                      description: 'True when the item cannot be ordered without a pick from this group',
+                    },
+                    multiple: {
+                      type: 'boolean',
+                      description: 'True when the group accepts several picks',
+                    },
+                    options: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: {
+                            type: 'string',
+                            description: 'Option ID - send as option_id in selected_choices',
+                          },
+                          name: {
+                            type: 'string',
+                            description: 'Option display name',
+                          },
+                          priceAdjustmentCents: {
+                            type: ['integer', 'null'],
+                            description: 'Price change per pick, in cents; may be negative',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              isCombo: {
+                type: 'boolean',
+                description: 'True when the item is a fixed combo',
+              },
+              combo: {
+                type: ['object', 'null'],
+                description: 'Combo composition when isCombo is true',
+                properties: {
+                  mainItemId: { type: 'string' },
+                  sideItemIds: { type: 'array', items: { type: 'string' } },
+                  comboPriceCents: { type: 'integer' },
+                },
+              },
+              itemType: {
+                type: 'string',
+                description: 'Item kind (meal, drink, treat)',
+              },
+              toppings: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Free-text topping names',
+              },
+              isItemAvailable: {
+                type: 'boolean',
+                description: 'Whether the item is orderable',
+              },
+              orderDeadlineUtc: {
+                type: ['string', 'null'],
+                description: 'Order deadline, ISO timestamp',
+              },
+              notes: {
+                type: ['string', 'null'],
+                description: 'Kitchen notes for the item',
+              },
+              sortOrder: { type: 'integer' },
+              dailySortOrder: { type: 'integer' },
             },
           },
-          description: 'Items orderable on that date',
+          description: 'Items orderable on the requested date (date queries and the default today)',
+        },
+        orderingWindow: {
+          type: 'object',
+          description: 'Ordering lead-time window for the school',
+          properties: {
+            minLeadDays: { type: 'integer' },
+            minDate: { type: 'string', description: 'Earliest orderable date, YYYY-MM-DD' },
+            maxDate: { type: ['string', 'null'], description: 'Latest orderable date, YYYY-MM-DD' },
+            orderingPaused: { type: 'boolean' },
+          },
+        },
+        calendar: {
+          type: 'object',
+          description:
+            'Month queries only: orderable items grouped by date (YYYY-MM-DD). Choice groups are not included here - query a date for them',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              restaurantId: { type: 'string' },
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', description: 'Menu item ID' },
+                    name: { type: 'string', description: 'Item display name' },
+                    itemType: { type: 'string' },
+                    priceCents: { type: 'integer' },
+                    restaurantName: { type: ['string', 'null'] },
+                    orderable: { type: 'boolean' },
+                    orderableReason: {
+                      type: ['string', 'null'],
+                      description: 'Why the item is not orderable, when orderable is false',
+                    },
+                    availableQty: { type: ['integer', 'null'] },
+                    orderDeadlineUtc: { type: ['string', 'null'] },
+                  },
+                },
+              },
+            },
+          },
+        },
+        closedDays: {
+          type: 'object',
+          description: 'Month queries only: map of YYYY-MM-DD to the reason the school is closed',
         },
       },
     },
@@ -416,7 +551,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'create_lunch_order_draft',
     title: 'Create Lunch Order Draft',
     description:
-      'Creates an unpaid draft lunch order with one or more items - nothing is charged until pay_lunch_order_draft commits it. Use for multi-item orders or when the user should review the total first; each items entry pairs a menu_item_id with a quantity. The draft total is the sum of item prices times quantities plus nothing else until pay_lunch_order_draft. To change or abandon the draft, use update_lunch_order_draft or discard_lunch_order_draft. FINANCIAL - confirm student, items, and date before calling.',
+      'Creates an unpaid draft lunch order with one or more items - nothing is charged until pay_lunch_order_draft commits it. Use for multi-item orders or when the user should review the total first; each items entry pairs a menu_item_id with a quantity and optional selected_choices. When get_lunch_menu shows an item has choice groups, ask the user for each required group one at a time, offer the optional groups, then confirm the item, its choices and the total before calling - a required group without a pick is rejected. The draft total is the sum of item prices times quantities plus choice price adjustments. To change or abandon the draft, use update_lunch_order_draft or discard_lunch_order_draft. FINANCIAL - confirm student, items, choices and date before calling.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -440,6 +575,26 @@ export const ALL_TOOLS: ToolDefinition[] = [
               menu_item_id: { type: 'string', description: 'Menu item ID from get_lunch_menu' },
               menu_item_name: { type: 'string', description: 'Item display name from get_lunch_menu' },
               quantity: { type: 'integer', description: 'Number of servings', minimum: 1 },
+              selected_choices: {
+                type: 'array',
+                description:
+                  "Menu picks for the item (toppings, sizes, ...); group_id and option_id come from the item's choiceGroups in get_lunch_menu. Every required group needs a pick",
+                items: {
+                  type: 'object',
+                  properties: {
+                    group_id: {
+                      type: 'string',
+                      description: "Choice group ID from the item's choiceGroups in get_lunch_menu",
+                    },
+                    option_id: {
+                      type: 'string',
+                      description: 'Option ID within that group',
+                    },
+                  },
+                  required: ['group_id', 'option_id'],
+                  additionalProperties: false,
+                },
+              },
             },
             required: ['menu_item_id', 'menu_item_name', 'quantity'],
           },
@@ -543,7 +698,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
     name: 'update_lunch_order_draft',
     title: 'Update Lunch Order Draft',
     description:
-      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_lunch_order_draft). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from menu prices times quantity. Only draft orders can be updated; once finalized, use cancel_my_lunch_order. WRITE - confirm the new contents with the user.",
+      "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_lunch_order_draft). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from menu prices times quantity plus choice adjustments. When an item has choice groups, ask the user for each required group one at a time and pass the picks as selected_choices, same as create_lunch_order_draft. Only draft orders can be updated; once finalized, use cancel_my_lunch_order. WRITE - confirm the new contents, choices and total with the user.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -554,7 +709,36 @@ export const ALL_TOOLS: ToolDefinition[] = [
         items: {
           type: 'array',
           description:
-            'Replacement line items (menu_item_id from get_lunch_menu + quantity); replaces all existing items when provided',
+            'Replacement line items (menu_item_id and quantity from get_lunch_menu, plus selected_choices for menu picks); replaces all existing items when provided',
+          items: {
+            type: 'object',
+            properties: {
+              menu_item_id: { type: 'string', description: 'Menu item ID from get_lunch_menu' },
+              menu_item_name: { type: 'string', description: 'Item display name from get_lunch_menu' },
+              quantity: { type: 'integer', description: 'Number of servings', minimum: 1 },
+              selected_choices: {
+                type: 'array',
+                description:
+                  "Menu picks for the item (toppings, sizes, ...); group_id and option_id come from the item's choiceGroups in get_lunch_menu. Every required group needs a pick",
+                items: {
+                  type: 'object',
+                  properties: {
+                    group_id: {
+                      type: 'string',
+                      description: "Choice group ID from the item's choiceGroups in get_lunch_menu",
+                    },
+                    option_id: {
+                      type: 'string',
+                      description: 'Option ID within that group',
+                    },
+                  },
+                  required: ['group_id', 'option_id'],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ['menu_item_id', 'menu_item_name', 'quantity'],
+          },
         },
         menu_date: { type: 'string', description: 'New date the lunch is served, YYYY-MM-DD' },
       },
@@ -1925,7 +2109,7 @@ export const ALL_PROMPTS: PromptDefinition[] = [
     name: 'daily_lunch_menu',
     description: 'Show today lunch menu for the school.',
     message: () =>
-      "Show me today's lunch menu for my school on Paxaver. Call get_lunch_menu and summarize the orderable items with their menu_item_id values. If I ask for another day, pass 'date' (YYYY-MM-DD) or 'month' (YYYY-MM).",
+      "Show me today's lunch menu for my school on Paxaver. Call get_lunch_menu and summarize the orderable items with their menu_item_id values and choice groups - mention which groups are required. If I ask for another day, pass 'date' (YYYY-MM-DD) or 'month' (YYYY-MM).",
   },
   {
     name: 'wallet_balance',
@@ -1948,9 +2132,11 @@ export const ALL_PROMPTS: PromptDefinition[] = [
       const forWhom = name ? ` for ${name}` : ' for my student';
       return (
         `Help me order lunch${forWhom} on Paxaver. Call get_my_context to find the right student_id, ` +
-        'then get_lunch_menu and show me the orderable items with their menu_item_id values. ' +
-        'After I pick, call create_lunch_order_draft with the chosen items and menu_date, show me the ' +
-        'draft and its total for review, and call pay_lunch_order_draft only after I confirm.'
+        'then get_lunch_menu and show me the orderable items with their menu_item_id values and choice groups. ' +
+        'When an item has choice groups, ask me for each required group one at a time and offer the optional ones. ' +
+        'After I pick items and choices, call create_lunch_order_draft with the chosen items (selected_choices ' +
+        'for the picks) and menu_date, show me the draft, its choices and its total for review, and call ' +
+        'pay_lunch_order_draft only after I confirm.'
       );
     },
     arguments: [

@@ -52,6 +52,24 @@ function walletTopUpMessage(env: Env, ctx: AppVariables): string {
 
 const WALLET_CHARGE_TOOLS = new Set(['pay_lunch_order_draft', 'register_for_event']);
 
+// Draft create/update surface the backend's validation message: a missing
+// required choice group names the group to pick, a closed day names the
+// date — the model can fix the call and retry instead of reporting a bare
+// error. Every 422 these routes raise is an AppError.validation message
+// written for end users.
+const DRAFT_ORDER_TOOLS = new Set(['create_lunch_order_draft', 'update_lunch_order_draft']);
+
+// The backend already strips its 0X... ref code before sending
+// (AppError.userMessage); strip it again defensively and cap the length so
+// a malformed body cannot dump internals into the tool result.
+function backendValidationMessage(data: unknown): string | undefined {
+  const err = (data as { error?: unknown } | null | undefined)?.error;
+  const message = typeof err === 'string' ? err : (err as { message?: unknown } | undefined)?.message;
+  if (typeof message !== 'string') return undefined;
+  const cleaned = message.replace(/^0X[0-9A-Fa-f]+:\s*/, '').trim();
+  return cleaned ? cleaned.slice(0, 500) : undefined;
+}
+
 // JSON with sorted object keys, so equal arguments give equal text.
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -151,6 +169,10 @@ export async function dispatchTool(
         /insufficient/i.test(JSON.stringify(result.data ?? ''))
       ) {
         return toolError(id, -32602, walletTopUpMessage(env, ctx));
+      }
+      if (DRAFT_ORDER_TOOLS.has(name) && result.status === 422) {
+        const message = backendValidationMessage(result.data);
+        if (message) return toolError(id, -32602, message);
       }
       const err = apiErrorToMcp(result.status);
       return toolError(id, err.code, err.message);

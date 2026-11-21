@@ -256,6 +256,144 @@ describe('tool → backend contract', () => {
     expect(JSON.stringify(c?.body)).not.toContain('priceCents');
   });
 
+  it('draft tools declare selected_choices and the menu declares choiceGroups', () => {
+    const create = ALL_TOOLS.find((t) => t.name === 'create_lunch_order_draft');
+    const update = ALL_TOOLS.find((t) => t.name === 'update_lunch_order_draft');
+    const menu = ALL_TOOLS.find((t) => t.name === 'get_lunch_menu');
+    expect(JSON.stringify(create?.inputSchema)).toContain('selected_choices');
+    expect(JSON.stringify(update?.inputSchema)).toContain('selected_choices');
+    expect(JSON.stringify(menu?.outputSchema)).toContain('choiceGroups');
+  });
+
+  it("get_lunch_menu passes each item's choice groups through to the result", async () => {
+    const menuBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/schools/test-school/menu/daily') {
+          return Response.json({
+            data: {
+              items: [
+                {
+                  id: 'dm-1',
+                  menuItemId: 'item-1',
+                  name: 'Pizza',
+                  restaurantName: 'Cafe',
+                  priceCents: 550,
+                  availableQty: 10,
+                  dietaryTags: ['vegetarian'],
+                  choiceGroups: [
+                    {
+                      id: 'grp-toppings',
+                      name: 'Toppings',
+                      required: true,
+                      multiple: false,
+                      options: [
+                        { id: 'opt-cheese', name: 'Extra cheese', priceAdjustmentCents: 75 },
+                        { id: 'opt-olives', name: 'Olives', priceAdjustmentCents: 0 },
+                      ],
+                    },
+                  ],
+                },
+              ],
+              orderingWindow: { minLeadDays: 1, minDate: '2026-10-01', maxDate: null, orderingPaused: false },
+            },
+          });
+        }
+        return recordingBackend.fetch(req);
+      },
+    };
+    const env = { ...TEST_ENV, PAXAVER_API_CA: menuBackend, PAXAVER_API_US: menuBackend };
+    const res = await postTool('get_lunch_menu', { date: '2026-10-01' }, env);
+    const json = (await res.json()) as {
+      result: { structuredContent: { items: Array<{ choiceGroups: Array<Record<string, unknown>> }> } };
+    };
+    const groups = json.result.structuredContent.items[0]?.choiceGroups ?? [];
+    expect(groups[0]).toMatchObject({ id: 'grp-toppings', name: 'Toppings', required: true, multiple: false });
+    expect(groups[0]?.options).toEqual([
+      { id: 'opt-cheese', name: 'Extra cheese', priceAdjustmentCents: 75 },
+      { id: 'opt-olives', name: 'Olives', priceAdjustmentCents: 0 },
+    ]);
+  });
+
+  it('create_lunch_order_draft maps selected_choices to selectedChoices', async () => {
+    const c = await callTool('create_lunch_order_draft', {
+      menu_date: '2026-10-01',
+      items: [
+        {
+          menu_item_id: 'item-1',
+          menu_item_name: 'Pizza',
+          quantity: 2,
+          selected_choices: [
+            { group_id: 'grp-toppings', option_id: 'opt-cheese' },
+            { group_id: 'grp-size', option_id: 'opt-large' },
+          ],
+        },
+      ],
+    });
+    expect(c?.body?.items).toEqual([
+      {
+        menuItemId: 'item-1',
+        menuItemName: 'Pizza',
+        quantity: 2,
+        selectedChoices: [
+          { groupId: 'grp-toppings', optionId: 'opt-cheese' },
+          { groupId: 'grp-size', optionId: 'opt-large' },
+        ],
+      },
+    ]);
+  });
+
+  it('update_lunch_order_draft maps selected_choices to selectedChoices', async () => {
+    const c = await callTool('update_lunch_order_draft', {
+      order_id: 'o1',
+      items: [
+        {
+          menu_item_id: 'item-1',
+          menu_item_name: 'Pizza',
+          quantity: 1,
+          selected_choices: [{ group_id: 'grp-toppings', option_id: 'opt-cheese' }],
+        },
+      ],
+    });
+    expect(c?.body?.items).toEqual([
+      {
+        menuItemId: 'item-1',
+        menuItemName: 'Pizza',
+        quantity: 1,
+        selectedChoices: [{ groupId: 'grp-toppings', optionId: 'opt-cheese' }],
+      },
+    ]);
+  });
+
+  it.each([
+    ['create_lunch_order_draft', { menu_date: '2026-10-01', items: [draftItem] }],
+    ['update_lunch_order_draft', { order_id: 'o1', items: [draftItem] }],
+  ])('%s surfaces the backend validation message naming the missing choice group', async (name, args) => {
+    const rejectBackend = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const url = new URL(req.url);
+        if (url.pathname === '/api/lunch/orders/draft' || url.pathname === '/api/lunch/orders/o1') {
+          return Response.json(
+            {
+              success: false,
+              error: { code: 'VALIDATION_ERROR', message: 'Please select: Toppings', details: null },
+            },
+            { status: 422, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        return recordingBackend.fetch(req);
+      },
+    };
+    const env = { ...TEST_ENV, PAXAVER_API_CA: rejectBackend, PAXAVER_API_US: rejectBackend };
+    const res = await postTool(name, args, env);
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error.code).toBe(-32602);
+    expect(json.error.message).toContain('Toppings');
+    expect(json.error.message).not.toContain('0X');
+  });
+
   it('pay_lunch_order_draft sends tipCents', async () => {
     const c = await callTool('pay_lunch_order_draft', { order_id: 'o1', tip_cents: 100 });
     expect(`${c?.method} ${c?.path}`).toBe('POST /api/lunch/orders/o1/finalize');
