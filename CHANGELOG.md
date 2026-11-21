@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAI plugin package: `pnpm package:openai-plugin` builds
   `paxaver-openai-plugin-<version>.zip`. The plugin manifest now meets the
   current OpenAI limits (short and long descriptions, support URL, icons).
+- Lunch menu choices: `get_lunch_menu` declares each item's `choiceGroups`
+  (group id, name, required, single or multi pick, and options with id,
+  name and price adjustment), and `create_lunch_order_draft` /
+  `update_lunch_order_draft` accept `selected_choices`
+  (`{group_id, option_id}` per item), mapped to the backend's
+  `selectedChoices`.
+
+### Changed
+
+- `get_lunch_menu`'s `outputSchema` now describes the payload the backend
+  actually returns (`items` with `name`/`id`, `orderingWindow`, and the
+  month view's `calendar`/`closedDays`) instead of the
+  `menuItems`/`menuItemName`/`dailyMenuId`/`date` shape that was never
+  sent.
+
+### Fixed
+
+- The lunch draft tools surface the backend's validation message on a 422
+  — a missing required choice group names the group to pick — instead of
+  a generic invalid-params error.
 
 ### Removed
 

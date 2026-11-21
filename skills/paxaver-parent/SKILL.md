@@ -14,7 +14,7 @@ Call `get_my_context` first. This returns the user's active school, students, an
 ## Common workflows
 
 - "What's for lunch today?" → Call `get_lunch_menu` with today's date.
-- "Order lunch for Emma" → Call `get_my_context`, ask which student and date if needed, then build the draft flow: `create_lunch_order_draft`, confirm the total, then `pay_lunch_order_draft`.
+- "Order lunch for Emma" → Call `get_my_context`, ask which student and date if needed, then build the draft flow: `get_lunch_menu`, `create_lunch_order_draft`, confirm the total, then `pay_lunch_order_draft`.
 - "Check wallet balance" → Call `get_my_wallet_balance`.
 - "Show my orders" → Call `list_my_lunch_orders` (filter by `month` or `menu_date` if needed).
 - "What events are coming up?" → Call `list_school_events`.
@@ -23,6 +23,7 @@ Call `get_my_context` first. This returns the user's active school, students, an
 ## Rules
 
 - Ask for missing required inputs: student, date, menu item, or event.
+- When a menu item has choice groups (toppings, sizes, ...), ask the user for each required group one at a time, offer the optional groups, then confirm the item, its choices and the total before `create_lunch_order_draft`. Pass the picks as `selected_choices` (`group_id` + `option_id` from the item's `choiceGroups` in `get_lunch_menu`). If the draft call fails naming a missing group, ask for it and retry.
 - Confirm the draft total before `pay_lunch_order_draft` — that is the only step that charges.
 - Do not ask for passwords, payment card numbers, or sensitive health data.
 - Use ISO date format `YYYY-MM-DD`.

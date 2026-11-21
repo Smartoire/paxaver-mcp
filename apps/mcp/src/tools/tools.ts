@@ -39,14 +39,28 @@ interface ToolSpec {
 
 // The backend prices every draft item from the daily menu and ignores a
 // client-sent priceCents — never forward one. Items still need
-// camelCase keys: menuItemId / menuItemName / quantity.
+// camelCase keys: menuItemId / menuItemName / quantity, plus the menu
+// picks (selectedChoices) a choice group asks for. selectedChoices stays
+// undefined when the caller sent none, so the key never reaches the wire.
 function mapDraftItems(items: unknown): unknown {
   if (!Array.isArray(items)) return items;
   return (items as Record<string, unknown>[]).map((i) => ({
     menuItemId: i.menu_item_id ?? i.menuItemId,
     menuItemName: i.menu_item_name ?? i.menuItemName,
     quantity: i.quantity,
+    selectedChoices: mapSelectedChoices(i.selected_choices ?? i.selectedChoices),
   }));
+}
+
+// Choice picks arrive as {group_id, option_id} (camelCase also accepted);
+// the backend reads {groupId, optionId} and re-derives the names and price
+// adjustments from the menu, so only the two ids are forwarded.
+function mapSelectedChoices(raw: unknown): unknown {
+  if (!Array.isArray(raw)) return raw;
+  return raw.map((sel) => {
+    const s = (sel ?? {}) as Record<string, unknown>;
+    return { groupId: s.group_id ?? s.groupId, optionId: s.option_id ?? s.optionId };
+  });
 }
 
 // student_id defaults to the user's only student; with several it must be
