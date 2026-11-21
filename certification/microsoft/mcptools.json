@@ -500,9 +500,24 @@
               "toppings": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "costCents": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  ]
                 },
-                "description": "Free-text topping names"
+                "description": "Topping picks: plain names (legacy rows and CSV imports) or {name, costCents} objects"
               },
               "isItemAvailable": {
                 "type": "boolean",

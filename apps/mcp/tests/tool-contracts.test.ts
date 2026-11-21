@@ -282,6 +282,7 @@ describe('tool → backend contract', () => {
                   priceCents: 550,
                   availableQty: 10,
                   dietaryTags: ['vegetarian'],
+                  toppings: ['Cheese', { name: 'Bacon', costCents: 150 }],
                   choiceGroups: [
                     {
                       id: 'grp-toppings',
@@ -306,7 +307,14 @@ describe('tool → backend contract', () => {
     const env = { ...TEST_ENV, PAXAVER_API_CA: menuBackend, PAXAVER_API_US: menuBackend };
     const res = await postTool('get_lunch_menu', { date: '2026-10-01' }, env);
     const json = (await res.json()) as {
-      result: { structuredContent: { items: Array<{ choiceGroups: Array<Record<string, unknown>> }> } };
+      result: {
+        structuredContent: {
+          items: Array<{
+            choiceGroups: Array<Record<string, unknown>>;
+            toppings: unknown[];
+          }>;
+        };
+      };
     };
     const groups = json.result.structuredContent.items[0]?.choiceGroups ?? [];
     expect(groups[0]).toMatchObject({ id: 'grp-toppings', name: 'Toppings', required: true, multiple: false });
@@ -314,6 +322,9 @@ describe('tool → backend contract', () => {
       { id: 'opt-cheese', name: 'Extra cheese', priceAdjustmentCents: 75 },
       { id: 'opt-olives', name: 'Olives', priceAdjustmentCents: 0 },
     ]);
+    // The backend stores toppings as plain strings (CSV imports) or
+    // {name, costCents} objects (item API); both shapes pass through.
+    expect(json.result.structuredContent.items[0]?.toppings).toEqual(['Cheese', { name: 'Bacon', costCents: 150 }]);
   });
 
   it('create_lunch_order_draft maps selected_choices to selectedChoices', async () => {

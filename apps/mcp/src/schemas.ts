@@ -477,8 +477,19 @@ export const ALL_TOOLS: ToolDefinition[] = [
               },
               toppings: {
                 type: 'array',
-                items: { type: 'string' },
-                description: 'Free-text topping names',
+                items: {
+                  anyOf: [
+                    { type: 'string' },
+                    {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        costCents: { type: 'integer' },
+                      },
+                    },
+                  ],
+                },
+                description: 'Topping picks: plain names (legacy rows and CSV imports) or {name, costCents} objects',
               },
               isItemAvailable: {
                 type: 'boolean',
