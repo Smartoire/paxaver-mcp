@@ -93,13 +93,20 @@ function anonymousDiscoveryEnabled(env: Env): boolean {
 }
 
 /**
- * Returns 'public' for server/discover (always unauthenticated), 'anonymous'
- * for a discovery method allowed by anonymousDiscoveryEnabled(), else null.
- * Only single (non-batch) messages qualify.
+ * Returns 'public' for server/discover (always unauthenticated, also as a
+ * batch of only server/discover messages), 'anonymous' for a discovery method
+ * allowed by anonymousDiscoveryEnabled(), else null. Auth is skipped for
+ * 'public' even when the Authorization header is present but stale, so
+ * connectors polling public metadata with an expired token are not 401'd.
  */
 function publicDiscoveryKind(parsed: ParsedBody, env: Env): 'public' | 'anonymous' | null {
   const body = parsed?.value;
-  if (Array.isArray(body) || body === null || typeof body !== 'object' || !('method' in body)) return null;
+  if (Array.isArray(body)) {
+    const allDiscover =
+      body.length > 0 && body.every((item) => (item as { method?: unknown })?.method === 'server/discover');
+    return allDiscover ? 'public' : null;
+  }
+  if (body === null || typeof body !== 'object' || !('method' in body)) return null;
   const method = body.method;
   if (method === 'server/discover') return 'public';
   if (typeof method === 'string' && ANONYMOUS_DISCOVERY_METHODS.has(method) && anonymousDiscoveryEnabled(env)) {
