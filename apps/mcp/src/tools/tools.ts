@@ -109,34 +109,65 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
   // User
   get_my_context: {
     method: 'GET',
-    path: '/api/users/me',
+    // A child credential cannot read /api/users/me — the backend child
+    // allowlist serves only the narrowed /me/context (#3680/#3682).
+    path: (_args, ctx) => (ctx.assistantMode === 'child' ? '/api/users/me/context' : '/api/users/me'),
     after: (result, _args, ctx, env) => {
       if (!result.ok) return;
       const raw = (result.data as { data?: Record<string, unknown> })?.data ?? result.data;
       const u = (raw ?? {}) as Record<string, unknown>;
-      // ponytail: filter PII — only return fields declared in the outputSchema.
-      // The backend returns email, phone, address, nationality, totp_secret, etc.
-      // These must never reach the AI client. Upgrade path: generate the filter
-      // from the outputSchema definition automatically.
-      const filtered: Record<string, unknown> = {
-        firstName: u.firstName,
-        schoolSlug: u.schoolSlug,
-        schoolName: u.schoolName,
-        students: Array.isArray(u.students)
-          ? (u.students as Record<string, unknown>[]).map((s) => ({
-              id: s.id,
-              firstName: s.firstName,
-              schoolSlug: s.schoolSlug,
-            }))
-          : u.students,
-        roles: u.roles,
-        // Identity fields come from the verified context, not the backend
-        // payload: the caller's own sign-in email, account region, and the
-        // public server environment (staging/development both read 'dev').
+      // Identity fields come from the verified context, not the backend
+      // payload: the caller's own sign-in email, account region, and the
+      // public server environment (staging/development both read 'dev').
+      const identity = {
         email: ctx.email || null,
         region: ctx.country?.toUpperCase() ?? null,
         environment: env.ENVIRONMENT === 'production' ? 'production' : 'dev',
       };
+      // ponytail: filter PII — only return fields declared in the outputSchema.
+      // The backend returns email, phone, address, nationality, totp_secret, etc.
+      // These must never reach the AI client. Upgrade path: generate the filter
+      // from the outputSchema definition automatically.
+      const filtered: Record<string, unknown> =
+        ctx.assistantMode === 'child'
+          ? {
+              // The narrowed /me/context carries ids only — no names, no
+              // parent email, no roles. A child can never pay through the
+              // assistant, so the wallet-spend answer is always false.
+              firstName: null,
+              schoolSlug: u.schoolSlug ?? ctx.schoolSlug ?? null,
+              schoolName: null,
+              students: (Array.isArray(u.studentIds) ? u.studentIds : (ctx.studentIds ?? [])).map((id) => ({
+                id,
+                firstName: null,
+                schoolSlug: u.schoolSlug ?? ctx.schoolSlug ?? null,
+              })),
+              roles: Array.isArray(u.permissions) ? u.permissions : [],
+              // The child's context carries no email — identity.email is
+              // already null for a child credential.
+              ...identity,
+              assistantMode: 'child',
+              assistantWalletSpend: false,
+            }
+          : {
+              firstName: u.firstName,
+              schoolSlug: u.schoolSlug,
+              schoolName: u.schoolName,
+              students: Array.isArray(u.students)
+                ? (u.students as Record<string, unknown>[]).map((s) => ({
+                    id: s.id,
+                    firstName: s.firstName,
+                    schoolSlug: s.schoolSlug,
+                  }))
+                : u.students,
+              roles: u.roles,
+              ...identity,
+              assistantMode: 'parent',
+              // The account's "assistants may pay from my wallet" switch
+              // (#3679). Absent on an older backend reads as ON — the
+              // shipped default keeps the pre-setting behaviour.
+              assistantWalletSpend: u.assistantWalletSpend == null ? true : Boolean(u.assistantWalletSpend),
+            };
       if (ctx.subscription) {
         filtered.subscription = ctx.subscription;
       }
@@ -572,6 +603,11 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     }),
   },
 };
+
+/** Required MCP argument names for a canonical tool ([] when none). */
+export function requiredArgsFor(name: string): string[] {
+  return TOOL_SPECS[name]?.required ?? [];
+}
 
 export async function handleTool({
   env,

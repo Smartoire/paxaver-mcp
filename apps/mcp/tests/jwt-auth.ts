@@ -69,7 +69,10 @@ const BASE_CONTEXT = {
 };
 
 // userId -> AuthContext returned by the mocked /api/users/me/context.
-const USER_CONTEXTS: Record<string, typeof BASE_CONTEXT & { userId: string; subscription?: unknown }> = {
+const USER_CONTEXTS: Record<
+  string,
+  typeof BASE_CONTEXT & { userId: string; subscription?: unknown; childStudentId?: string | null }
+> = {
   'user-1': { userId: 'user-1', ...BASE_CONTEXT },
   // Valid context — only the internal /verify check rejects this user,
   // simulating a revoked token with an otherwise-live account.
@@ -95,6 +98,19 @@ const USER_CONTEXTS: Record<string, typeof BASE_CONTEXT & { userId: string; subs
     ...BASE_CONTEXT,
     subscription: { status: 'expired', toolLevel: 'parent', expiry: '2020-07-31T00:00:00Z' },
   },
+  // Parent-issued read-only child credential (#3680): the backend narrows
+  // /me/context to the bound student and reports childStudentId.
+  'user-child': {
+    userId: 'user-child',
+    email: '',
+    schoolSlug: 'test-school',
+    permissions: [],
+    isPlatformAdmin: false,
+    studentIds: ['student-2'],
+    childStudentId: 'student-2',
+    country: 'ca' as const,
+    subscription: { status: 'active', toolLevel: 'parent', expiry: '2099-07-31T00:00:00Z' },
+  },
 };
 
 export const TEST_TOKEN = await makeToken('user-1');
@@ -103,6 +119,7 @@ export const ACTIVE_TOKEN = await makeToken('user-active');
 export const FULL_TOKEN = await makeToken('user-full');
 export const EVENT_COORDINATOR_TOKEN = await makeToken('user-event-coordinator');
 export const EXPIRED_TOKEN = await makeToken('user-expired');
+export const CHILD_TOKEN = await makeToken('user-child');
 
 // Records `${method} ${path}` for every mocked backend call so tests can
 // assert which backend route a tool maps to.

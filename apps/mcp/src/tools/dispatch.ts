@@ -24,7 +24,9 @@ import type { ApiCallResult } from '../api/client.js';
 import type { DispatchContext, RpcId } from './shared.js';
 import { InvalidParamsError } from './shared.js';
 import { coerceBooleans } from './coerce.js';
-import { handleTool } from './tools.js';
+import { handleTool, requiredArgsFor } from './tools.js';
+import { applyElicitedArgs, buildInputRequired, missingRequiredArgs } from './elicitation.js';
+import type { ElicitationContext } from './elicitation.js';
 
 function toolResult(id: RpcId, data: unknown): Response {
   return Response.json({
@@ -68,6 +70,50 @@ function backendValidationMessage(data: unknown): string | undefined {
   if (typeof message !== 'string') return undefined;
   const cleaned = message.replace(/^0X[0-9A-Fa-f]+:\s*/, '').trim();
   return cleaned ? cleaned.slice(0, 500) : undefined;
+}
+
+/**
+ * The backend's structured error object ({success:false, error:{code,
+ * message, details}}), tolerant of the plain-string error shape older
+ * routes still send.
+ */
+function backendError(data: unknown): { code?: string; message?: string; details?: unknown } | null {
+  const err = (data as { error?: unknown } | null | undefined)?.error;
+  if (typeof err === 'string') return { message: err };
+  if (err && typeof err === 'object') return err as { code?: string; message?: string; details?: unknown };
+  return null;
+}
+
+/**
+ * ASSISTANT_PAYMENTS_DISABLED (#3679): the account turned "assistants may
+ * pay from my wallet" off. Relay the backend's user-safe message and name
+ * the draft/order the user can finish in the Paxaver app — never the
+ * generic 403 text, which would hide the way forward.
+ */
+function assistantConsentMessage(result: ApiCallResult, name: string, args: Record<string, unknown>): string | null {
+  if (result.status !== 403) return null;
+  const err = backendError(result.data);
+  if (err?.code !== 'ASSISTANT_PAYMENTS_DISABLED') return null;
+  const base =
+    typeof err.message === 'string' && err.message.trim()
+      ? err.message
+          .replace(/^0X[0-9A-Fa-f]+:\s*/, '')
+          .trim()
+          .slice(0, 500)
+      : 'Assistant payments are turned off for this account.';
+  const details = err.details && typeof err.details === 'object' ? (err.details as Record<string, unknown>) : {};
+  const draftId =
+    (typeof details.orderId === 'string' && details.orderId) ||
+    (typeof details.draftId === 'string' && details.draftId) ||
+    (name === 'pay_lunch_order_draft' && typeof args.order_id === 'string' ? args.order_id : '') ||
+    '';
+  const eventId = typeof details.eventId === 'string' ? details.eventId : '';
+  const ref = draftId
+    ? ` Draft order ${draftId} stays saved — the user can pay it in the Paxaver app.`
+    : eventId
+      ? ` Event ${eventId} can be registered in the Paxaver app.`
+      : '';
+  return `${base}${ref}`;
 }
 
 // JSON with sorted object keys, so equal arguments give equal text.
@@ -135,17 +181,37 @@ export async function dispatchTool(
   name: string,
   args: Record<string, unknown>,
   id: RpcId,
+  elicitation: ElicitationContext = { form: false },
 ): Promise<Response> {
   const env = c.env;
   const ctx = c.var;
   const policy = getToolPolicy(name);
 
   try {
+    // Guided flow (#3682): a retry carrying a valid requestState merges
+    // the accepted elicitation values before anything else reads args.
+    const elicited = await applyElicitedArgs(args, name, ctx, env, elicitation);
+
     const idempotencyKey = policy?.mutates ? await makeIdempotencyKey(name, args, ctx, id) : undefined;
 
     // Verify that user-supplied student_id and school_slug arguments are
     // owned by the authenticated user before dispatching to the backend.
     validateOwnership(args, ctx);
+
+    // A call missing required args gets an InputRequiredResult when the
+    // client declared form elicitation and every missing arg is
+    // primitive; otherwise the usual -32602. Ownership stays ahead of
+    // this check, matching the pre-elicitation error order.
+    const required = requiredArgsFor(name);
+    const missing = missingRequiredArgs(args, required);
+    if (missing.length > 0) {
+      if (elicited) {
+        return toolError(id, -32602, `Missing required parameter(s): ${missing.join(', ')}`);
+      }
+      const inputRequired = await buildInputRequired(id, name, missing, ctx, env, elicitation);
+      if (inputRequired) return inputRequired;
+      return toolError(id, -32602, `Missing required parameter(s): ${missing.join(', ')}`);
+    }
 
     const result: ApiCallResult | undefined = await handleTool({
       env,
@@ -160,6 +226,8 @@ export async function dispatchTool(
     }
 
     if (!result.ok) {
+      const consentMessage = assistantConsentMessage(result, name, args);
+      if (consentMessage) return toolError(id, -32602, consentMessage);
       // Wallet-charging tools are wallet-only: an insufficient-balance
       // rejection must direct the user to top up in the panel — the
       // card-payment link is never surfaced through MCP.

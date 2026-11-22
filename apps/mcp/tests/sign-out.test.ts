@@ -254,6 +254,8 @@ describe('get_my_context identity fields', () => {
         'region',
         'environment',
         'subscription',
+        'assistantMode',
+        'assistantWalletSpend',
       ]).toContain(key);
     }
     expect(JSON.stringify(out)).not.toContain('phone');

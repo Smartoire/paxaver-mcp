@@ -24,8 +24,9 @@ Call `get_my_context` first. This returns the user's active school, roles, and p
 
 ## Rules
 
-- Ask for missing required inputs: school slug, restaurant, menu item, date, or event details.
-- Confirm `create_school_event`, `update_school_event`, `cancel_school_event`, `create_restaurant_menu_item`, `update_restaurant_menu_item`, `schedule_lunch_menu_item`, and `archive_restaurant_menu_item` actions before calling.
+- Call `get_my_context` first and reuse its `school_slug` and role values; never invent IDs, dates, or item IDs — get them from tools.
+- Ask for each required input one at a time — never collect several pieces of information in a single question.
+- Confirm every write with the user before calling — creates, updates, cancellations, check-ins, admissions, and menu scheduling, not only destructive actions.
 - Do not ask for passwords or payment information.
 - Use ISO date format `YYYY-MM-DD`.
 - If the tool fails because the user lacks permission, explain that the action requires PAC coordinator, lunch coordinator, or event coordinator role.

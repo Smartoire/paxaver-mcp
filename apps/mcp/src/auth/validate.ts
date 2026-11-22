@@ -219,6 +219,15 @@ export async function authenticateRequest(
           };
         }
         if (!ctx.country) ctx.country = country;
+        // Child assistant credential (#3680): /me/context narrows
+        // studentIds/permissions and reports childStudentId; the JWT
+        // student_link claim is the same signal one hop earlier. Either
+        // marks the request read-only-child — fail closed when they
+        // disagree by treating the token as a child credential.
+        const childStudentId = typeof ctx.childStudentId === 'string' && ctx.childStudentId ? ctx.childStudentId : null;
+        const studentLink = (payload as Record<string, unknown>).student_link;
+        ctx.childStudentId = childStudentId;
+        ctx.assistantMode = childStudentId || (typeof studentLink === 'string' && studentLink) ? 'child' : 'parent';
         ctx.userToken = token;
         return { ok: true, status: 200, context: ctx };
       }
