@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Child assistant credentials (#3680/#3682): a parent-issued read-only
+  token sees only `get_my_context`, `get_lunch_menu` and
+  `list_my_lunch_orders` in `tools/list`, and every other `tools/call` —
+  canonical name or legacy alias — is refused with a read-only message
+  before it reaches the backend. `get_my_context` reports
+  `assistantMode` (`parent`/`child`) and `assistantWalletSpend`; a child
+  sees only the bound student, no email or roles, and
+  `assistantWalletSpend: false`. A `paxaver-child` skill ships for the
+  read-only flow.
+- Guided-flow elicitation (#3682): a `tools/call` missing required
+  arguments returns an MCP `input_required` result with an
+  `elicitation/create` form request when the client declares form-mode
+  elicitation in `_meta`; the retry's `inputResponses` are merged under a
+  signed, expiring `requestState`. Clients without the capability keep
+  the `-32602` missing-parameter error.
+- `ASSISTANT_PAYMENTS_DISABLED` (#3679): when the account turns assistant
+  wallet payments off, pay/finalize calls return a readable `-32602`
+  naming the draft the user can finish in the Paxaver app.
 - OpenAI plugin package: `pnpm package:openai-plugin` builds
   `paxaver-openai-plugin-<version>.zip`. The plugin manifest now meets the
   current OpenAI limits (short and long descriptions, support URL, icons).

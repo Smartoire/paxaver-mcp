@@ -390,12 +390,34 @@ export function resolveToolName(name: string): string {
 export const SUBSCRIPTION_EXEMPT_TOOLS: ReadonlySet<string> = new Set(['sign_out']);
 
 /**
+ * The complete surface a child assistant credential may see and call
+ * (#3682): exactly the reads the backend child-token allowlist serves —
+ * the narrowed /me/context, the school menu, and the child's own lunch
+ * orders. Writes, wallet, events, programs, volunteers, and admin reads
+ * are refused before they can reach the backend.
+ */
+export const CHILD_ASSISTANT_TOOLS: ReadonlySet<string> = new Set([
+  'get_my_context',
+  'get_lunch_menu',
+  'list_my_lunch_orders',
+]);
+
+/** Context fields the visibility/authorization checks read. */
+export interface PolicyContext {
+  isPlatformAdmin: boolean;
+  permissions: string[];
+  /** 'child' marks a parent-issued read-only credential (#3680). */
+  assistantMode?: 'parent' | 'child';
+}
+
+/**
  * Check whether the authenticated context is allowed to *see* a tool in
  * tools/list. Data-level access is re-checked by the backend on call.
  */
-export function canSeeTool(toolName: string, ctx: { isPlatformAdmin: boolean; permissions: string[] }): boolean {
+export function canSeeTool(toolName: string, ctx: PolicyContext): boolean {
   const policy = TOOL_POLICIES[toolName];
   if (!policy) return false;
+  if (ctx.assistantMode === 'child') return CHILD_ASSISTANT_TOOLS.has(toolName);
   if (ctx.isPlatformAdmin) return true;
   if (policy.requiredRoles.length === 0) return true;
   return policy.requiredRoles.some((r) => ctx.permissions.includes(r));
@@ -406,12 +428,10 @@ export function canSeeTool(toolName: string, ctx: { isPlatformAdmin: boolean; pe
  * The caller rejects unknown tools first; a tool without a policy is
  * 'forbidden' (fail closed).
  */
-export function checkToolAuthorization(
-  toolName: string,
-  ctx: { isPlatformAdmin: boolean; permissions: string[] },
-): 'ok' | 'forbidden' {
+export function checkToolAuthorization(toolName: string, ctx: PolicyContext): 'ok' | 'forbidden' {
   const policy = TOOL_POLICIES[toolName];
   if (!policy) return 'forbidden';
+  if (ctx.assistantMode === 'child') return CHILD_ASSISTANT_TOOLS.has(toolName) ? 'ok' : 'forbidden';
   if (ctx.isPlatformAdmin) return 'ok';
   if (policy.requiredRoles.length > 0 && !policy.requiredRoles.some((r) => ctx.permissions.includes(r))) {
     return 'forbidden';

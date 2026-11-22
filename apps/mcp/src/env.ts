@@ -70,6 +70,13 @@ export interface AuthContext {
   isPlatformAdmin: boolean;
   studentIds: string[];
   country: McpCountry;
+  /**
+   * 'child' when the verified token is a parent-issued read-only child
+   * assistant credential (#3680); 'parent' for the account holder.
+   */
+  assistantMode?: 'parent' | 'child';
+  /** Student id a child credential is bound to; null/absent for parents. */
+  childStudentId?: string | null;
   /** Original OAuth access token, used to call the Paxaver backend. */
   userToken?: string;
   /** Subscription status from the backend (undefined or null if none). */

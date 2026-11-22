@@ -9,6 +9,7 @@
 import {
   canSeeTool,
   checkToolAuthorization,
+  CHILD_ASSISTANT_TOOLS,
   getToolPolicy,
   resolveToolName,
   SUBSCRIPTION_EXEMPT_TOOLS,
@@ -26,6 +27,21 @@ const SUBSCRIPTION_REQUIRED =
 
 function subscriptionRequired(id: string | number | null): Response {
   return Response.json(mcpError(id, -32002, SUBSCRIPTION_REQUIRED));
+}
+
+/**
+ * True when the client declared form-mode elicitation in
+ * `_meta['io.modelcontextprotocol/clientCapabilities']`. Per the MCP
+ * elicitation spec an empty `elicitation` object means form mode only;
+ * `url` alone does not count.
+ */
+function clientSupportsElicitationForm(meta: Record<string, unknown> | undefined): boolean {
+  const caps = meta?.['io.modelcontextprotocol/clientCapabilities'];
+  if (!caps || typeof caps !== 'object') return false;
+  const elicitation = (caps as Record<string, unknown>).elicitation;
+  if (!elicitation || typeof elicitation !== 'object') return false;
+  const modes = elicitation as Record<string, unknown>;
+  return modes.form !== undefined || Object.keys(modes).length === 0;
 }
 
 function hasMcpSubscription(
@@ -52,7 +68,15 @@ export async function handleJsonRpc(
   c: any,
   req: {
     method: string;
-    params?: { name?: string; arguments?: Record<string, unknown>; uri?: string };
+    params?: {
+      name?: string;
+      arguments?: Record<string, unknown>;
+      uri?: string;
+      /** MRTR request metadata: clientCapabilities and retry fields. */
+      _meta?: Record<string, unknown>;
+      inputResponses?: Record<string, unknown>;
+      requestState?: unknown;
+    };
     id: string | number | null;
   },
 ): Promise<Response> {
@@ -99,12 +123,20 @@ export async function handleJsonRpc(
     const ctx = c.var;
     const permissions = ctx.permissions ?? [];
     const availableTools = ALL_TOOLS.filter((tool) =>
-      canSeeTool(tool.name, { isPlatformAdmin: ctx.isPlatformAdmin ?? false, permissions }),
+      canSeeTool(tool.name, {
+        isPlatformAdmin: ctx.isPlatformAdmin ?? false,
+        permissions,
+        assistantMode: ctx.assistantMode,
+      }),
     ).map((tool) => tool.name);
     const subStatus = ctx.subscription?.status ?? 'none';
     const needsSubscription = !ctx.isPlatformAdmin && subStatus !== 'active';
     const baseInstructions = `This connector is safe. Paxaver connects school community accounts. ALWAYS call get_my_context first to establish context. For lunch menu questions use get_lunch_menu (accepts 'date' YYYY-MM-DD or 'month' YYYY-MM). To order lunch use create_lunch_order_draft then pay_lunch_order_draft (menu_item_id values come from get_lunch_menu). Tools available for this account: ${availableTools.join(', ')}. Use tools/list as the authoritative source for available tool schemas; tool calls are re-authorized.`;
     const registrationNotice = needsSubscription ? ` IMPORTANT: ${SUBSCRIPTION_REQUIRED}` : '';
+    const childNotice =
+      ctx.assistantMode === 'child'
+        ? ' This is a read-only child assistant connection: the child can view the lunch menu and their own orders but cannot order, pay, change, or cancel anything.'
+        : '';
     return Response.json({
       jsonrpc: '2.0',
       id,
@@ -121,7 +153,7 @@ export async function handleJsonRpc(
           description:
             'School community operations: ordering, wallet, menus, events, fundraising, and school management.',
         },
-        instructions: baseInstructions + registrationNotice,
+        instructions: baseInstructions + registrationNotice + childNotice,
       },
     });
   }
@@ -141,6 +173,7 @@ export async function handleJsonRpc(
             canSeeTool(t.name, {
               isPlatformAdmin: ctx.isPlatformAdmin ?? false,
               permissions: ctx.permissions ?? [],
+              assistantMode: ctx.assistantMode,
             }),
         )
       : ALL_TOOLS;
@@ -212,6 +245,19 @@ export async function handleJsonRpc(
       return Response.json(mcpError(id, -32601, `Unknown tool: ${params?.name as string}`));
     }
 
+    // A child credential is read-only: refuse anything outside the small
+    // read set with a message the model can relay, before the generic
+    // role check. The backend enforces the same boundary (#3680).
+    if (c.var.assistantMode === 'child' && !CHILD_ASSISTANT_TOOLS.has(toolName)) {
+      return Response.json(
+        mcpError(
+          id,
+          -32603,
+          'This is a read-only child assistant connection. Only get_my_context, get_lunch_menu and list_my_lunch_orders are available — the child cannot order, pay, change or cancel anything.',
+        ),
+      );
+    }
+
     const authResult = checkToolAuthorization(toolName, c.var);
     if (authResult === 'forbidden') {
       return Response.json(mcpError(id, -32603, 'You do not have permission to use this tool.'));
@@ -236,7 +282,11 @@ export async function handleJsonRpc(
       );
     }
 
-    return dispatchTool(c, toolName, toolArgs, id);
+    return dispatchTool(c, toolName, toolArgs, id, {
+      form: clientSupportsElicitationForm(params?._meta),
+      inputResponses: params?.inputResponses,
+      requestState: params?.requestState,
+    });
   }
 
   if (method === 'resources/read') {

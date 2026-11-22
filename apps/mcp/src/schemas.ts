@@ -42,13 +42,13 @@ export interface PromptDefinition {
   arguments?: PromptArgument[];
 }
 
-export const ALL_TOOLS: ToolDefinition[] = [
+const TOOL_DEFINITIONS: ToolDefinition[] = [
   // --- User/account ---
   {
     name: 'get_my_context',
     title: 'Get My Context',
     description:
-      "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, sign-in account email, account region, server environment, active school, the students they are a guardian for, and their role codes at that school. This is the context-discovery call - most other tools need a student_id or school_slug from here, admin-role checks come from roles, and email/region/environment answer which account is signed in. Returns live account state, so call again if the user may have switched schools or had roles changed.",
+      "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, sign-in account email, account region, server environment, active school, the students they are a guardian for, their role codes at that school, the assistant mode (parent or child), and whether the account allows assistants to pay from its wallet. This is the context-discovery call - most other tools need a student_id or school_slug from here, admin-role checks come from roles, email/region/environment answer which account is signed in, and assistantMode/assistantWalletSpend tell the model what it may do. A child credential reports assistantMode 'child', only the bound student, no email or roles, and assistantWalletSpend false. Returns live account state, so call again if the user may have switched schools or had roles changed.",
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     outputSchema: {
       type: 'object',
@@ -56,6 +56,16 @@ export const ALL_TOOLS: ToolDefinition[] = [
         firstName: {
           type: ['string', 'null'],
           description: 'User first name',
+        },
+        assistantMode: {
+          type: 'string',
+          enum: ['parent', 'child'],
+          description: "Assistant mode - 'parent' for the account holder, 'child' for a read-only child credential",
+        },
+        assistantWalletSpend: {
+          type: 'boolean',
+          description:
+            'Whether the account allows assistants to pay from its wallet; false means drafts must be paid in the Paxaver app',
         },
         email: {
           type: ['string', 'null'],
@@ -2114,6 +2124,21 @@ export const ALL_TOOLS: ToolDefinition[] = [
   },
 ];
 
+/**
+ * Guided-flow contract (#3682): every write tool tells the model to
+ * collect required inputs one at a time and confirm with the user before
+ * calling. sign_out is excluded — it is a session escape hatch with no
+ * user-supplied inputs.
+ */
+const WRITE_FLOW_GUIDANCE =
+  ' Collect each required input one at a time and confirm the details with the user before calling.';
+
+export const ALL_TOOLS: ToolDefinition[] = TOOL_DEFINITIONS.map((tool) =>
+  tool.annotations?.readOnlyHint === false && tool.name !== 'sign_out'
+    ? { ...tool, description: `${tool.description}${WRITE_FLOW_GUIDANCE}` }
+    : tool,
+);
+
 // --- Prompts (predefined templates) ---
 export const ALL_PROMPTS: PromptDefinition[] = [
   {
@@ -2144,10 +2169,12 @@ export const ALL_PROMPTS: PromptDefinition[] = [
       return (
         `Help me order lunch${forWhom} on Paxaver. Call get_my_context to find the right student_id, ` +
         'then get_lunch_menu and show me the orderable items with their menu_item_id values and choice groups. ' +
+        'Ask me for each required input one at a time — never collect several pieces of information in one question. ' +
         'When an item has choice groups, ask me for each required group one at a time and offer the optional ones. ' +
         'After I pick items and choices, call create_lunch_order_draft with the chosen items (selected_choices ' +
         'for the picks) and menu_date, show me the draft, its choices and its total for review, and call ' +
-        'pay_lunch_order_draft only after I confirm.'
+        'pay_lunch_order_draft only after I confirm. Confirm with me before every write — drafts, payments, ' +
+        'changes and cancellations, not only the step that charges money.'
       );
     },
     arguments: [

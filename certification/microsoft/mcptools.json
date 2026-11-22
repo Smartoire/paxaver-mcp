@@ -2,7 +2,7 @@
   {
     "name": "get_my_context",
     "title": "Get My Context",
-    "description": "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, sign-in account email, account region, server environment, active school, the students they are a guardian for, and their role codes at that school. This is the context-discovery call - most other tools need a student_id or school_slug from here, admin-role checks come from roles, and email/region/environment answer which account is signed in. Returns live account state, so call again if the user may have switched schools or had roles changed.",
+    "description": "Read-only lookup with no side effects - safe to call repeatedly. Requires authentication: returns only the caller's own context (never another user's data): first name, sign-in account email, account region, server environment, active school, the students they are a guardian for, their role codes at that school, the assistant mode (parent or child), and whether the account allows assistants to pay from its wallet. This is the context-discovery call - most other tools need a student_id or school_slug from here, admin-role checks come from roles, email/region/environment answer which account is signed in, and assistantMode/assistantWalletSpend tell the model what it may do. A child credential reports assistantMode 'child', only the bound student, no email or roles, and assistantWalletSpend false. Returns live account state, so call again if the user may have switched schools or had roles changed.",
     "inputSchema": {
       "type": "object",
       "properties": {},
@@ -14,6 +14,15 @@
         "firstName": {
           "type": ["string", "null"],
           "description": "User first name"
+        },
+        "assistantMode": {
+          "type": "string",
+          "enum": ["parent", "child"],
+          "description": "Assistant mode - 'parent' for the account holder, 'child' for a read-only child credential"
+        },
+        "assistantWalletSpend": {
+          "type": "boolean",
+          "description": "Whether the account allows assistants to pay from its wallet; false means drafts must be paid in the Paxaver app"
         },
         "email": {
           "type": ["string", "null"],
@@ -627,7 +636,7 @@
   {
     "name": "create_lunch_order_draft",
     "title": "Create Lunch Order Draft",
-    "description": "Creates an unpaid draft lunch order with one or more items - nothing is charged until pay_lunch_order_draft commits it. Use for multi-item orders or when the user should review the total first; each items entry pairs a menu_item_id with a quantity and optional selected_choices. When get_lunch_menu shows an item has choice groups, ask the user for each required group one at a time, offer the optional groups, then confirm the item, its choices and the total before calling - a required group without a pick is rejected. The draft total is the sum of item prices times quantities plus choice price adjustments. To change or abandon the draft, use update_lunch_order_draft or discard_lunch_order_draft. FINANCIAL - confirm student, items, choices and date before calling.",
+    "description": "Creates an unpaid draft lunch order with one or more items - nothing is charged until pay_lunch_order_draft commits it. Use for multi-item orders or when the user should review the total first; each items entry pairs a menu_item_id with a quantity and optional selected_choices. When get_lunch_menu shows an item has choice groups, ask the user for each required group one at a time, offer the optional groups, then confirm the item, its choices and the total before calling - a required group without a pick is rejected. The draft total is the sum of item prices times quantities plus choice price adjustments. To change or abandon the draft, use update_lunch_order_draft or discard_lunch_order_draft. FINANCIAL - confirm student, items, choices and date before calling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -736,7 +745,7 @@
   {
     "name": "pay_lunch_order_draft",
     "title": "Pay Lunch Order Draft",
-    "description": "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Wallet-only: if the balance cannot cover the full total, the call fails with an error directing the user to open the Paxaver panel and top up the wallet balance, then retry - no card payment is offered through this tool. Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling.",
+    "description": "Commits a draft order from create_lunch_order_draft and charges the wallet for the item total plus optional tip_cents (donated to the school's PAC). Wallet-only: if the balance cannot cover the full total, the call fails with an error directing the user to open the Paxaver panel and top up the wallet balance, then retry - no card payment is offered through this tool. Not for new orders - use create_lunch_order_draft first. FINANCIAL - confirm the total before calling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -785,7 +794,7 @@
   {
     "name": "update_lunch_order_draft",
     "title": "Update Lunch Order Draft",
-    "description": "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_lunch_order_draft). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from menu prices times quantity plus choice adjustments. When an item has choice groups, ask the user for each required group one at a time and pass the picks as selected_choices, same as create_lunch_order_draft. Only draft orders can be updated; once finalized, use cancel_my_lunch_order. WRITE - confirm the new contents, choices and total with the user.",
+    "description": "Replaces the items and/or menu_date of an unpaid draft order before it is finalized - the caller must own the draft and it must still be in draft status (order_id from create_lunch_order_draft). Pass the complete items list: it replaces the draft's items wholesale and the total is recomputed from menu prices times quantity plus choice adjustments. When an item has choice groups, ask the user for each required group one at a time and pass the picks as selected_choices, same as create_lunch_order_draft. Only draft orders can be updated; once finalized, use cancel_my_lunch_order. WRITE - confirm the new contents, choices and total with the user. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -867,7 +876,7 @@
   {
     "name": "discard_lunch_order_draft",
     "title": "Discard Lunch Order Draft",
-    "description": "Permanently discards an unpaid draft order - the caller must own it and it must still be in draft status (order_id from create_lunch_order_draft). Nothing was ever charged, so there is no refund; the draft is simply deleted. For a finalized order use cancel_my_lunch_order instead. DESTRUCTIVE - confirm with the user before discarding.",
+    "description": "Permanently discards an unpaid draft order - the caller must own it and it must still be in draft status (order_id from create_lunch_order_draft). Nothing was ever charged, so there is no refund; the draft is simply deleted. For a finalized order use cancel_my_lunch_order instead. DESTRUCTIVE - confirm with the user before discarding. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -903,7 +912,7 @@
   {
     "name": "cancel_my_lunch_order",
     "title": "Cancel My Lunch Order",
-    "description": "Cancels a finalized order and refunds the charge to the wallet. Only works before order labels have been sent; after that the request is rejected and the order stands. DESTRUCTIVE - confirm with the user before cancelling.",
+    "description": "Cancels a finalized order and refunds the charge to the wallet. Only works before order labels have been sent; after that the request is rejected and the order stands. DESTRUCTIVE - confirm with the user before cancelling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1256,7 +1265,7 @@
   {
     "name": "create_school_event",
     "title": "Create School Event (Admin)",
-    "description": "ADMIN: Creates a school event, optionally ticketed, at the active school. To change an existing event use update_school_event; to register a parent for an event use register_for_event. Requires pac_cordinator or event_cordinator role. WRITE - only create on explicit user request.",
+    "description": "ADMIN: Creates a school event, optionally ticketed, at the active school. To change an existing event use update_school_event; to register a parent for an event use register_for_event. Requires pac_cordinator or event_cordinator role. WRITE - only create on explicit user request. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1332,7 +1341,7 @@
   {
     "name": "update_school_event",
     "title": "Update School Event (Admin)",
-    "description": "ADMIN: Partially updates an existing school event - only the provided fields change; omitted fields keep their current values. Use for reschedules, capacity or price changes, and status transitions (cancelled/completed). Prefer cancel_school_event to cancel outright. Requires pac_cordinator or event_cordinator role. WRITE operation - confirm changes with the user. Get event_id from list_school_events.",
+    "description": "ADMIN: Partially updates an existing school event - only the provided fields change; omitted fields keep their current values. Use for reschedules, capacity or price changes, and status transitions (cancelled/completed). Prefer cancel_school_event to cancel outright. Requires pac_cordinator or event_cordinator role. WRITE operation - confirm changes with the user. Get event_id from list_school_events. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1413,7 +1422,7 @@
   {
     "name": "cancel_school_event",
     "title": "Cancel School Event (Admin)",
-    "description": "ADMIN: Cancels a school event outright; cancelled events cannot be reactivated. For schedule, capacity, or price changes use update_school_event instead. Requires pac_cordinator or event_cordinator role. DESTRUCTIVE - confirm with the user. Get event_id from list_school_events.",
+    "description": "ADMIN: Cancels a school event outright; cancelled events cannot be reactivated. For schedule, capacity, or price changes use update_school_event instead. Requires pac_cordinator or event_cordinator role. DESTRUCTIVE - confirm with the user. Get event_id from list_school_events. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1449,7 +1458,7 @@
   {
     "name": "check_in_event_ticket",
     "title": "Check In Event Ticket (Admin)",
-    "description": "ADMIN: Marks one attendee ticket as checked in at the door - use ticket ids from list_event_attendees. Only tickets in paid status can be checked in; a repeat call on an already-checked-in ticket is rejected by the backend, so accidental double-calls do not corrupt state. Requires pac_cordinator or event_cordinator role. WRITE - confirm the attendee before checking in.",
+    "description": "ADMIN: Marks one attendee ticket as checked in at the door - use ticket ids from list_event_attendees. Only tickets in paid status can be checked in; a repeat call on an already-checked-in ticket is rejected by the backend, so accidental double-calls do not corrupt state. Requires pac_cordinator or event_cordinator role. WRITE - confirm the attendee before checking in. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1489,7 +1498,7 @@
   {
     "name": "register_for_event",
     "title": "Register for Event",
-    "description": "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance (the error includes the regional Paxaver top-up page for the user to add funds), when the event is sold out, or when registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering.",
+    "description": "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance (the error includes the regional Paxaver top-up page for the user to add funds), when the event is sold out, or when registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1570,7 +1579,7 @@
   {
     "name": "cancel_my_event_registration",
     "title": "Cancel My Event Registration",
-    "description": "Cancels one of the authenticated user's own event tickets (ticket_id from list_my_event_registrations). Releases the reserved seats; for paid tickets the full amount is refunded to the user's wallet at that school. Only the ticket owner or a coordinator can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+    "description": "Cancels one of the authenticated user's own event tickets (ticket_id from list_my_event_registrations). Releases the reserved seats; for paid tickets the full amount is refunded to the user's wallet at that school. Only the ticket owner or a coordinator can cancel. DESTRUCTIVE - confirm with the user before cancelling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1632,7 +1641,7 @@
   {
     "name": "cancel_my_volunteer_signup",
     "title": "Cancel My Volunteer Signup",
-    "description": "Cancels one of the authenticated user's own volunteer signups (signup_id from list_my_volunteer_signups) and frees the shift slot for others. No payment is involved. Only the volunteer themselves or an admin can cancel. DESTRUCTIVE - confirm with the user before cancelling.",
+    "description": "Cancels one of the authenticated user's own volunteer signups (signup_id from list_my_volunteer_signups) and frees the shift slot for others. No payment is involved. Only the volunteer themselves or an admin can cancel. DESTRUCTIVE - confirm with the user before cancelling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1668,7 +1677,7 @@
   {
     "name": "sign_up_for_volunteer_shift",
     "title": "Sign Up for Volunteer Shift",
-    "description": "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in get_school_event. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_for_event. WRITE - confirm with the user before signing up.",
+    "description": "Signs the authenticated user up for a specific volunteer shift - no payment involved. shift_id identifies one shift within an event, not the event itself: get it from the event's volunteer shifts in get_school_event. The call fails when the shift is full or cancelled. To attend an event as a guest instead, use register_for_event. WRITE - confirm with the user before signing up. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1708,7 +1717,7 @@
   {
     "name": "create_volunteer_shift",
     "title": "Create Volunteer Shift (Admin)",
-    "description": "ADMIN: Creates a volunteer shift at the active school, optionally attached to an event (event_id must reference an event of the same school). Parents discover the new shift via the event's shifts in get_school_event or the volunteer views in the Paxaver panel, and sign up through sign_up_for_volunteer_shift. Requires pac_cordinator or pac_member role. WRITE - confirm title, date and times with the user before calling.",
+    "description": "ADMIN: Creates a volunteer shift at the active school, optionally attached to an event (event_id must reference an event of the same school). Parents discover the new shift via the event's shifts in get_school_event or the volunteer views in the Paxaver panel, and sign up through sign_up_for_volunteer_shift. Requires pac_cordinator or pac_member role. WRITE - confirm title, date and times with the user before calling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1878,7 +1887,7 @@
   {
     "name": "register_for_program",
     "title": "Register for Program",
-    "description": "Registers one of the caller's own students for a school program (before/after-school care, enrichment, camp). Returns status 'registered' when a seat is available or 'waitlist' when the program is at capacity - the backend enforces the capacity check atomically. The response records the program fee (amountCents) owed; no wallet charge happens on this call. program_id comes from list_school_programs, student_id from get_my_context. WRITE - confirm the student and program before calling.",
+    "description": "Registers one of the caller's own students for a school program (before/after-school care, enrichment, camp). Returns status 'registered' when a seat is available or 'waitlist' when the program is at capacity - the backend enforces the capacity check atomically. The response records the program fee (amountCents) owed; no wallet charge happens on this call. program_id comes from list_school_programs, student_id from get_my_context. WRITE - confirm the student and program before calling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2010,7 +2019,7 @@
   {
     "name": "cancel_program_registration",
     "title": "Cancel Program Registration",
-    "description": "Cancels one of the caller's own students' program registrations (registration_id from register_for_program). When the program has a waitlist, the backend automatically promotes the next waitlisted registration. Coordinators manage cancellations through the Paxaver panel. DESTRUCTIVE - confirm with the user before cancelling.",
+    "description": "Cancels one of the caller's own students' program registrations (registration_id from register_for_program). When the program has a waitlist, the backend automatically promotes the next waitlisted registration. Coordinators manage cancellations through the Paxaver panel. DESTRUCTIVE - confirm with the user before cancelling. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2064,7 +2073,7 @@
   {
     "name": "admit_program_registration",
     "title": "Admit Program Registration (Admin)",
-    "description": "ADMIN: Manually promotes a waitlisted program registration to a seat, regardless of the current capacity count - the backend rejects registrations that are not in waitlist status. Find the waitlisted registration id with list_program_registrations. Requires pac_cordinator role. WRITE - confirm with the user before admitting.",
+    "description": "ADMIN: Manually promotes a waitlisted program registration to a seat, regardless of the current capacity count - the backend rejects registrations that are not in waitlist status. Find the waitlisted registration id with list_program_registrations. Requires pac_cordinator role. WRITE - confirm with the user before admitting. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2159,7 +2168,7 @@
   {
     "name": "create_school_restaurant",
     "title": "Create School Restaurant (Admin)",
-    "description": "ADMIN: Adds a restaurant to the active school so it can offer menu items via create_restaurant_menu_item. To change an existing restaurant there is no update tool - recreate or manage it in the Paxaver admin. Requires pac_cordinator role. WRITE - confirm with the user.",
+    "description": "ADMIN: Adds a restaurant to the active school so it can offer menu items via create_restaurant_menu_item. To change an existing restaurant there is no update tool - recreate or manage it in the Paxaver admin. Requires pac_cordinator role. WRITE - confirm with the user. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2286,7 +2295,7 @@
   {
     "name": "create_restaurant_menu_item",
     "title": "Create Restaurant Menu Item (Admin)",
-    "description": "ADMIN: Creates a new menu item on a restaurant. Only restaurant_id and name are required - set price_cents before the item can be meaningfully ordered. New items start active and available; use update_restaurant_menu_item to change them later. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm with the user. Get restaurant_id from list_school_restaurants.",
+    "description": "ADMIN: Creates a new menu item on a restaurant. Only restaurant_id and name are required - set price_cents before the item can be meaningfully ordered. New items start active and available; use update_restaurant_menu_item to change them later. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm with the user. Get restaurant_id from list_school_restaurants. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2357,7 +2366,7 @@
   {
     "name": "update_restaurant_menu_item",
     "title": "Update Restaurant Menu Item (Admin)",
-    "description": "ADMIN: Partially updates an existing menu item - only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents - FINANCIAL, confirm the new price), nutrition updates, or retiring an item (is_active=false). Day-level orderability is controlled by schedule_lunch_menu_item, not this tool. Use archive_restaurant_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_restaurant_menu_items.",
+    "description": "ADMIN: Partially updates an existing menu item - only the provided fields change; omitted fields keep their current values. Use for renames, description edits, price changes (price_cents - FINANCIAL, confirm the new price), nutrition updates, or retiring an item (is_active=false). Day-level orderability is controlled by schedule_lunch_menu_item, not this tool. Use archive_restaurant_menu_item to remove the item permanently. Requires pac_cordinator or lunch_cordinator role. WRITE operation - confirm changes with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_restaurant_menu_items. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2440,7 +2449,7 @@
   {
     "name": "archive_restaurant_menu_item",
     "title": "Archive Restaurant Menu Item (Admin)",
-    "description": "ADMIN: Archives (soft-deletes) a menu item so it can no longer be ordered - the item is removed from ordering but stays on historical orders. To retire it from the restaurant menu without archiving, use update_restaurant_menu_item with is_active=false. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_restaurant_menu_items.",
+    "description": "ADMIN: Archives (soft-deletes) a menu item so it can no longer be ordered - the item is removed from ordering but stays on historical orders. To retire it from the restaurant menu without archiving, use update_restaurant_menu_item with is_active=false. Requires pac_cordinator or lunch_cordinator role. DESTRUCTIVE operation - confirm with the user. Get restaurant_id from list_school_restaurants and menu_item_id from list_restaurant_menu_items. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2480,7 +2489,7 @@
   {
     "name": "schedule_lunch_menu_item",
     "title": "Schedule Lunch Menu Item (Admin)",
-    "description": "ADMIN: Puts a restaurant menu item on the orderable menu for a given date, optionally capping portions. This only schedules the item - to retire it entirely use update_restaurant_menu_item (is_active) or archive_restaurant_menu_item. Requires pac_cordinator or lunch_cordinator role. WRITE - confirm with the user. Get IDs from list_school_restaurants and list_restaurant_menu_items.",
+    "description": "ADMIN: Puts a restaurant menu item on the orderable menu for a given date, optionally capping portions. This only schedules the item - to retire it entirely use update_restaurant_menu_item (is_active) or archive_restaurant_menu_item. Requires pac_cordinator or lunch_cordinator role. WRITE - confirm with the user. Get IDs from list_school_restaurants and list_restaurant_menu_items. Collect each required input one at a time and confirm the details with the user before calling.",
     "inputSchema": {
       "type": "object",
       "properties": {
