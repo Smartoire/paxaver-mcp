@@ -37,6 +37,9 @@ async function mcpPost(body: unknown, token?: string, mcpMethod?: string) {
   );
 }
 
+// Signed by a foreign issuer, so authenticateRequest rejects it (invalid/stale bearer).
+const STALE_TOKEN = await makeToken('user-stale', 'https://wrong-issuer.test');
+
 describe('MCP protocol', () => {
   it('initialize explains portal subscription requirements to free users', async () => {
     const res = await mcpPost({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }, TEST_TOKEN);
@@ -109,6 +112,33 @@ describe('MCP protocol', () => {
     expect(json.result.resultType).toBe('complete');
     expect(json.result.supportedVersions).toContain('2026-07-28');
     expect(json.result.cacheScope).toBe('public');
+  });
+
+  it('server/discover with an expired bearer token still returns public metadata', async () => {
+    const res = await mcpPost({ jsonrpc: '2.0', id: 7, method: 'server/discover' }, STALE_TOKEN);
+    expect(res.status).toBe(200);
+  });
+
+  it('batch of only server/discover with an expired bearer token returns 200', async () => {
+    const res = await mcpPost(
+      [
+        { jsonrpc: '2.0', id: 1, method: 'server/discover' },
+        { jsonrpc: '2.0', id: 2, method: 'server/discover' },
+      ],
+      STALE_TOKEN,
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('batch mixing server/discover with a protected method still returns 401 on an expired token', async () => {
+    const res = await mcpPost(
+      [
+        { jsonrpc: '2.0', id: 1, method: 'server/discover' },
+        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+      ],
+      STALE_TOKEN,
+    );
+    expect(res.status).toBe(401);
   });
 
   it.each(['initialize', 'tools/list', 'ping'])(
