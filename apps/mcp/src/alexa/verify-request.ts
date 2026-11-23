@@ -47,7 +47,9 @@ interface TrustedChain {
 
 // Validated chains per trust-anchor set and certificate URL, for this
 // isolate. Only successful validations are stored. The URL can change at
-// runtime, so it is the key.
+// runtime, so it is the key. At most CHAIN_CACHE_MAX URLs per anchor set;
+// the oldest entry goes first.
+export const CHAIN_CACHE_MAX = 16;
 const chainCache = new WeakMap<readonly string[], Map<string, TrustedChain>>();
 
 /** Normalize and check SignatureCertChainUrl. Returns the normalized URL, or null. */
@@ -60,8 +62,10 @@ export function normalizeCertUrl(value: string | null): string | null {
     return null;
   }
   // URL parsing lowercases the scheme and host, resolves dot segments and
-  // drops the default port 443.
+  // drops the default port 443. The query does not select a different
+  // certificate, so it is removed: it must not make a new cache key.
   url.hash = '';
+  url.search = '';
   url.pathname = url.pathname.replace(/\/{2,}/g, '/');
   if (url.protocol !== 'https:') return null;
   if (url.hostname !== 's3.amazonaws.com') return null;
@@ -191,7 +195,10 @@ async function trustedChainFor(
   const chain = parsePem(await response.text());
   const anchors = anchorsPem.flatMap(parsePem);
   const trusted = await validateChain(chain, anchors, now);
-  if (trusted) cache.set(certUrl, trusted);
+  if (trusted) {
+    if (cache.size >= CHAIN_CACHE_MAX) cache.delete(cache.keys().next().value!);
+    cache.set(certUrl, trusted);
+  }
   return trusted;
 }
 

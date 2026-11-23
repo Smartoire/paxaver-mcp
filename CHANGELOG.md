@@ -54,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The lunch draft tools surface the backend's validation message on a 422
   — a missing required choice group names the group to pick — instead of
   a generic invalid-params error.
+- Alexa request verification removes the query string from
+  `SignatureCertChainUrl` before it fetches and caches the certificate
+  chain, and keeps at most 16 validated chains. A changed query no longer
+  causes a new certificate fetch or a new cache entry.
 
 ### Removed
 
