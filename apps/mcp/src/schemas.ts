@@ -295,8 +295,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         student_id: {
           type: 'string',
-          description:
-            'Filter to a specific student (must be your own student, from get_my_context; admins may filter any student in the school)',
+          description: 'Filter to a specific student (must be your own student, from get_my_context)',
         },
         menu_date: { type: 'string', description: 'Single day to query, YYYY-MM-DD; omit when using month' },
         month: { type: 'string', description: 'Calendar month to query, YYYY-MM; omit when using menu_date' },

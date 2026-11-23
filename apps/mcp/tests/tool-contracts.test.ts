@@ -563,6 +563,25 @@ describe('tool → backend contract', () => {
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/lunch/orders');
   });
 
+  it('list_my_lunch_orders refuses another student for a school admin without linked students', async () => {
+    const admin = { permissions: ['lunch_cordinator'], studentIds: [] };
+    const env = {
+      ...TEST_ENV,
+      PAXAVER_API_CA: contextOverrideBackend(admin),
+      PAXAVER_API_US: contextOverrideBackend(admin),
+    };
+    const res = await postTool('list_my_lunch_orders', { student_id: 'other-student' }, env);
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error).toEqual({ code: -32602, message: 'student_id is not permitted for this user' });
+    expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+  });
+
+  it('list_my_lunch_orders student_id schema does not promise admin filtering', () => {
+    const tool = ALL_TOOLS.find((t) => t.name === 'list_my_lunch_orders');
+    const description = (tool?.inputSchema.properties.student_id as { description: string }).description;
+    expect(description).toBe('Filter to a specific student (must be your own student, from get_my_context)');
+  });
+
   it('pay_lunch_order_draft requests wallet-only finalize and never advertises paymentUrl', async () => {
     const c = await callTool('pay_lunch_order_draft', { order_id: 'o1', tip_cents: 100 });
     expect(c?.body).toEqual({ tipCents: 100, walletOnly: true });

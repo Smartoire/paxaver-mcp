@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   month view's `calendar`/`closedDays`) instead of the
   `menuItems`/`menuItemName`/`dailyMenuId`/`date` shape that was never
   sent.
+- `list_my_lunch_orders`'s `student_id` description no longer says admins may
+  filter any student. The ownership check only lets platform admins name a
+  student outside the caller's own, so a school admin gets the
+  `student_id is not permitted` error for another student.
 
 ### Fixed
 
