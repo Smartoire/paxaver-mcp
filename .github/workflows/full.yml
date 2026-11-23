@@ -25,7 +25,7 @@ jobs:
   gate:
     # A scheduled run skips a commit that already passed a full run.
     # A manual dispatch always runs.
-    runs-on: [self-hosted, linux, office, public-repo]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       actions: read
@@ -53,7 +53,7 @@ jobs:
   full:
     needs: gate
     if: needs.gate.outputs.skip != 'true'
-    runs-on: [self-hosted, linux, office, public-repo]
+    runs-on: ubuntu-latest
     container: node:26-bookworm
     timeout-minutes: 30
     steps:
@@ -107,7 +107,7 @@ jobs:
   report:
     needs: [gate, full]
     if: always() && (needs.full.result == 'failure' || needs.full.result == 'success')
-    runs-on: [self-hosted, linux, office, public-repo]
+    runs-on: ubuntu-latest
     container: node:26-bookworm
     timeout-minutes: 10
     permissions:
