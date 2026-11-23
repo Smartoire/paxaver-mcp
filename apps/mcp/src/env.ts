@@ -53,6 +53,14 @@ export interface Env {
    */
   ALEXA_SKILL_ID?: string;
 
+  /**
+   * Per-client-IP limits on POST /register and /oauth/register (fan-out to
+   * every region) and on POST /oauth/token. Declared per environment in
+   * wrangler.jsonc; unset means no limit (local runs and tests).
+   */
+  REGISTER_RATE_LIMITER?: RateLimit;
+  TOKEN_RATE_LIMITER?: RateLimit;
+
   /** Git SHA injected by the deploy command (--var); exposed on /health. */
   COMMIT_SHA?: string;
 

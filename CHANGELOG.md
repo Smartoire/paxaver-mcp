@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `POST /register` and `POST /oauth/register` reject a body over 8 KB with
+  413 before any region is called, so a rejected request leaves no client
+  row. Both routes and `POST /oauth/token` answer 429 once one caller IP
+  passes the per-minute limit (20 registrations, 300 token calls).
 - The lunch draft tools surface the backend's validation message on a 422
   — a missing required choice group names the group to pick — instead of
   a generic invalid-params error.
