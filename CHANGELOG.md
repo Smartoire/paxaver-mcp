@@ -63,6 +63,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A parent whose children attend more than one school can use each school.
+  `school_slug` accepts any school the user belongs to (from
+  `/me/context`), not only the active one. A `student_id` paired with a
+  `school_slug` must belong to that school, or the call fails with
+  `student does not belong to school_slug`. `get_lunch_menu` takes
+  `school_slug`, and a lunch draft without `school_slug` uses the chosen
+  student's school. Child credentials
+  stay on the active school. Until the backend returns `schoolSlugs` and
+  `studentSchools`, the behaviour is unchanged.
 - `POST /register` and `POST /oauth/register` reject a body over 8 KB with
   413 before any region is called, so a rejected request leaves no client
   row. Both routes and `POST /oauth/token` answer 429 once one caller IP

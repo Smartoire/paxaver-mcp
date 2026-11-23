@@ -77,6 +77,10 @@ export interface AuthContext {
   permissions: string[];
   isPlatformAdmin: boolean;
   studentIds: string[];
+  /** Slugs of every school the caller belongs to (from /me/context). */
+  schoolSlugs?: string[];
+  /** Student id to school slug, for the caller's own students (from /me/context). */
+  studentSchools?: Record<string, string>;
   country: McpCountry;
   /**
    * 'child' when the verified token is a parent-issued read-only child
