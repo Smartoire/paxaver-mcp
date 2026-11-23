@@ -25,7 +25,7 @@ import type { DispatchContext, RpcId } from './shared.js';
 import { InvalidParamsError } from './shared.js';
 import { coerceBooleans } from './coerce.js';
 import { handleTool, requiredArgsFor } from './tools.js';
-import { applyElicitedArgs, buildInputRequired, missingRequiredArgs } from './elicitation.js';
+import { applyElicitedArgs, buildInputRequired, confirmPaidRegistration, missingRequiredArgs } from './elicitation.js';
 import type { ElicitationContext } from './elicitation.js';
 
 function toolResult(id: RpcId, data: unknown): Response {
@@ -176,6 +176,51 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
   }
 }
 
+/**
+ * Paid-registration gate (#3805): read the event's ticket price from the
+ * detail route and, for a paid event, require the user's confirmation of
+ * the total before the charging POST. Free events pass straight through.
+ * An unreadable price counts as paid. Returns a Response to send instead
+ * of registering, or null to go on with the registration.
+ */
+async function gatePaidRegistration(
+  id: RpcId,
+  args: Record<string, unknown>,
+  ctx: AppVariables,
+  env: Env,
+  elicitation: ElicitationContext,
+): Promise<Response | null> {
+  const quantity = args.quantity ?? 1;
+  if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
+    throw new InvalidParamsError('quantity must be a whole number from 1 to 20');
+  }
+  const detail = await handleTool({ env, ctx, name: 'get_school_event', args });
+  if (!detail?.ok) {
+    const err = apiErrorToMcp(detail?.status ?? 500);
+    return toolError(id, err.code, err.message);
+  }
+  const event = ((detail.data as { data?: unknown })?.data ?? detail.data) as Record<string, unknown> | null;
+  const price = event?.ticketPriceCents;
+  if (price === 0) return null;
+  if (typeof price !== 'number' || !Number.isInteger(price) || price < 0) {
+    throw new InvalidParamsError(
+      'The ticket price of this event could not be read, so the charge cannot be confirmed. Register in the Paxaver app.',
+    );
+  }
+  return confirmPaidRegistration(
+    id,
+    {
+      eventId: String(args.event_id),
+      eventName: typeof event?.name === 'string' ? event.name : 'this event',
+      quantity,
+      totalCents: quantity * price,
+    },
+    ctx,
+    env,
+    elicitation,
+  );
+}
+
 export async function dispatchTool(
   c: DispatchContext,
   name: string,
@@ -211,6 +256,11 @@ export async function dispatchTool(
       const inputRequired = await buildInputRequired(id, name, missing, ctx, env, elicitation);
       if (inputRequired) return inputRequired;
       return toolError(id, -32602, `Missing required parameter(s): ${missing.join(', ')}`);
+    }
+
+    if (name === 'register_for_event') {
+      const gate = await gatePaidRegistration(id, args, ctx, env, elicitation);
+      if (gate) return gate;
     }
 
     const result: ApiCallResult | undefined = await handleTool({

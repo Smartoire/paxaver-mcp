@@ -38,6 +38,11 @@ const recordingBackend = {
       body,
       idempotencyKey: req.headers.get('Idempotency-Key'),
     });
+    // A free event: register_for_event reads the price before it registers
+    // (#3805), and a free event needs no charge confirmation.
+    if (req.method === 'GET' && /^\/api\/events\/[^/]+\/detail$/.test(url.pathname)) {
+      return Response.json({ data: { id: 'e1', name: 'Free event', ticketPriceCents: 0 } });
+    }
     return mockBackend.fetch(req);
   },
 };
@@ -763,6 +768,11 @@ describe('tool → backend contract', () => {
     expect(policy).toBeDefined();
   });
 
+  it('register_for_event is annotated destructive: it can charge the wallet (#3805)', () => {
+    const tool = ALL_TOOLS.find((t) => t.name === 'register_for_event');
+    expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+  });
+
   it('register_for_event insufficient funds returns the top-up URL, never a payment link', async () => {
     const insufficientBackend = {
       async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
@@ -776,7 +786,7 @@ describe('tool → backend contract', () => {
             },
           );
         }
-        return mockBackend.fetch(req);
+        return recordingBackend.fetch(req);
       },
     };
     const res = await postTool(

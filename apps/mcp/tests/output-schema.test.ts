@@ -143,6 +143,11 @@ const fixtureBackend = {
     if (req.method === 'GET' && url.pathname === '/api/wallet/transactions') {
       return Response.json({ data: WALLET_TRANSACTIONS });
     }
+    // A free event: register_for_event reads the price before it registers
+    // (#3805), and a free event needs no charge confirmation.
+    if (req.method === 'GET' && /^\/api\/events\/[^/]+\/detail$/.test(url.pathname)) {
+      return Response.json({ data: { id: 'event-1', name: 'Fixture event', ticketPriceCents: 0 } });
+    }
     if (req.method === 'GET') {
       const match = LIST_FIXTURES.find(([pattern]) => pattern.test(url.pathname));
       if (match) return Response.json({ data: match[1] });

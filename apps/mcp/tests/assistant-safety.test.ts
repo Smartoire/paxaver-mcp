@@ -13,7 +13,7 @@
  *   the client declared form elicitation, and the usual -32602 otherwise.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import app from '../src/index.js';
 import { request } from './request.js';
 import { CHILD_TOKEN, FULL_TOKEN, TEST_ENV, backendCalls, mockBackend } from './jwt-auth.js';
@@ -286,5 +286,214 @@ describe('guided-flow elicitation', () => {
     const err = await rpcError(res);
     expect(err.code).toBe(-32602);
     expect(err.message).toContain('items');
+  });
+});
+
+describe('paid registration confirmation (#3805)', () => {
+  // Event e-paid costs 1250 cents a ticket; e-free costs nothing.
+  function eventBackend(prices: Record<string, unknown>) {
+    return {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        const match = /^\/api\/events\/([^/]+)\/detail$/.exec(new URL(req.url).pathname);
+        if (req.method === 'GET' && match) {
+          backendCalls.push(`${req.method} ${match[0]}`);
+          return Response.json({
+            data: { id: match[1], name: 'Spring Gala', ticketPriceCents: prices[match[1] ?? ''] },
+          });
+        }
+        return mockBackend.fetch(req);
+      },
+    };
+  }
+  const backend = eventBackend({ 'e-paid': 1250, 'e-free': 0 });
+  const ENV = { ...TEST_ENV, PAXAVER_API_CA: backend, PAXAVER_API_US: backend };
+  const registered = (id: string) => backendCalls.filter((c) => c === `POST /api/events/${id}/register`).length;
+
+  type InputRequired = {
+    result?: {
+      resultType?: string;
+      requestState?: string;
+      inputRequests?: Record<string, { params: { mode: string; message: string; requestedSchema: unknown } }>;
+    };
+  };
+
+  async function askConfirmation(args: Record<string, unknown>): Promise<string> {
+    const res = await callTool('register_for_event', args, FULL_TOKEN, { _meta: ELICIT_META }, ENV);
+    const json = (await res.json()) as InputRequired;
+    expect(json.result?.resultType).toBe('input_required');
+    return json.result?.requestState ?? '';
+  }
+
+  it('a free event registers with no confirmation', async () => {
+    const res = await callTool('register_for_event', { event_id: 'e-free', quantity: 3 }, FULL_TOKEN, {}, ENV);
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { result?: unknown }).toHaveProperty('result');
+    expect(registered('e-free')).toBe(1);
+  });
+
+  it('a paid event without form elicitation fails closed, no charge', async () => {
+    const res = await callTool('register_for_event', { event_id: 'e-paid', quantity: 20 }, FULL_TOKEN, {}, ENV);
+    const err = await rpcError(res);
+    expect(err.code).toBe(-32602);
+    expect(err.message).toContain('Paxaver app');
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('a paid event asks for confirmation of the total, no charge yet', async () => {
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-paid', quantity: 2 },
+      FULL_TOKEN,
+      { _meta: ELICIT_META },
+      ENV,
+    );
+    const json = (await res.json()) as InputRequired;
+    expect(json.result?.resultType).toBe('input_required');
+    const req = json.result?.inputRequests?.confirm_charge;
+    expect(req?.params.mode).toBe('form');
+    expect(req?.params.message).toContain('25.00');
+    expect(req?.params.message).toContain('2 tickets');
+    expect(req?.params.requestedSchema).toMatchObject({ required: ['confirm'] });
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('an accepted confirmation registers once with the same quantity', async () => {
+    const requestState = await askConfirmation({ event_id: 'e-paid', quantity: 2 });
+    const calls: unknown[] = [];
+    const recording = {
+      async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
+        const req = typeof request === 'string' ? new Request(request, init) : request;
+        if (req.method === 'POST') calls.push(await req.clone().json());
+        return backend.fetch(req);
+      },
+    };
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-paid', quantity: 2 },
+      FULL_TOKEN,
+      {
+        _meta: ELICIT_META,
+        requestState,
+        inputResponses: { confirm_charge: { action: 'accept', content: { confirm: true } } },
+      },
+      { ...ENV, PAXAVER_API_CA: recording, PAXAVER_API_US: recording },
+    );
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { result?: { resultType?: string } }).result?.resultType).toBe('complete');
+    expect(registered('e-paid')).toBe(1);
+    expect(calls).toEqual([expect.objectContaining({ quantity: 2 })]);
+  });
+
+  it.each([
+    ['a declined confirmation', { confirm_charge: { action: 'decline' } }],
+    ['an accept without confirm: true', { confirm_charge: { action: 'accept', content: { confirm: false } } }],
+    ['a retry with no response', undefined],
+  ])('%s does not charge', async (_label, inputResponses) => {
+    const requestState = await askConfirmation({ event_id: 'e-paid', quantity: 2 });
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-paid', quantity: 2 },
+      FULL_TOKEN,
+      { _meta: ELICIT_META, requestState, inputResponses },
+      ENV,
+    );
+    expect((await rpcError(res)).code).toBe(-32602);
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('a confirmation for another quantity does not charge', async () => {
+    const requestState = await askConfirmation({ event_id: 'e-paid', quantity: 1 });
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-paid', quantity: 20 },
+      FULL_TOKEN,
+      {
+        _meta: ELICIT_META,
+        requestState,
+        inputResponses: { confirm_charge: { action: 'accept', content: { confirm: true } } },
+      },
+      ENV,
+    );
+    expect((await rpcError(res)).code).toBe(-32602);
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('a confirmation does not survive a price change', async () => {
+    const requestState = await askConfirmation({ event_id: 'e-paid', quantity: 1 });
+    const repriced = eventBackend({ 'e-paid': 9999 });
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-paid', quantity: 1 },
+      FULL_TOKEN,
+      {
+        _meta: ELICIT_META,
+        requestState,
+        inputResponses: { confirm_charge: { action: 'accept', content: { confirm: true } } },
+      },
+      { ...ENV, PAXAVER_API_CA: repriced, PAXAVER_API_US: repriced },
+    );
+    expect((await rpcError(res)).code).toBe(-32602);
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('a forged confirmation state does not charge', async () => {
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-paid', quantity: 1 },
+      FULL_TOKEN,
+      {
+        _meta: ELICIT_META,
+        requestState: 'forged.payload.signature',
+        inputResponses: { confirm_charge: { action: 'accept', content: { confirm: true } } },
+      },
+      ENV,
+    );
+    expect((await rpcError(res)).code).toBe(-32602);
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('an expired confirmation does not charge', async () => {
+    const requestState = await askConfirmation({ event_id: 'e-paid', quantity: 1 });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 16 * 60 * 1000);
+    try {
+      const res = await callTool(
+        'register_for_event',
+        { event_id: 'e-paid', quantity: 1 },
+        FULL_TOKEN,
+        {
+          _meta: ELICIT_META,
+          requestState,
+          inputResponses: { confirm_charge: { action: 'accept', content: { confirm: true } } },
+        },
+        ENV,
+      );
+      expect((await rpcError(res)).code).toBe(-32602);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(registered('e-paid')).toBe(0);
+  });
+
+  it('an event whose price cannot be read counts as paid and fails closed', async () => {
+    const unknown = eventBackend({});
+    const res = await callTool(
+      'register_for_event',
+      { event_id: 'e-x', quantity: 1 },
+      FULL_TOKEN,
+      { _meta: ELICIT_META },
+      { ...ENV, PAXAVER_API_CA: unknown, PAXAVER_API_US: unknown },
+    );
+    expect((await rpcError(res)).code).toBe(-32602);
+    expect(registered('e-x')).toBe(0);
+  });
+
+  it('a quantity outside 1 to 20 is refused before any backend call', async () => {
+    for (const quantity of [0, 21]) {
+      const res = await callTool('register_for_event', { event_id: 'e-free', quantity }, FULL_TOKEN, {}, ENV);
+      expect((await rpcError(res)).code).toBe(-32602);
+    }
+    expect(backendCalls.some((c) => c.includes('/api/events/'))).toBe(false);
   });
 });

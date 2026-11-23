@@ -107,7 +107,10 @@ Paxaver in that app or in their Paxaver account settings instead.
 
 Pre-2.5 tool names still resolve to the canonical tools but are no longer
 advertised; the retired `order_lunch` tool is removed. Financial and destructive
-tools are labeled and require user confirmation.
+tools are labeled for confirmation in `tools/list`. For a paid event,
+`register_for_event` does not charge the wallet until the user accepts a
+confirmation form (MCP elicitation) that shows the total. A client that cannot
+show the form gets an error, and the user registers in the Paxaver app.
 
 ### Privacy
 

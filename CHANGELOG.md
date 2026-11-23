@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Paid event registration needs user confirmation (#3805). For an event with
+  a ticket price above zero, `register_for_event` reads the price first and
+  returns an `input_required` form elicitation that shows the total. The
+  wallet is charged only on a retry that accepts the form (`confirm: true`)
+  under a signed `requestState` bound to the user, event, quantity and total
+  (15-minute TTL). A decline, a forged, expired or mismatched state, or a
+  price change gives `-32602` and no charge. Clients without form
+  elicitation get `-32602` for paid events (fail closed). Free events
+  register as before. The tool is now annotated `destructiveHint: true`.
+
 ### Added
 
 - Child assistant credentials (#3680/#3682): a parent-issued read-only
