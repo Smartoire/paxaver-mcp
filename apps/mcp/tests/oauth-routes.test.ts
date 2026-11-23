@@ -353,6 +353,42 @@ describe('POST /oauth/token', () => {
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: 'temporarily_unavailable' });
   });
+
+  it.each([
+    ['a 502', () => new Response('down', { status: 502 })],
+    ['a 429', () => new Response('slow down', { status: 429 })],
+    [
+      'a thrown fetch',
+      () => {
+        throw new Error('down');
+      },
+    ],
+  ])('tries the next region after %s and returns the grant of that region', async (_, failure) => {
+    responder = (call) => (regionOf(call) === 'ca' ? failure() : regionOf(call) === 'us' ? tokens() : invalidGrant());
+    const res = await post('grant_type=authorization_code&code=abc&client_id=plain');
+
+    expect(calls.map((c) => regionOf(c))).toEqual(['ca', 'us']);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as Record<string, unknown>).refresh_token).toBe('us.rt');
+  });
+
+  it('answers 503 when a failing region may hold the grant, even if the others miss', async () => {
+    responder = (call) => (regionOf(call) === 'ca' ? new Response('down', { status: 502 }) : invalidGrant());
+    const res = await post('grant_type=authorization_code&code=abc&client_id=plain');
+
+    expect(calls).toHaveLength(3);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'temporarily_unavailable' });
+  });
+
+  it('answers 503 when every region fails', async () => {
+    responder = () => new Response('down', { status: 503 });
+    const res = await post('grant_type=refresh_token&refresh_token=legacy&client_id=plain');
+
+    expect(calls).toHaveLength(3);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'temporarily_unavailable' });
+  });
 });
 
 describe('POST /oauth/revoke', () => {
