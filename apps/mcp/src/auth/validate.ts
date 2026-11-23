@@ -245,6 +245,9 @@ export async function authenticateRequest(
           };
         }
         if (!ctx.country) ctx.country = country;
+        // Older backends omit the school lists: fall back to the active school.
+        ctx.schoolSlugs = Array.isArray(ctx.schoolSlugs) ? ctx.schoolSlugs : ctx.schoolSlug ? [ctx.schoolSlug] : [];
+        ctx.studentSchools = ctx.studentSchools ?? {};
         // Child assistant credential (#3680): /me/context narrows
         // studentIds/permissions and reports childStudentId; the JWT
         // student_link claim is the same signal one hop earlier. Either

@@ -161,17 +161,23 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
   if (args.student_id !== undefined && !ctx.isPlatformAdmin && !ctx.studentIds?.includes(String(args.student_id))) {
     throw new InvalidParamsError('student_id is not permitted for this user');
   }
-  // school_slug: if the caller supplies one, it must match the user's own
-  // school. If we don't know the user's school (empty ctx.schoolSlug) and
-  // they aren't a platform admin, we can't validate it — reject rather than
-  // forward blindly. Platform admins can act on any school.
+  // school_slug: if the caller supplies one, it must be a school the user
+  // belongs to. If we don't know the user's schools and they aren't a
+  // platform admin, we can't validate it — reject rather than forward
+  // blindly. Platform admins can act on any school. Child credentials
+  // stay on the active school only.
   if (args.school_slug !== undefined && !ctx.isPlatformAdmin) {
     const slug = String(args.school_slug);
-    if (!ctx.schoolSlug) {
+    const schools = ctx.assistantMode === 'child' ? [ctx.schoolSlug] : [ctx.schoolSlug, ...(ctx.schoolSlugs ?? [])];
+    if (!schools.some(Boolean)) {
       throw new InvalidParamsError('school_slug cannot be verified for this user');
     }
-    if (slug !== ctx.schoolSlug) {
+    if (!schools.includes(slug)) {
       throw new InvalidParamsError('school_slug does not match the user school');
+    }
+    const studentSchool = args.student_id !== undefined ? ctx.studentSchools?.[String(args.student_id)] : undefined;
+    if (studentSchool && studentSchool !== slug) {
+      throw new InvalidParamsError('student does not belong to school_slug');
     }
   }
 }

@@ -358,10 +358,14 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'get_lunch_menu',
     title: 'Get Lunch Menu',
     description:
-      "Returns the orderable lunch menu for the user's active school - item names, prices, dietary tags, remaining quantity, and each item's choice groups (toppings, sizes, ...). Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by create_lunch_order_draft; choiceGroups give the group_id and option_id values for selected_choices. For orders already placed, use list_my_lunch_orders.",
+      "Returns the orderable lunch menu for the user's active school, or for school_slug when the user belongs to another school - item names, prices, dietary tags, remaining quantity, and each item's choice groups (toppings, sizes, ...). Pass date for a single day or month for a per-day listing across the whole month (today if neither is given); if both are passed, date wins. The menu_item_id values returned are required by create_lunch_order_draft; choiceGroups give the group_id and option_id values for selected_choices. For orders already placed, use list_my_lunch_orders.",
     inputSchema: {
       type: 'object',
       properties: {
+        school_slug: {
+          type: 'string',
+          description: 'School slug (from get_my_context), a school the user belongs to; defaults to the active school',
+        },
         date: { type: 'string', description: 'Single day to show, YYYY-MM-DD; omit when using month' },
         month: {
           type: 'string',
@@ -582,7 +586,8 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
         school_slug: {
           type: 'string',
-          description: 'School slug (from get_my_context); defaults to the active school',
+          description:
+            'School slug (from get_my_context); defaults to the school of student_id, else the active school',
         },
         menu_date: { type: 'string', description: 'Date the lunch is served, YYYY-MM-DD' },
         items: {

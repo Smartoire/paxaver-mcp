@@ -258,7 +258,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     // /menu/daily only reads `date` — a month query must hit the calendar
     // endpoint (year + month params) or it silently returns one day.
     path: (args, ctx) => {
-      const slug = validatePathId(ctx.schoolSlug, 'schoolSlug');
+      const slug = validatePathId((args.school_slug as string | undefined) ?? ctx.schoolSlug, 'schoolSlug');
       return args.month && !args.date ? `/api/schools/${slug}/menu/daily/calendar` : `/api/schools/${slug}/menu/daily`;
     },
     query: (args) => {
@@ -274,12 +274,18 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     method: 'POST',
     path: '/api/lunch/orders/draft',
     required: ['menu_date', 'items'],
-    body: (args, ctx) => ({
-      studentId: defaultStudentId(args, ctx),
-      schoolSlug: (args.school_slug as string | undefined) ?? ctx.schoolSlug,
-      menuDate: args.menu_date,
-      items: mapDraftItems(args.items),
-    }),
+    body: (args, ctx) => {
+      const studentId = defaultStudentId(args, ctx);
+      return {
+        studentId,
+        schoolSlug:
+          (args.school_slug as string | undefined) ??
+          (studentId !== undefined ? ctx.studentSchools?.[String(studentId)] : undefined) ??
+          ctx.schoolSlug,
+        menuDate: args.menu_date,
+        items: mapDraftItems(args.items),
+      };
+    },
   },
   // Backend reads tipCents — a snake_case key would silently drop the tip.
   // walletOnly: MCP must never surface a card payment link; an
