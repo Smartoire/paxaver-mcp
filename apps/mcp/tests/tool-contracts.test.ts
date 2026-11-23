@@ -558,6 +558,20 @@ describe('tool → backend contract', () => {
     expect(c?.query.get('end')).toBe('2026-10-01');
   });
 
+  it('list_my_lunch_orders month filter sends the real last day of the month', async () => {
+    const cases: Array<[string, string]> = [
+      ['2026-02', '2026-02-28'],
+      ['2028-02', '2028-02-29'],
+      ['2026-11', '2026-11-30'],
+      ['2026-10', '2026-10-31'],
+    ];
+    for (const [month, end] of cases) {
+      const c = await callTool('list_my_lunch_orders', { month });
+      expect(c?.query.get('start')).toBe(`${month}-01`);
+      expect(c?.query.get('end')).toBe(end);
+    }
+  });
+
   it('order tools stay under /api/lunch/orders', async () => {
     const c = await callTool('list_my_lunch_orders', {});
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/lunch/orders');

@@ -69,6 +69,16 @@ function defaultStudentId(args: Args, ctx: AppVariables): unknown {
   return (args.student_id as string | undefined) ?? (ctx.studentIds?.length === 1 ? ctx.studentIds[0] : undefined);
 }
 
+// Last calendar day of a YYYY-MM month (day 0 of the next month, in UTC).
+// Malformed input yields undefined, so no end bound is sent.
+function lastDayOfMonth(month: string): string | undefined {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return undefined;
+  const [, year, mm] = match;
+  const day = new Date(Date.UTC(Number(year), Number(mm), 0)).getUTCDate();
+  return `${month}-${String(day).padStart(2, '0')}`;
+}
+
 // Interpolate `:arg` placeholders in a path template with validated values.
 function resolvePath(template: string, args: Args): string {
   return template.replace(/:([A-Za-z0-9_]+)/g, (_, key: string) => validatePathId(args[key], key));
@@ -249,7 +259,7 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     query: (args) => ({
       studentId: args.student_id as string | undefined,
       start: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-01` : undefined),
-      end: (args.menu_date as string | undefined) ?? (args.month ? `${args.month}-31` : undefined),
+      end: (args.menu_date as string | undefined) ?? (args.month ? lastDayOfMonth(String(args.month)) : undefined),
     }),
     after: (result) => wrapListBody('orders', result),
   },
