@@ -12,7 +12,7 @@ import type { ApiCallOptions, ApiCallResult } from '../api/client.js';
 import type { AppVariables, Env } from '../env.js';
 import { regionBaseUrl } from '../lib/regions.js';
 import type { ToolHandlerArgs } from './shared.js';
-import { requireArgs, validatePathId } from './shared.js';
+import { requireArgs, validatePathId, InvalidParamsError } from './shared.js';
 import { signOut } from './sign-out.js';
 
 type Args = Record<string, unknown>;
@@ -276,12 +276,22 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
     required: ['menu_date', 'items'],
     body: (args, ctx) => {
       const studentId = defaultStudentId(args, ctx);
+      const studentSchool = studentId !== undefined ? ctx.studentSchools?.[String(studentId)] : undefined;
+      // student_id may be defaulted here, after validateOwnership checked
+      // only the raw args — apply the same student↔school check to the
+      // resolved pair so an omitted student_id cannot forward a student
+      // enrolled at another school under this school_slug.
+      if (
+        !ctx.isPlatformAdmin &&
+        args.school_slug !== undefined &&
+        studentSchool &&
+        studentSchool !== String(args.school_slug)
+      ) {
+        throw new InvalidParamsError('student does not belong to school_slug');
+      }
       return {
         studentId,
-        schoolSlug:
-          (args.school_slug as string | undefined) ??
-          (studentId !== undefined ? ctx.studentSchools?.[String(studentId)] : undefined) ??
-          ctx.schoolSlug,
+        schoolSlug: (args.school_slug as string | undefined) ?? studentSchool ?? ctx.schoolSlug,
         menuDate: args.menu_date,
         items: mapDraftItems(args.items),
       };

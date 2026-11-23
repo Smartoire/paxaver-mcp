@@ -169,6 +169,16 @@ describe('tool → backend contract', () => {
         PAXAVER_API_US: contextOverrideBackend({ schoolSlug: '' }),
       },
     ],
+    [
+      'school_slug does not match the user school',
+      'list_school_programs',
+      { school_slug: '' },
+      {
+        ...TEST_ENV,
+        PAXAVER_API_CA: contextOverrideBackend({ schoolSlug: '', schoolSlugs: ['test-school'] }),
+        PAXAVER_API_US: contextOverrideBackend({ schoolSlug: '', schoolSlugs: ['test-school'] }),
+      },
+    ],
   ])(
     'ownership rejection %s returns invalid params without calling the tool endpoint',
     async (message, name, args, env) => {
@@ -196,6 +206,12 @@ describe('tool → backend contract', () => {
       studentSchools: { 'student-1': 'test-school' },
     });
     const MULTI_ENV = { ...ENV, PAXAVER_API_CA: multiSchool, PAXAVER_API_US: multiSchool };
+    // The caller's only student attends the second school.
+    const secondSchoolStudent = contextOverrideBackend({
+      schoolSlugs: ['test-school', 'other-school'],
+      studentSchools: { 'student-1': 'other-school' },
+    });
+    const SECOND_ENV = { ...ENV, PAXAVER_API_CA: secondSchoolStudent, PAXAVER_API_US: secondSchoolStudent };
 
     it('get_lunch_menu reads a second school the user belongs to', async () => {
       const c = await callTool('get_lunch_menu', { school_slug: 'other-school' }, {}, MULTI_ENV);
@@ -226,17 +242,34 @@ describe('tool → backend contract', () => {
     });
 
     it('create_lunch_order_draft defaults the school to the student school', async () => {
-      const backend = contextOverrideBackend({
-        schoolSlugs: ['test-school', 'other-school'],
-        studentSchools: { 'student-1': 'other-school' },
-      });
       const c = await callTool(
         'create_lunch_order_draft',
         { menu_date: '2026-11-23', items: [draftItem] },
         {},
-        { ...ENV, PAXAVER_API_CA: backend, PAXAVER_API_US: backend },
+        SECOND_ENV,
       );
       expect(c?.body).toMatchObject({ studentId: 'student-1', schoolSlug: 'other-school' });
+    });
+
+    it('create_lunch_order_draft accepts the second school for the defaulted student', async () => {
+      const c = await callTool(
+        'create_lunch_order_draft',
+        { school_slug: 'other-school', menu_date: '2026-11-23', items: [draftItem] },
+        {},
+        SECOND_ENV,
+      );
+      expect(c?.body).toMatchObject({ studentId: 'student-1', schoolSlug: 'other-school' });
+    });
+
+    it('create_lunch_order_draft rejects a defaulted student paired with another school', async () => {
+      const res = await postTool(
+        'create_lunch_order_draft',
+        { school_slug: 'test-school', menu_date: '2026-11-23', items: [draftItem] },
+        SECOND_ENV,
+      );
+      const json = (await res.json()) as { error: { code: number; message: string } };
+      expect(json.error).toEqual({ code: -32602, message: 'student does not belong to school_slug' });
+      expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
     });
 
     it('child credential cannot read a second school', async () => {

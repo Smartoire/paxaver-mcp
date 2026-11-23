@@ -168,8 +168,10 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
   // stay on the active school only.
   if (args.school_slug !== undefined && !ctx.isPlatformAdmin) {
     const slug = String(args.school_slug);
-    const schools = ctx.assistantMode === 'child' ? [ctx.schoolSlug] : [ctx.schoolSlug, ...(ctx.schoolSlugs ?? [])];
-    if (!schools.some(Boolean)) {
+    const schools = (
+      ctx.assistantMode === 'child' ? [ctx.schoolSlug] : [ctx.schoolSlug, ...(ctx.schoolSlugs ?? [])]
+    ).filter(Boolean);
+    if (schools.length === 0) {
       throw new InvalidParamsError('school_slug cannot be verified for this user');
     }
     if (!schools.includes(slug)) {
