@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { normalizeCertUrl, verifyAlexaRequest } from '../src/alexa/verify-request.js';
+import { CHAIN_CACHE_MAX, normalizeCertUrl, verifyAlexaRequest } from '../src/alexa/verify-request.js';
 import { makeAlexaChain, makeCert, signBody, type TestCert } from './alexa-certs.js';
 
 const DAY = 86_400_000;
@@ -62,6 +62,12 @@ describe('normalizeCertUrl', () => {
     expect(normalizeCertUrl(url) !== null).toBe(valid);
   });
 
+  it('removes the query string', () => {
+    expect(normalizeCertUrl('https://s3.amazonaws.com/echo.api/cert.pem?x=1')).toBe(
+      'https://s3.amazonaws.com/echo.api/cert.pem',
+    );
+  });
+
   it('removes dot segments and the fragment', () => {
     expect(normalizeCertUrl('https://s3.amazonaws.com/echo.api/../echo.api/cert.pem#x')).toBe(
       'https://s3.amazonaws.com/echo.api/cert.pem',
@@ -87,6 +93,40 @@ describe('verifyAlexaRequest', () => {
       expect(await verifyAlexaRequest(await signedHeaders(leaf, url, body), body, { anchors })).toBe(true);
     }
     expect(fetched.filter((u) => u === url)).toHaveLength(1);
+  });
+
+  it('makes one certificate fetch for URLs that differ only in the query string', async () => {
+    const { root, leaf, chainPem } = await makeAlexaChain();
+    const url = serve(chainPem);
+    const anchors = [root.pem];
+    // A junk signature: the chain is valid, the request is not.
+    for (const query of ['?x=1', '?x=2', '']) {
+      const headers = new Headers({ SignatureCertChainUrl: url + query, 'Signature-256': 'AAAA' });
+      expect(await verifyAlexaRequest(headers, alexaBody(), { anchors })).toBe(false);
+    }
+    expect(fetched).toEqual([url]);
+    // The cached chain still verifies a correctly signed request.
+    const body = alexaBody();
+    expect(await verifyAlexaRequest(await signedHeaders(leaf, `${url}?x=3`, body), body, { anchors })).toBe(true);
+    expect(fetched).toEqual([url]);
+  });
+
+  it('keeps at most CHAIN_CACHE_MAX chains and drops the oldest first', async () => {
+    const { root, chainPem } = await makeAlexaChain();
+    const anchors = [root.pem];
+    const urls = Array.from({ length: CHAIN_CACHE_MAX + 1 }, () => serve(chainPem));
+    const check = (url: string) =>
+      verifyAlexaRequest(new Headers({ SignatureCertChainUrl: url, 'Signature-256': 'AAAA' }), alexaBody(), {
+        anchors,
+      });
+    for (const url of urls) await check(url);
+    expect(fetched).toHaveLength(CHAIN_CACHE_MAX + 1);
+    // The newest entries are still cached; the first one was dropped.
+    await check(urls[urls.length - 1]!);
+    await check(urls[1]!);
+    expect(fetched).toHaveLength(CHAIN_CACHE_MAX + 1);
+    await check(urls[0]!);
+    expect(fetched).toHaveLength(CHAIN_CACHE_MAX + 2);
   });
 
   it('does not reuse a chain cached under other trust anchors', async () => {
