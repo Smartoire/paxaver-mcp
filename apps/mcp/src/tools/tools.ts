@@ -125,9 +125,9 @@ const TOOL_SPECS: Record<string, ToolSpec> = {
         environment: env.ENVIRONMENT === 'production' ? 'production' : 'dev',
       };
       // ponytail: filter PII — only return fields declared in the outputSchema.
-      // The backend returns email, phone, address, nationality, totp_secret, etc.
-      // These must never reach the AI client. Upgrade path: generate the filter
-      // from the outputSchema definition automatically.
+      // The backend payload carries personal and account fields that must never
+      // reach the AI client. Upgrade path: generate the filter from the
+      // outputSchema definition automatically.
       const filtered: Record<string, unknown> =
         ctx.assistantMode === 'child'
           ? {
