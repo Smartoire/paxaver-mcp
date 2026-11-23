@@ -22,6 +22,7 @@ import {
   NO_STORE,
   errorCode,
   isInvalidGrant,
+  isTransient,
   oauthError,
   overRateLimit,
   relay,
@@ -102,28 +103,33 @@ export async function oauthToken(request: Request, env: Env): Promise<Response> 
     if (grantKey === 'refresh_token') params.set(grantKey, tagged.rest);
   }
 
-  try {
-    // Stop at the first answer that is not a miss (a success, or a client
-    // error). When every region misses, prefer invalid_grant.
-    let best: { result: RegionResult; region: McpCountry } | undefined;
-    for (const target of targets) {
-      const result = await callIssuer(target, '/token', request, params);
-      if (!result) continue;
-      const current = { result, region: target.region };
-      if (!isMiss(result)) {
-        best = current;
-        break;
-      }
-      if (!best || (isInvalidGrant(result) && !isInvalidGrant(best.result))) best = current;
+  // Stop at the first answer that is not a miss or a failure (a success, or a
+  // client error). When every region misses, prefer invalid_grant. A failed
+  // region may hold the grant, so a miss beside a failure is 503.
+  let best: { result: RegionResult; region: McpCountry } | undefined;
+  let failed = false;
+  for (const target of targets) {
+    const result = await callIssuer(target, '/token', request, params).catch((err: unknown) => {
+      console.error('[oauth] token forward failed:', err instanceof Error ? err.message : String(err));
+      return undefined;
+    });
+    if (result === null) continue;
+    if (result === undefined || isTransient(result)) {
+      failed = true;
+      continue;
     }
-    // No region to ask: the tag names no region of this environment, or the
-    // client has no registration in the regions.
-    if (!best) return targets.length ? oauthError('invalid_client', 401) : oauthError('invalid_grant');
-    return relay(best.result, best.region);
-  } catch (err) {
-    console.error('[oauth] token forward failed:', err instanceof Error ? err.message : String(err));
-    return oauthError('temporarily_unavailable', 503);
+    const current = { result, region: target.region };
+    if (!isMiss(result)) {
+      best = current;
+      break;
+    }
+    if (!best || (isInvalidGrant(result) && !isInvalidGrant(best.result))) best = current;
   }
+  if (failed && (!best || isMiss(best.result))) return oauthError('temporarily_unavailable', 503);
+  // No region to ask: the tag names no region of this environment, or the
+  // client has no registration in the regions.
+  if (!best) return targets.length ? oauthError('invalid_client', 401) : oauthError('invalid_grant');
+  return relay(best.result, best.region);
 }
 
 /** Region of a token: its tag, or the issuer of a JWT access token. */

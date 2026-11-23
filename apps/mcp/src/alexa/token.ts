@@ -17,7 +17,7 @@
 import type { Env, McpCountry } from '../env.js';
 import { forwardToRegion } from '../api/client.js';
 import { REGIONS, regionFromTag } from '../lib/regions.js';
-import { isInvalidGrant, oauthError, relay, type RegionResult } from '../lib/oauth-relay.js';
+import { isInvalidGrant, isTransient, oauthError, relay, type RegionResult } from '../lib/oauth-relay.js';
 
 const TOKEN_PATH = '/api/assistant/alexa/token';
 
@@ -65,13 +65,23 @@ export async function alexaToken(request: Request, env: Env): Promise<Response> 
       }
 
       // Legacy untagged refresh token: try each region. Stop at the first
-      // answer that is not invalid_grant (a success, or a client error).
+      // answer that is not invalid_grant or a failure (a success, or a client
+      // error). A failed region may hold the token, so a miss beside a failure is 503.
       let last: { result: RegionResult; region: McpCountry } | undefined;
+      let failed = false;
       for (const region of REGIONS) {
-        const result = await callRegion(env, region, request, raw);
+        const result = await callRegion(env, region, request, raw).catch((err: unknown) => {
+          console.error('[alexa] token forward failed:', err instanceof Error ? err.message : String(err));
+          return undefined;
+        });
+        if (!result || isTransient(result)) {
+          failed = true;
+          continue;
+        }
         last = { result, region };
         if (!isInvalidGrant(result)) break;
       }
+      if (failed && (!last || isInvalidGrant(last.result))) return oauthError('temporarily_unavailable', 503);
       return relay(last!.result, last!.region);
     }
   } catch (err) {

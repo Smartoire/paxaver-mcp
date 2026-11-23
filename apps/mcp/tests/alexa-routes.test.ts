@@ -199,6 +199,50 @@ describe('POST /alexa/token', () => {
     expect(((await res.json()) as Record<string, unknown>).refresh_token).toBe('us.new');
   });
 
+  it.each([
+    ['a 502', () => new Response('down', { status: 502 })],
+    ['a 429', () => new Response('slow down', { status: 429 })],
+    [
+      'a thrown fetch',
+      () => {
+        throw new Error('down');
+      },
+    ],
+  ])('tries the next region for a legacy refresh token after %s', async (_, failure) => {
+    responder = (call) =>
+      call.region === 'ca'
+        ? failure()
+        : call.region === 'us'
+          ? Response.json({ access_token: 'at', refresh_token: 'new' })
+          : Response.json({ error: 'invalid_grant' }, { status: 400 });
+    const res = await post('grant_type=refresh_token&refresh_token=legacy');
+
+    expect(calls.map((c) => c.region)).toEqual(['ca', 'us']);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as Record<string, unknown>).refresh_token).toBe('us.new');
+  });
+
+  it('answers 503 for a legacy refresh token when a failing region may hold it', async () => {
+    responder = (call) =>
+      call.region === 'us'
+        ? new Response('down', { status: 502 })
+        : Response.json({ error: 'invalid_grant' }, { status: 400 });
+    const res = await post('grant_type=refresh_token&refresh_token=legacy');
+
+    expect(calls.map((c) => c.region)).toEqual(['ca', 'us', 'mx']);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'temporarily_unavailable' });
+  });
+
+  it('answers 503 for a legacy refresh token when every region fails', async () => {
+    responder = () => new Response('down', { status: 502 });
+    const res = await post('grant_type=refresh_token&refresh_token=legacy');
+
+    expect(calls.map((c) => c.region)).toEqual(['ca', 'us', 'mx']);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'temporarily_unavailable' });
+  });
+
   it('returns invalid_grant when no region knows a legacy refresh token', async () => {
     responder = () => Response.json({ error: 'invalid_grant' }, { status: 400 });
     const res = await post('grant_type=refresh_token&refresh_token=legacy');

@@ -34,6 +34,11 @@ export function isInvalidGrant(result: RegionResult): boolean {
   return result.status === 400 && errorCode(result) === 'invalid_grant';
 }
 
+/** A region that did not answer (a 5xx or 429). The grant may live there. */
+export function isTransient(result: RegionResult): boolean {
+  return result.status >= 500 || result.status === 429;
+}
+
 /** Relay a regional answer. Tag a refresh_token in a success response with its region. */
 export function relay(result: RegionResult, region: McpCountry): Response {
   const headers = new Headers(NO_STORE);
