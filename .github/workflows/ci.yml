@@ -1,8 +1,9 @@
 name: CI
 
-# Public repo: workflows never see secrets on PRs, and this job runs in a
-# container on the dedicated `public-repo` runner — nothing touches the
-# host. Never use pull_request_target.
+# Public repo: workflows never see secrets on PRs. This job runs on a
+# GitHub-hosted, ephemeral runner, so fork code never reaches a
+# self-hosted runner that also runs publish or report jobs. Never use
+# pull_request_target.
 
 on:
   pull_request:
@@ -17,7 +18,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: [self-hosted, linux, office, public-repo]
+    runs-on: ubuntu-latest
     container: node:26-bookworm
     timeout-minutes: 30
     steps:
