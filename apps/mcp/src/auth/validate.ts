@@ -14,7 +14,7 @@
  * correct regional backend.
  */
 
-import { jwtVerify, createRemoteJWKSet, decodeJwt } from 'jose';
+import { jwtVerify, createRemoteJWKSet, decodeJwt, errors as joseErrors } from 'jose';
 import type { Env, AuthContext, McpCountry } from '../env.js';
 import { callPaxaverApi, verifyAccessToken } from '../api/client.js';
 import { regionFromIssuer } from '../lib/regions.js';
@@ -55,6 +55,25 @@ const AUTH_UNAVAILABLE: AuthResult = {
   status: 503,
   error: { code: 'AUTH_UNAVAILABLE', message: 'Auth verification unavailable' },
 };
+
+// jose errors that mean the token itself failed verification. Every other
+// throw in the verify block — a JWKS fetch/parse failure or a backend
+// transport error — means auth could not run and fails closed with 503.
+// A `kid` the issuer does not publish (JWKSNoMatchingKey) is a bad token,
+// not an outage, so it stays 401. JWKSMultipleMatchingKeys means the issuer
+// published a bad JWKS, so it is treated as an outage (503).
+function isInvalidTokenError(err: unknown): boolean {
+  return (
+    err instanceof joseErrors.JWTInvalid ||
+    err instanceof joseErrors.JWTExpired ||
+    err instanceof joseErrors.JWTClaimValidationFailed ||
+    err instanceof joseErrors.JWSInvalid ||
+    err instanceof joseErrors.JWSSignatureVerificationFailed ||
+    err instanceof joseErrors.JWKSNoMatchingKey ||
+    err instanceof joseErrors.JOSEAlgNotAllowed ||
+    err instanceof joseErrors.JOSENotSupported
+  );
+}
 
 type VerifyOutcome = 'active' | 'revoked' | 'unavailable';
 
@@ -201,6 +220,13 @@ export async function authenticateRequest(
         }
 
         if (!result.ok || !result.data) {
+          // A 5xx or 429 from the context call is a backend outage, not a
+          // verdict on the token — fail closed 503 so clients retry
+          // instead of signing the user out.
+          if (result.status >= 500 || result.status === 429) {
+            console.error(`[auth] user context call failed (status ${result.status})`);
+            return AUTH_UNAVAILABLE;
+          }
           return {
             ok: false,
             status: 401,
@@ -231,8 +257,14 @@ export async function authenticateRequest(
         ctx.userToken = token;
         return { ok: true, status: 200, context: ctx };
       }
-    } catch {
-      // Fall through to the 401 below.
+    } catch (err) {
+      // Only a jose JWT/JWS failure means the token itself is bad — fall
+      // through to the 401 below. A JWKS fetch/parse failure or a backend
+      // transport error means verification could not run.
+      if (!isInvalidTokenError(err)) {
+        console.error('[auth] token verification unavailable:', err instanceof Error ? err.message : String(err));
+        return AUTH_UNAVAILABLE;
+      }
     }
   }
 
