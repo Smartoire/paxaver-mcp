@@ -56,3 +56,16 @@ export function relay(result: RegionResult, region: McpCountry): Response {
   }
   return new Response(body, { status: result.status, headers });
 }
+
+/** Largest client registration or token body the routers forward. */
+export const MAX_OAUTH_BODY_BYTES = 8 * 1024;
+
+/**
+ * True when the caller's client IP has used up the limiter's budget. No
+ * binding (local runs, tests) means no limit.
+ */
+export async function overRateLimit(limiter: RateLimit | undefined, request: Request): Promise<boolean> {
+  if (!limiter) return false;
+  const { success } = await limiter.limit({ key: request.headers.get('CF-Connecting-IP') ?? 'unknown' });
+  return !success;
+}

@@ -13,7 +13,7 @@
 
 import type { Env, McpCountry } from '../env.js';
 import { issuersFor } from '../lib/regions.js';
-import { NO_STORE, oauthError } from '../lib/oauth-relay.js';
+import { MAX_OAUTH_BODY_BYTES, NO_STORE, oauthError, overRateLimit } from '../lib/oauth-relay.js';
 import { encodeComposite } from './client-id.js';
 
 interface Registration {
@@ -27,7 +27,17 @@ export async function oauthRegister(request: Request, env: Env): Promise<Respons
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } });
   }
+  if (await overRateLimit(env.REGISTER_RATE_LIMITER, request)) {
+    return oauthError('temporarily_unavailable', 429);
+  }
+  // Check the size before any region is called: a region that accepts an
+  // oversized body keeps a client row even when another region fails.
+  const declared = Number(request.headers.get('Content-Length') ?? 0);
+  if (declared > MAX_OAUTH_BODY_BYTES) return oauthError('invalid_client_metadata', 413);
   const body = await request.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_OAUTH_BODY_BYTES) {
+    return oauthError('invalid_client_metadata', 413);
+  }
   const contentType = request.headers.get('Content-Type') ?? 'application/json';
 
   try {

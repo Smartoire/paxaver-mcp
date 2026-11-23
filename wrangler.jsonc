@@ -36,6 +36,10 @@
         { "binding": "PAXAVER_API_US", "service": "paxaver-api-dev" },
         { "binding": "PAXAVER_API_MX", "service": "paxaver-api-dev" },
       ],
+      "ratelimits": [
+        { "name": "REGISTER_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
+        { "name": "TOKEN_RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 300, "period": 60 } },
+      ],
       "routes": [{ "pattern": "mcp.paxaver.dev", "zone_name": "paxaver.dev", "custom_domain": true }],
     },
 
@@ -52,6 +56,10 @@
         { "binding": "PAXAVER_API_CA", "service": "paxaver-api-ca" },
         { "binding": "PAXAVER_API_US", "service": "paxaver-api-us" },
         { "binding": "PAXAVER_API_MX", "service": "paxaver-api-mx" },
+      ],
+      "ratelimits": [
+        { "name": "REGISTER_RATE_LIMITER", "namespace_id": "1003", "simple": { "limit": 20, "period": 60 } },
+        { "name": "TOKEN_RATE_LIMITER", "namespace_id": "1004", "simple": { "limit": 300, "period": 60 } },
       ],
       "routes": [{ "pattern": "mcp.paxaver.com", "zone_name": "paxaver.com", "custom_domain": true }],
     },

@@ -18,7 +18,15 @@
 import { decodeJwt } from 'jose';
 import type { Env, McpCountry } from '../env.js';
 import { issuersFor, regionFromIssuer, regionFromTag } from '../lib/regions.js';
-import { NO_STORE, errorCode, isInvalidGrant, oauthError, relay, type RegionResult } from '../lib/oauth-relay.js';
+import {
+  NO_STORE,
+  errorCode,
+  isInvalidGrant,
+  oauthError,
+  overRateLimit,
+  relay,
+  type RegionResult,
+} from '../lib/oauth-relay.js';
 import { regionalAuthorization, regionalParams } from './client-id.js';
 
 interface Target {
@@ -73,6 +81,9 @@ function isMiss(result: RegionResult): boolean {
 }
 
 export async function oauthToken(request: Request, env: Env): Promise<Response> {
+  if (await overRateLimit(env.TOKEN_RATE_LIMITER, request)) {
+    return oauthError('temporarily_unavailable', 429);
+  }
   const params = await readForm(request);
   if (params instanceof Response) return params;
 
