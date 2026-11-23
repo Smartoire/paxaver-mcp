@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { generateKeyPair, SignJWT } from 'jose';
 import app from '../src/index.js';
 import { request } from './request.js';
 import { TEST_TOKEN, REVOKED_TOKEN, TEST_ENV, mockBackend, makeToken } from './jwt-auth.js';
@@ -106,9 +107,27 @@ describe('auth backend outage', () => {
   });
 
   it('still answers 401 for a token with a bad signature', async () => {
-    const last = TEST_TOKEN.at(-1)!;
-    const bad = TEST_TOKEN.slice(0, -1) + (last === 'A' ? 'B' : 'A');
+    // Change every signature character: flipping only the last one can touch
+    // padding bits alone and leave a valid signature.
+    const dot = TEST_TOKEN.lastIndexOf('.');
+    const bad = TEST_TOKEN.slice(0, dot + 1) + TEST_TOKEN.slice(dot + 1).replace(/./g, (c) => (c === 'A' ? 'B' : 'A'));
     const res = await mcpCall(bad);
+    expect(res.status).toBe(401);
+    expect(res.headers.get('WWW-Authenticate')).toContain('Bearer');
+  });
+
+  it('still answers 401 for a token whose kid the issuer does not publish', async () => {
+    // Signed by a key the mock JWKS never serves (kid "rotated-away").
+    const { privateKey } = await generateKeyPair('RS256');
+    const unknownKid = await new SignJWT({ tenant_id: 'user-ca', scope: 'openid tools' })
+      .setProtectedHeader({ alg: 'RS256', kid: 'rotated-away' })
+      .setSubject('user-1')
+      .setIssuer('https://paxaver.dev/auth')
+      .setAudience(['paxaver-api', 'https://mcp.paxaver.dev/mcp'])
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(privateKey);
+    const res = await mcpCall(unknownKid);
     expect(res.status).toBe(401);
     expect(res.headers.get('WWW-Authenticate')).toContain('Bearer');
   });

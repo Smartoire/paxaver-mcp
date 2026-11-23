@@ -59,6 +59,9 @@ const AUTH_UNAVAILABLE: AuthResult = {
 // jose errors that mean the token itself failed verification. Every other
 // throw in the verify block — a JWKS fetch/parse failure or a backend
 // transport error — means auth could not run and fails closed with 503.
+// A `kid` the issuer does not publish (JWKSNoMatchingKey) is a bad token,
+// not an outage, so it stays 401. JWKSMultipleMatchingKeys means the issuer
+// published a bad JWKS, so it is treated as an outage (503).
 function isInvalidTokenError(err: unknown): boolean {
   return (
     err instanceof joseErrors.JWTInvalid ||
@@ -66,6 +69,7 @@ function isInvalidTokenError(err: unknown): boolean {
     err instanceof joseErrors.JWTClaimValidationFailed ||
     err instanceof joseErrors.JWSInvalid ||
     err instanceof joseErrors.JWSSignatureVerificationFailed ||
+    err instanceof joseErrors.JWKSNoMatchingKey ||
     err instanceof joseErrors.JOSEAlgNotAllowed ||
     err instanceof joseErrors.JOSENotSupported
   );
