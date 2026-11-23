@@ -214,6 +214,69 @@ describe('POST /oauth/register', () => {
     expect((await post()).status).toBe(503);
   });
 
+  it('rejects a body over the cap with 413 and calls no region', async () => {
+    const big = JSON.stringify({ ...metadata, client_name: 'x'.repeat(9 * 1024) });
+    const res = await request(
+      app,
+      '/oauth/register',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: big },
+      PROD_ENV,
+    );
+    expect(res.status).toBe(413);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(calls).toEqual([]);
+  });
+
+  it('rejects a declared Content-Length over the cap with 413 and calls no region', async () => {
+    const res = await request(
+      app,
+      '/oauth/register',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': String(9 * 1024) },
+        body: JSON.stringify(metadata),
+      },
+      PROD_ENV,
+    );
+    expect(res.status).toBe(413);
+    expect(calls).toEqual([]);
+  });
+
+  it('answers 429 with no-store and calls no region when the caller is over the limit', async () => {
+    const limiter = { limit: vi.fn(async () => ({ success: false })) };
+    const res = await post('/oauth/register', { ...PROD_ENV, REGISTER_RATE_LIMITER: limiter });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(limiter.limit).toHaveBeenCalledWith({ key: 'unknown' });
+    expect(calls).toEqual([]);
+  });
+
+  it('keys the limit on CF-Connecting-IP', async () => {
+    responder = () => Response.json({ client_id: 'x' }, { status: 201 });
+    const limiter = { limit: vi.fn(async () => ({ success: true })) };
+    await request(
+      app,
+      '/oauth/register',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '198.51.100.7' },
+        body: JSON.stringify(metadata),
+      },
+      { ...PROD_ENV, REGISTER_RATE_LIMITER: limiter },
+    );
+    expect(limiter.limit).toHaveBeenCalledWith({ key: '198.51.100.7' });
+    expect(calls).toHaveLength(3);
+  });
+
+  it('keeps 503 when one region fails after the others accepted (partial failure)', async () => {
+    responder = (call) =>
+      regionOf(call) === 'ca'
+        ? new Response('boom', { status: 500 })
+        : Response.json({ client_id: 'x' }, { status: 201 });
+    expect((await post()).status).toBe(503);
+    expect(calls).toHaveLength(3);
+  });
+
   it('rejects non-POST', async () => {
     const res = await request(app, '/oauth/register', {}, PROD_ENV);
     expect(res.status).toBe(405);
@@ -221,7 +284,12 @@ describe('POST /oauth/register', () => {
 });
 
 describe('POST /oauth/token', () => {
-  function post(body: string, headers: Record<string, string> = {}, path = '/oauth/token', env = PROD_ENV) {
+  function post(
+    body: string,
+    headers: Record<string, string> = {},
+    path = '/oauth/token',
+    env: Record<string, unknown> = PROD_ENV,
+  ) {
     return request(
       app,
       path,
@@ -334,6 +402,17 @@ describe('POST /oauth/token', () => {
     const res = await post('grant_type=authorization_code&code=abc&client_id=x', {}, '/oauth/token', STAGING_ENV);
     expect(calls.map((c) => c.url)).toEqual(['https://paxaver.dev/auth/token']);
     expect(((await res.json()) as Record<string, unknown>).refresh_token).toBe('ca.rt');
+  });
+
+  it('answers 429 with no-store and calls no region when the caller is over the token limit', async () => {
+    const limiter = { limit: vi.fn(async () => ({ success: false })) };
+    const res = await post(`grant_type=refresh_token&refresh_token=ca.rt&client_id=${COMPOSITE}`, {}, '/oauth/token', {
+      ...PROD_ENV,
+      TOKEN_RATE_LIMITER: limiter,
+    });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(calls).toEqual([]);
   });
 
   it('rejects other grant types, content types and methods', async () => {

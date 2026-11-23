@@ -24,6 +24,7 @@ import {
   isInvalidGrant,
   isTransient,
   oauthError,
+  overRateLimit,
   relay,
   type RegionResult,
 } from '../lib/oauth-relay.js';
@@ -81,6 +82,9 @@ function isMiss(result: RegionResult): boolean {
 }
 
 export async function oauthToken(request: Request, env: Env): Promise<Response> {
+  if (await overRateLimit(env.TOKEN_RATE_LIMITER, request)) {
+    return oauthError('temporarily_unavailable', 429);
+  }
   const params = await readForm(request);
   if (params instanceof Response) return params;
 

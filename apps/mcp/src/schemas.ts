@@ -295,8 +295,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         student_id: {
           type: 'string',
-          description:
-            'Filter to a specific student (must be your own student, from get_my_context; admins may filter any student in the school)',
+          description: 'Filter to a specific student (must be your own student, from get_my_context)',
         },
         menu_date: { type: 'string', description: 'Single day to query, YYYY-MM-DD; omit when using month' },
         month: { type: 'string', description: 'Calendar month to query, YYYY-MM; omit when using menu_date' },
@@ -1303,7 +1302,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'register_for_event',
     title: 'Register for Event',
     description:
-      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance (the error includes the regional Paxaver top-up page for the user to add funds), when the event is sold out, or when registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events - confirm before registering.",
+      "Registers the authenticated user for a school event and issues tickets to the caller (quantity is the number of tickets bought for the caller, 1 to 20 - there is no per-student split). For paid events quantity times the ticket price is charged to the user's wallet - the call fails on insufficient balance (the error includes the regional Paxaver top-up page for the user to add funds), when the event is sold out, or when registration is closed. To volunteer at an event rather than attend, use sign_up_for_volunteer_shift. FINANCIAL for paid events: before the charge the server asks the user to confirm the total in a form (MCP elicitation); clients that cannot show the form get an error and the user registers in the Paxaver app.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -1340,7 +1339,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     annotations: {
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
       openWorldHint: false,
       title: 'Register for Event',

@@ -38,6 +38,11 @@ const recordingBackend = {
       body,
       idempotencyKey: req.headers.get('Idempotency-Key'),
     });
+    // A free event: register_for_event reads the price before it registers
+    // (#3805), and a free event needs no charge confirmation.
+    if (req.method === 'GET' && /^\/api\/events\/[^/]+\/detail$/.test(url.pathname)) {
+      return Response.json({ data: { id: 'e1', name: 'Free event', ticketPriceCents: 0 } });
+    }
     return mockBackend.fetch(req);
   },
 };
@@ -563,6 +568,25 @@ describe('tool → backend contract', () => {
     expect(`${c?.method} ${c?.path}`).toBe('GET /api/lunch/orders');
   });
 
+  it('list_my_lunch_orders refuses another student for a school admin without linked students', async () => {
+    const admin = { permissions: ['lunch_cordinator'], studentIds: [] };
+    const env = {
+      ...TEST_ENV,
+      PAXAVER_API_CA: contextOverrideBackend(admin),
+      PAXAVER_API_US: contextOverrideBackend(admin),
+    };
+    const res = await postTool('list_my_lunch_orders', { student_id: 'other-student' }, env);
+    const json = (await res.json()) as { error: { code: number; message: string } };
+    expect(json.error).toEqual({ code: -32602, message: 'student_id is not permitted for this user' });
+    expect(calls.filter((call) => call.path !== '/api/users/me/context')).toEqual([]);
+  });
+
+  it('list_my_lunch_orders student_id schema does not promise admin filtering', () => {
+    const tool = ALL_TOOLS.find((t) => t.name === 'list_my_lunch_orders');
+    const description = (tool?.inputSchema.properties.student_id as { description: string }).description;
+    expect(description).toBe('Filter to a specific student (must be your own student, from get_my_context)');
+  });
+
   it('pay_lunch_order_draft requests wallet-only finalize and never advertises paymentUrl', async () => {
     const c = await callTool('pay_lunch_order_draft', { order_id: 'o1', tip_cents: 100 });
     expect(c?.body).toEqual({ tipCents: 100, walletOnly: true });
@@ -763,6 +787,11 @@ describe('tool → backend contract', () => {
     expect(policy).toBeDefined();
   });
 
+  it('register_for_event is annotated destructive: it can charge the wallet (#3805)', () => {
+    const tool = ALL_TOOLS.find((t) => t.name === 'register_for_event');
+    expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+  });
+
   it('register_for_event insufficient funds returns the top-up URL, never a payment link', async () => {
     const insufficientBackend = {
       async fetch(request: Request | string, init?: RequestInit): Promise<Response> {
@@ -776,7 +805,7 @@ describe('tool → backend contract', () => {
             },
           );
         }
-        return mockBackend.fetch(req);
+        return recordingBackend.fetch(req);
       },
     };
     const res = await postTool(

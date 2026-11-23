@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Paid event registration needs user confirmation (#3805). For an event with
+  a ticket price above zero, `register_for_event` reads the price first and
+  returns an `input_required` form elicitation that shows the total. The
+  wallet is charged only on a retry that accepts the form (`confirm: true`)
+  under a signed `requestState` bound to the user, event, quantity and total
+  (15-minute TTL). A decline, a forged, expired or mismatched state, or a
+  price change gives `-32602` and no charge. Clients without form
+  elicitation get `-32602` for paid events (fail closed). Free events
+  register as before. The tool is now annotated `destructiveHint: true`.
+
 ### Added
 
 - Child assistant credentials (#3680/#3682): a parent-issued read-only
@@ -44,12 +56,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   month view's `calendar`/`closedDays`) instead of the
   `menuItems`/`menuItemName`/`dailyMenuId`/`date` shape that was never
   sent.
+- `list_my_lunch_orders`'s `student_id` description no longer says admins may
+  filter any student. The ownership check only lets platform admins name a
+  student outside the caller's own, so a school admin gets the
+  `student_id is not permitted` error for another student.
 
 ### Fixed
 
+- `POST /register` and `POST /oauth/register` reject a body over 8 KB with
+  413 before any region is called, so a rejected request leaves no client
+  row. Both routes and `POST /oauth/token` answer 429 once one caller IP
+  passes the per-minute limit (20 registrations, 300 token calls).
 - The lunch draft tools surface the backend's validation message on a 422
   — a missing required choice group names the group to pick — instead of
   a generic invalid-params error.
+- Alexa request verification removes the query string from
+  `SignatureCertChainUrl` before it fetches and caches the certificate
+  chain, and keeps at most 16 validated chains. A changed query no longer
+  causes a new certificate fetch or a new cache entry.
 
 ### Removed
 
