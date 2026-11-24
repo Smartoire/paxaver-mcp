@@ -31,6 +31,9 @@ as the authenticated user, and errors are sanitized before they reach the client
 
 ## Connect
 
+**ChatGPT:** add Paxaver from the ChatGPT plugin directory:
+<https://chatgpt.com/plugins/plugin_asdk_app_6abf1ac214888191afe622642d0e035f>
+
 Point an MCP-compatible client at the hosted endpoint and sign in with a Paxaver
 account when prompted (OAuth 2.1 Authorization Code + PKCE):
 
