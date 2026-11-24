@@ -454,6 +454,24 @@ describe('POST /alexa', () => {
     expect(calls.map((c) => c.region)).toEqual(['ca', 'us', 'mx']);
   });
 
+  it.each([123, {}, true])('answers LinkAccount for a tokenless request with non-string type %j', async (type) => {
+    const body = JSON.stringify({
+      version: '1.0',
+      context: {
+        System: {
+          application: { applicationId: 'amzn1.ask.skill.test' },
+          user: { userId: 'amzn1.ask.account.x' },
+        },
+      },
+      request: { type, timestamp: new Date().toISOString() },
+    });
+    const res = await post(body);
+    const json = (await res.json()) as { response: { card?: { type: string } } };
+    expect(res.status).toBe(200);
+    expect(json.response.card).toEqual({ type: 'LinkAccount' });
+    expect(calls).toHaveLength(0);
+  });
+
   it('keeps LinkAccount for a tokenless non-DataStore request', async () => {
     const res = await post(alexaBody({ type: 'IntentRequest' }));
     const json = (await res.json()) as { response: { card?: { type: string } } };

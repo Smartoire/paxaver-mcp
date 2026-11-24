@@ -83,6 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SignatureCertChainUrl` before it fetches and caches the certificate
   chain, and keeps at most 16 validated chains. A changed query no longer
   causes a new certificate fetch or a new cache entry.
+- Alexa widget lifecycle requests (`Alexa.DataStore.*`) that arrive before
+  account linking now reach every regional backend, so a widget installed
+  first is registered. Other tokenless requests still get the LinkAccount
+  response.
 
 ### Removed
 

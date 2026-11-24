@@ -98,8 +98,9 @@ export async function alexaSkill(request: Request, env: Env): Promise<Response> 
 
   const token = body.context?.System?.user?.accessToken ?? body.session?.user?.accessToken;
   if (!token) {
-    if (body.request?.type?.startsWith('Alexa.DataStore.')) return forwardDataStore(env, raw);
-    if (body.request?.type === 'SessionEndedRequest') return Response.json({ version: '1.0', response: {} });
+    const type = body.request?.type;
+    if (typeof type === 'string' && type.startsWith('Alexa.DataStore.')) return forwardDataStore(env, raw);
+    if (type === 'SessionEndedRequest') return Response.json({ version: '1.0', response: {} });
     return speech('Please link your Paxaver account in the Alexa app.', true);
   }
 
