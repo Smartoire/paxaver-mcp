@@ -11,7 +11,7 @@
 import { decodeJwt } from 'jose';
 import type { Env } from '../env.js';
 import { forwardToRegion } from '../api/client.js';
-import { regionFromIssuer } from '../lib/regions.js';
+import { issuersFor, regionFromIssuer } from '../lib/regions.js';
 import { verifyAlexaRequest } from './verify-request.js';
 
 const SKILL_PATH = '/api/assistant/alexa';
@@ -45,6 +45,31 @@ function badRequest(): Response {
   return new Response(null, { status: 400 });
 }
 
+/**
+ * Widget lifecycle events (`Alexa.DataStore.*`) can arrive before the user
+ * links an account, so they carry no token and no issuer. Send the same body
+ * to every region of this environment; each backend ignores an unknown
+ * install. Amazon does not speak lifecycle replies, so they are not used.
+ */
+async function forwardDataStore(env: Env, raw: Uint8Array): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (env.INTERNAL_SERVICE_SECRET) headers['x-internal-secret'] = env.INTERNAL_SERVICE_SECRET;
+
+  const regions = issuersFor(env).map((i) => i.region);
+  const results = await Promise.allSettled(
+    regions.map((region) => forwardToRegion(env, region, SKILL_PATH, { method: 'POST', headers, body: raw })),
+  );
+  results.forEach((result, i) => {
+    const region = regions[i]!;
+    if (result.status === 'rejected') {
+      console.error(`[alexa] datastore forward to ${region} failed:`, String(result.reason));
+    } else if (!result.value.ok) {
+      console.error(`[alexa] datastore forward to ${region} answered ${result.value.status}`);
+    }
+  });
+  return Response.json({ version: '1.0', response: {} });
+}
+
 export async function alexaSkill(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } });
@@ -73,7 +98,9 @@ export async function alexaSkill(request: Request, env: Env): Promise<Response> 
 
   const token = body.context?.System?.user?.accessToken ?? body.session?.user?.accessToken;
   if (!token) {
-    if (body.request?.type === 'SessionEndedRequest') return Response.json({ version: '1.0', response: {} });
+    const type = body.request?.type;
+    if (typeof type === 'string' && type.startsWith('Alexa.DataStore.')) return forwardDataStore(env, raw);
+    if (type === 'SessionEndedRequest') return Response.json({ version: '1.0', response: {} });
     return speech('Please link your Paxaver account in the Alexa app.', true);
   }
 
