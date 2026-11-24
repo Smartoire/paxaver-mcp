@@ -423,6 +423,51 @@ describe('POST /alexa', () => {
     expect(calls).toHaveLength(0);
   });
 
+  it('forwards a tokenless DataStore request to every production region with the body unchanged', async () => {
+    const body = alexaBody({ type: 'Alexa.DataStore.PackageManager.UsagesInstalled' });
+    const res = await post(body);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ version: '1.0', response: {} });
+    expect(calls.map((c) => c.region)).toEqual(['ca', 'us', 'mx']);
+    for (const call of calls) {
+      expect(call.body).toBe(body);
+      expect(call.headers.get('Authorization')).toBeNull();
+      expect(call.headers.get('Content-Type')).toBe('application/json');
+      expect(call.headers.get('x-internal-secret')).toBe('internal-test-secret');
+    }
+  });
+
+  it('forwards a tokenless DataStore request to the dev region only in staging', async () => {
+    const res = await post(alexaBody({ type: 'Alexa.DataStore.PackageManager.UsagesRemoved' }), STAGING_ENV);
+    expect(res.status).toBe(200);
+    expect(calls.map((c) => c.region)).toEqual(['ca']);
+  });
+
+  it('still answers 200 when one region fails and forwards to the others', async () => {
+    responder = (call) => {
+      if (call.region === 'us') throw new Error('down');
+      return Response.json({ ok: true });
+    };
+    const res = await post(alexaBody({ type: 'Alexa.DataStore.PackageManager.UsagesInstalled' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ version: '1.0', response: {} });
+    expect(calls.map((c) => c.region)).toEqual(['ca', 'us', 'mx']);
+  });
+
+  it('keeps LinkAccount for a tokenless non-DataStore request', async () => {
+    const res = await post(alexaBody({ type: 'IntentRequest' }));
+    const json = (await res.json()) as { response: { card?: { type: string } } };
+    expect(json.response.card).toEqual({ type: 'LinkAccount' });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('routes a tokened DataStore request by issuer', async () => {
+    const token = jwt({ iss: 'https://paxaver.mx/auth' });
+    await post(alexaBody({ token, type: 'Alexa.DataStore.PackageManager.UsagesInstalled' }));
+    expect(calls.map((c) => c.region)).toEqual(['mx']);
+    expect(calls[0]!.headers.get('Authorization')).toBe(`Bearer ${token}`);
+  });
+
   it.each([
     ['unknown issuer', jwt({ iss: 'https://evil.example/auth' })],
     ['dev issuer in production', jwt({ iss: 'https://paxaver.dev/auth' })],
