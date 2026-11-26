@@ -87,6 +87,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   account linking now reach every regional backend, so a widget installed
   first is registered. Other tokenless requests still get the LinkAccount
   response.
+- `update_lunch_order_draft` is now annotated `destructiveHint: true`:
+  its `items` argument replaces the draft's items wholesale, so MCP
+  clients treat the call as destructive (#4124).
 
 ### Removed
 
