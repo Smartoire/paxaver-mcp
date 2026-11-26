@@ -17,6 +17,7 @@ import {
 } from '../lib/policies.js';
 import { ALL_TOOLS, ALL_PROMPTS } from '../schemas.js';
 import { dispatchTool } from '../tools/dispatch.js';
+import { permissionsForSchool, targetSchoolFor } from '../auth/school-roles.js';
 import { mcpError } from '../lib/errors.js';
 import { SERVER_VERSION } from '../lib/version.js';
 
@@ -258,7 +259,26 @@ export async function handleJsonRpc(
       );
     }
 
-    const authResult = checkToolAuthorization(toolName, c.var);
+    // A role-gated tool is checked against the school it acts on (#4128):
+    // the active-school permissions cannot decide for another school.
+    let roleCtx = c.var;
+    if (TOOL_POLICIES[toolName].requiredRoles.length > 0 && !c.var.isPlatformAdmin) {
+      const school = targetSchoolFor(toolArgs, c.var);
+      if (!school) {
+        return Response.json(
+          mcpError(id, -32602, 'No active school is set for this account. Name the school in school_slug.'),
+        );
+      }
+      if (school !== c.var.schoolSlug) {
+        const scoped = await permissionsForSchool(c.env, c.var, school);
+        if (!scoped.ok) {
+          return Response.json(mcpError(id, -32603, 'The request could not be completed. Please try again later.'));
+        }
+        roleCtx = { ...c.var, permissions: scoped.permissions };
+      }
+    }
+
+    const authResult = checkToolAuthorization(toolName, roleCtx);
     if (authResult === 'forbidden') {
       return Response.json(mcpError(id, -32603, 'You do not have permission to use this tool.'));
     }

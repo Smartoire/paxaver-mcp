@@ -63,6 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Role-gated tools check the role at the school the call acts on (`school_slug`,
+  else the active school), not at the active school alone. A coordinator whose
+  active school differs from the target school can create, update and cancel
+  events there. The backend receives the same school. A caller with no role at
+  that school, or with no school named and no active school, is refused as before.
 - A parent whose children attend more than one school can use each school.
   `school_slug` accepts any school the user belongs to (from
   `/me/context`), not only the active one. A `student_id` paired with a

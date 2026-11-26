@@ -9,7 +9,9 @@
 
 import { callPaxaverApi } from '../api/client.js';
 import type { ApiCallOptions, ApiCallResult } from '../api/client.js';
+import { targetSchoolFor } from '../auth/school-roles.js';
 import type { AppVariables, Env } from '../env.js';
+import { getToolPolicy } from '../lib/policies.js';
 import { regionBaseUrl } from '../lib/regions.js';
 import type { ToolHandlerArgs } from './shared.js';
 import { requireArgs, validatePathId, InvalidParamsError } from './shared.js';
@@ -648,11 +650,17 @@ export async function handleTool({
   const spec = TOOL_SPECS[name];
   if (!spec) return undefined;
   if (spec.required) requireArgs(args, ...spec.required);
+  const query = spec.query?.(args, ctx) ?? {};
+  // A role-gated tool was authorized for its target school (#4128). Send
+  // that school so the backend checks the same school, not the active one.
+  if (getToolPolicy(name)?.requiredRoles.length && !query.schoolSlug) {
+    query.schoolSlug = targetSchoolFor(args, ctx);
+  }
   const result = await callPaxaverApi(env, ctx, {
     method: spec.method,
     path: typeof spec.path === 'function' ? spec.path(args, ctx) : resolvePath(spec.path, args),
     body: spec.body?.(args, ctx),
-    query: spec.query?.(args, ctx),
+    query,
     idempotencyKey,
   });
   spec.after?.(result, args, ctx, env);
