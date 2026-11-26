@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.8] — 2026-11-25
+
 ### Security
 
 - Paid event registration needs user confirmation (#3805). For an event with
@@ -67,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   else the active school), not at the active school alone. A coordinator whose
   active school differs from the target school can create, update and cancel
   events there. The backend receives the same school. A caller with no role at
-  that school, or with no school named and no active school, is refused as before.
+  that school, or with no school named and no active school, is refused as before (#4128).
 - A parent whose children attend more than one school can use each school.
   `school_slug` accepts any school the user belongs to (from
   `/me/context`), not only the active one. A `student_id` paired with a
