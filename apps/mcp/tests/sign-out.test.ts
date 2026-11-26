@@ -119,7 +119,7 @@ describe('sign_out', () => {
     expect(tool?.inputSchema).toEqual({ type: 'object', properties: {}, additionalProperties: false });
     expect(tool?.annotations).toMatchObject({
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: true,
     });
     expect(tool?.description).toMatch(/only when the user explicitly asks/i);
