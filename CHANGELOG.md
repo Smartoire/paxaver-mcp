@@ -95,6 +95,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sign_out` is now annotated `destructiveHint: true` (#4123): the tool
   revokes the caller's session, which the user cannot undo without
   signing in again. The tool's behaviour and description are unchanged.
+- `update_lunch_order_draft` is now annotated `destructiveHint: true`:
+  its `items` argument replaces the draft's items wholesale, so MCP
+  clients treat the call as destructive (#4124).
 
 ### Removed
 
