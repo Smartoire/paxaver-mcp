@@ -151,23 +151,11 @@ describe('tool → backend contract', () => {
 
   it.each([
     ['student_id is not permitted for this user', 'list_school_restaurants', { student_id: 'other-student' }, ENV],
-    ['school_slug does not match the user school', 'list_school_restaurants', { school_slug: 'other-school' }, ENV],
-    ['school_slug does not match the user school', 'schedule_lunch_menu_item', { school_slug: 'other-school' }, ENV],
     [
       'school_slug does not match the user school',
       'get_school_event',
       { event_id: 'e1', school_slug: 'other-school' },
       ENV,
-    ],
-    [
-      'school_slug cannot be verified for this user',
-      'list_school_restaurants',
-      { school_slug: 'other-school' },
-      {
-        ...TEST_ENV,
-        PAXAVER_API_CA: contextOverrideBackend({ schoolSlug: '' }),
-        PAXAVER_API_US: contextOverrideBackend({ schoolSlug: '' }),
-      },
     ],
     [
       'school_slug does not match the user school',

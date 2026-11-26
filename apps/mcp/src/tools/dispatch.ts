@@ -156,7 +156,7 @@ export async function makeIdempotencyKey(
  *
  * Platform admins are exempt — they may act on any school.
  */
-function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): void {
+function validateOwnership(args: Record<string, unknown>, ctx: AppVariables, roleGated: boolean): void {
   // Non-admin callers must supply a student_id from their context.
   if (args.student_id !== undefined && !ctx.isPlatformAdmin && !ctx.studentIds?.includes(String(args.student_id))) {
     throw new InvalidParamsError('student_id is not permitted for this user');
@@ -165,16 +165,18 @@ function validateOwnership(args: Record<string, unknown>, ctx: AppVariables): vo
   // belongs to. If we don't know the user's schools and they aren't a
   // platform admin, we can't validate it — reject rather than forward
   // blindly. Platform admins can act on any school. Child credentials
-  // stay on the active school only.
+  // stay on the active school only. A role-gated tool already proved the
+  // caller's role at that school (#4128), so the active-school list is
+  // not consulted for it.
   if (args.school_slug !== undefined && !ctx.isPlatformAdmin) {
     const slug = String(args.school_slug);
     const schools = (
       ctx.assistantMode === 'child' ? [ctx.schoolSlug] : [ctx.schoolSlug, ...(ctx.schoolSlugs ?? [])]
     ).filter(Boolean);
-    if (schools.length === 0) {
+    if (!roleGated && schools.length === 0) {
       throw new InvalidParamsError('school_slug cannot be verified for this user');
     }
-    if (!schools.includes(slug)) {
+    if (!roleGated && !schools.includes(slug)) {
       throw new InvalidParamsError('school_slug does not match the user school');
     }
     const studentSchool = args.student_id !== undefined ? ctx.studentSchools?.[String(args.student_id)] : undefined;
@@ -249,7 +251,7 @@ export async function dispatchTool(
 
     // Verify that user-supplied student_id and school_slug arguments are
     // owned by the authenticated user before dispatching to the backend.
-    validateOwnership(args, ctx);
+    validateOwnership(args, ctx, (policy?.requiredRoles.length ?? 0) > 0);
 
     // A call missing required args gets an InputRequiredResult when the
     // client declared form elicitation and every missing arg is
