@@ -344,6 +344,11 @@ describe('tool → backend contract', () => {
     expect(c?.body?.items).toEqual([draftItemCamel]);
   });
 
+  it('update_lunch_order_draft is annotated destructive: items are replaced wholesale (#4124)', () => {
+    const tool = ALL_TOOLS.find((t) => t.name === 'update_lunch_order_draft');
+    expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+  });
+
   it('draft tools never forward a client-supplied price, even a negative one', async () => {
     const c = await callTool('create_lunch_order_draft', {
       menu_date: '2026-10-01',
